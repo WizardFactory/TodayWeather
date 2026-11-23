@@ -24,23 +24,24 @@ struct DailyChartLayout: Equatable {
 struct DailyChartContent: View {
     let chart: DailyChart
     let colors: ChartColors
+    @State private var textCache = ChartTextCache()
 
     var body: some View {
         let layout = DailyChartLayout(chart)
         Canvas { context, _ in
             context.withCGContext { cg in
-                func row(_ texts: [String], _ size: Double, _ top: Double) {
+                @MainActor func row(_ texts: [String], _ size: Double, _ top: Double) {
                     for (i, text) in texts.enumerated() {
-                        let line = CssText.line([(text, size)], color: colors.label)
+                        let header = textCache.header(text, size: size, color: colors.label)
                         let center = (Double(i) + 0.5) * chart.columnWidth
-                        CssText.draw(line, x: center - CssText.width(line) / 2,
-                                     baseline: top + 2 + CssText.metrics(text, size: size).ascent, in: cg)
+                        CssText.draw(header.line, x: center - CssText.width(header.line) / 2,
+                                     baseline: top + 2 + header.ascent, in: cg)
                     }
                 }
                 row(chart.dayNames, CssText.smallTitle, 0)
                 row(chart.dates, CssText.title, layout.dateRowTop)
             }
-            SvgDrawing.draw(chart.chart, top: layout.chartTop, colors: colors, in: &context)
+            SvgDrawing.draw(chart.chart, top: layout.chartTop, colors: colors, textCache: textCache, in: &context)
         }
         .frame(width: chart.width, height: layout.contentHeight)
     }

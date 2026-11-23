@@ -195,6 +195,10 @@ const en: Catalog = {
   "public.body":
     "Save it to your locations to check hourly weather and air quality.",
   "public.open": "View weather here",
+  "link.appOption": "Open or install the app",
+  "link.dismiss": "Dismiss",
+  "link.addFavorite": "Add to favorites",
+  "link.invalidLocation": "This shared location is invalid.",
   "public.notFound": "Shared location not found",
   "welcome.kicker": "Weather for today",
   "welcome.headline": "Warmer than yesterday?",

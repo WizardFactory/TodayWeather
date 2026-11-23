@@ -14,7 +14,9 @@ import {
   dayLabel,
   iconKind,
   relativeDay,
+  upcomingPrecipitation,
 } from "../src/format";
+import type { Point } from "@todayweather/core";
 
 describe("air standards", () => {
   it("uses four grades for Korean standards and six for EPA/China", () => {
@@ -141,5 +143,117 @@ describe("display formatting", () => {
     expect(iconKind("sun")).toBe("sun");
     expect(iconKind("cloud")).toBe("cloud");
     expect(iconKind("")).toBe("cloud");
+  });
+  it("filters upcoming precipitation rows from current time and falls back when all rows are past (#3115)", () => {
+    const pt = (
+      at: string,
+      extra: Partial<Point> = {},
+    ): Point => ({
+      at,
+      temperature: 10,
+      low: null,
+      high: null,
+      humidity: 50,
+      wind: 1,
+      windDirection: "N",
+      pressure: 1013,
+      visibility: 10,
+      precipitation: 0,
+      precipitationHours: 1,
+      precipitationBasis: "forecast",
+      snowfall: null,
+      snowfallHours: null,
+      rainProbability: 10,
+      feelsLike: 10,
+      icon: "sun",
+      iconPm: "",
+      description: "",
+      sunrise: "",
+      sunset: "",
+      uv: "",
+      discomfort: "",
+      ...extra,
+    });
+    const current = pt("2026-09-23T10:00");
+    const hourly = [
+      pt("2026-09-21T00:00"),
+      pt("2026-09-22T18:00"),
+      pt("2026-09-23T06:00"),
+      pt("2026-09-23T09:00"),
+      pt("2026-09-23T10:00"),
+      pt("2026-09-23T12:00", { precipitationBasis: "partial", precipitationHours: null }),
+      pt("2026-09-23T15:00"),
+      pt("2026-09-23T18:00"),
+      pt("2026-09-23T21:00"),
+      pt("2026-09-24T00:00"),
+      pt("2026-09-24T03:00"),
+      pt("2026-09-24T06:00"),
+    ];
+    const daily = [
+      pt("2026-09-20T00:00"),
+      pt("2026-09-21T00:00"),
+      pt("2026-09-22T00:00"),
+      pt("2026-09-23T00:00"),
+      pt("2026-09-24T00:00"),
+      pt("2026-09-25T00:00"),
+      pt("2026-09-26T00:00"),
+      pt("2026-09-27T00:00"),
+      pt("2026-09-28T00:00"),
+      pt("2026-09-29T00:00"),
+      pt("2026-09-30T00:00"),
+      pt("2026-10-01T00:00"),
+    ];
+    // Hourly keeps current + in-progress partial slot (at > current.at) + future rows, capped at 8.
+    expect(
+      upcomingPrecipitation({ current, hourly, daily }, "hourly").map((p) => p.at),
+    ).toEqual([
+      "2026-09-23T10:00",
+      "2026-09-23T12:00",
+      "2026-09-23T15:00",
+      "2026-09-23T18:00",
+      "2026-09-23T21:00",
+      "2026-09-24T00:00",
+      "2026-09-24T03:00",
+      "2026-09-24T06:00",
+    ]);
+    // Overview uses the same hourly filter.
+    expect(
+      upcomingPrecipitation({ current, hourly, daily }, "overview")[0]?.at,
+    ).toBe("2026-09-23T10:00");
+    // Daily starts at today and caps at 8.
+    expect(
+      upcomingPrecipitation({ current, hourly, daily }, "daily").map((p) => p.at),
+    ).toEqual([
+      "2026-09-23T00:00",
+      "2026-09-24T00:00",
+      "2026-09-25T00:00",
+      "2026-09-26T00:00",
+      "2026-09-27T00:00",
+      "2026-09-28T00:00",
+      "2026-09-29T00:00",
+      "2026-09-30T00:00",
+    ]);
+    // All-past fallback returns the last 8 rows instead of an empty list.
+    const pastHourly = Array.from({ length: 10 }, (_, i) =>
+      pt(`2026-09-21T${String(i).padStart(2, "0")}:00`),
+    );
+    expect(
+      upcomingPrecipitation({ current, hourly: pastHourly, daily: daily.slice(0, 3) }, "hourly").map(
+        (p) => p.at,
+      ),
+    ).toEqual(pastHourly.slice(-8).map((p) => p.at));
+    expect(
+      upcomingPrecipitation({ current, hourly: pastHourly, daily: daily.slice(0, 3) }, "daily").map(
+        (p) => p.at,
+      ),
+    ).toEqual(daily.slice(0, 3).map((p) => p.at));
+    // Unparseable current.at falls back safely to the first 8 rows (PR2-R2).
+    const invalid = pt("bad");
+    expect(
+      upcomingPrecipitation({ current: invalid, hourly, daily }, "hourly").map((p) => p.at),
+    ).toEqual(hourly.slice(0, 8).map((p) => p.at));
+    expect(
+      upcomingPrecipitation({ current: invalid, hourly, daily }, "daily").map((p) => p.at),
+    ).toEqual(daily.slice(0, 8).map((p) => p.at));
   });
 });

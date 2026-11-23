@@ -44,39 +44,8 @@ function create(options) {
         return weatherSource.get(url, r.lang, deadline);
     }
     return {
-        resolve: async function (loc, r) {
-            var town = loc.town || r.town,
-                country = town ? 'KR' : undefined;
-            if (loc.lat !== undefined) {
-                // Use the existing geocoding service adapter off the send path (runtime URL contract below).
-                var config = require('../../config/config'),
-                    request = require('request');
-                var data = await new Promise(function (resolve, reject) {
-                    request(
-                        {
-                            url: config.apiServer.url + '/geocode/v000903/coord/' + loc.lat + ',' + loc.long,
-                            json: true,
-                            timeout: 5000
-                        },
-                        function (e, res, b) {
-                            if (e || !res || res.statusCode >= 400)
-                                return reject(new Error('Push region lookup failed'));
-                            resolve(b);
-                        }
-                    );
-                });
-                country = data.country;
-                var address = data.kmaAddress || {};
-                town = address.name1
-                    ? { first: address.name1, second: address.name2, third: address.name3 }
-                    : undefined;
-            }
-            return {
-                country: country,
-                town: town,
-                zones: town && town.first ? zones.zonesForTown(town) : [],
-                weatherKey: JSON.stringify([r.source || 'KMA', loc.lat, loc.long, town])
-            };
+        resolve: function (loc, record) {
+            return require('./region').resolveRegion(require('../../config/config').apiServer.url, loc, record);
         },
         alarm: async function (r, context) {
             var settings = normalized(r),

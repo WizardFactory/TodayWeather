@@ -1,6 +1,8 @@
 'use strict';
 var crypto = require('crypto');
 var EventEmitter = require('events');
+var RegionError = require('./errors').RegionError;
+var validTown = require('./region').validTown;
 var mapLimit = require('./storage').mapLimit;
 function hash(value) {
     return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -45,7 +47,7 @@ function validate(r) {
             Math.abs(r.location.long) > 180
         )
             throw new Error('Invalid push location');
-    } else if (!r.town || !r.town.first) throw new Error('Push location is required');
+    } else if (!validTown(r.town)) throw new Error('Invalid push town');
     ['pushTime', 'startTime', 'endTime'].forEach(function (k) {
         if (r[k] !== undefined && (!Number.isFinite(r[k]) || r[k] < 0 || r[k] >= 86400))
             throw new Error('Invalid push time');
@@ -77,11 +79,13 @@ class Registry extends EventEmitter {
         this.pending = new Set();
         this.retryAt = new Map();
         this.blocked = new Set();
+        this.restoreReasons = new Set();
+        this.restoreError = null;
         this.ready = false;
         this.mappingVersion = 1;
         this.maxQueue = options.maxQueue || 256;
     }
-    async init() {
+    async init(waitForRegionRetry) {
         var self = this,
             keys = await this.storage.list('registrations/');
         var docs = await mapLimit(keys, 16, function (k) {
@@ -104,8 +108,15 @@ class Registry extends EventEmitter {
             if (self.records.size % 256 === 0) await new Promise(setImmediate);
         }
         await this.settled();
-        if (this.retryAt.size)
-            throw new Error('Push region restoration incomplete; restart after geocoder recovery');
+        while (this.retryAt.size) {
+            if (this.restoreError) throw this.restoreError;
+            if (!waitForRegionRetry) throw new Error('Push region restoration incomplete; restart after geocoder recovery');
+            await waitForRegionRetry(this.retryAt.size, Array.from(this.restoreReasons).sort());
+            this.restoreReasons.clear();
+            // Startup has its own backoff. Only revisit queued devices; do not repeat S3 reads or reseals.
+            this.retryResolutions(Infinity);
+            await this.settled();
+        }
         this.ready = true;
         return this;
     }
@@ -422,7 +433,12 @@ class Registry extends EventEmitter {
                     });
                     self.emit('change', d.key);
                 })
-                .catch(function () {
+                .catch(function (error) {
+                    if (!self.ready) {
+                        var failure = error instanceof RegionError ? error : new RegionError('internal', false);
+                        self.restoreReasons.add(failure.category);
+                        if (!failure.retryable && !self.restoreError) self.restoreError = failure;
+                    }
                     self.retryAt.set(d.key, self.now() + 30000);
                     self.emit('resolutionError', d.key);
                 })
@@ -478,10 +494,10 @@ class Registry extends EventEmitter {
             this.resolutionHead = 0;
         }
     }
-    retryResolutions() {
+    retryResolutions(dueThrough = this.now()) {
         var self = this;
         this.retryAt.forEach(function (at, key) {
-            if (at <= self.now()) {
+            if (at <= dueThrough) {
                 self.retryAt.delete(key);
                 var d = self.devices.get(key);
                 if (d && !d.supersededBy) self.publish(d);

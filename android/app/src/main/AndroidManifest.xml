@@ -69,6 +69,44 @@
             android:name="org.apache.cordova.firebasex.OnNotificationOpenReceiver"
             android:exported="false" />
 
+        <activity android:name=".widget.WidgetConfigureActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <receiver android:name=".widget.CurrentReceiver" android:exported="false"
+            android:label="@string/widget_display_current">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_display_current" />
+        </receiver>
+
+        <receiver android:name=".widget.ForecastReceiver" android:exported="false"
+            android:label="@string/widget_display_forecast">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_display_forecast" />
+        </receiver>
+
+        <receiver android:name=".widget.ClockReceiver" android:exported="false"
+            android:label="@string/widget_display_clock">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_display_clock" />
+        </receiver>
+
+        <receiver android:name=".widget.AirReceiver" android:exported="false"
+            android:label="@string/widget_display_air">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_display_air" />
+        </receiver>
+
         <!-- The Cordova launcher component name, so existing home-screen shortcuts open this activity. -->
         <activity
             android:name=".MainActivity"

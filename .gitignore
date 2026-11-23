@@ -95,3 +95,4 @@ docs/architecture/diagrams/food-poisoning.*.json
 
 # Narrative diagram browser/finalize recovery state.
 /docs/architecture/diagrams/kma-warnings.*.json
+/docs/architecture/diagrams/android-ad-delivery.delivery.json

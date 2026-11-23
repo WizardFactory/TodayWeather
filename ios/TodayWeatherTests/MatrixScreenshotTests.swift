@@ -139,11 +139,13 @@ struct MatrixScreenshotTests {
             for block in blocks {
                 let index = Int(block["index"]?.numberValue?.double ?? -1)
                 let view = WeatherScreenshotTests.blockView(content.blocks[index], content: content, page: page, headerTop: display.top)
-                let native = render(view.frame(width: display.width), display, width: display.width, language: language)
+                let name = "\(size)-\(language)-forecast-\(page)-\(index)"
+                var measurement = ScreenshotMeasurement("matrix-\(name)")
+                let native = measurement.render { render(view.frame(width: display.width), display, width: display.width, language: language) }
                 let file = Self.file(display, language, try #require(block["file"]?.stringValue))
-                let reference = try References.image(WeatherScreenshotTests.referenceFile(file, block: content.blocks[index], content: content))
+                let reference = try measurement.reference(WeatherScreenshotTests.referenceFile(file, block: content.blocks[index], content: content))
                 let hidden = Int((block["hidden"]?.numberValue?.double ?? 0) * Double(display.scale))
-                try report.compare("\(size)-\(language)-forecast-\(page)-\(index)", native, reference, hidden: hidden)
+                try report.measure(measurement, name, native, reference, hidden: hidden)
             }
         }
         report.print("forecast")
@@ -213,25 +215,35 @@ struct MatrixScreenshotTests {
         let view = SideMenu(model: shell, catalog: Catalog(code: shell.locale.catalog), insets: insets, scrolls: false)
             .frame(width: display.width, height: display.webViewHeight, alignment: .top).clipped()
         var report = Report()
-        try report.compare("\(size)-\(language)-shell-menu", render(view, display, language: language),
-                           try References.image(Self.file(display, language, "shell-\(language)-light-menu.png")))
+        let menuName = "\(size)-\(language)-shell-menu"
+        var menu = ScreenshotMeasurement("matrix-\(menuName)")
+        let menuImage = menu.render { render(view, display, language: language) }
+        let menuReference = try menu.reference(Self.file(display, language, "shell-\(language)-light-menu.png"))
+        try report.measure(menu, menuName, menuImage, menuReference)
         // X1: the tab bar and the header bar on Hourly (the header without the page's own buttons, as ShellScreenshotTests).
         shell.select(.forecast)
         let colors = ShellColors.of(.light, tab: .forecast)
         let catalog = Catalog(code: shell.locale.catalog)
-        let tabs = render(TabBar(selected: .forecast, colors: colors, catalog: catalog, insets: insets, onTap: { _ in })
-            .frame(width: display.width), display, width: display.width, language: language)
-        let tabsReference = try References.image(Self.file(display, language, "shell-\(language)-light-forecast-tabs.png"))
+        var legacyColors = colors
+        legacyColors.tabSelected = colors.tabText
+        let tabsName = "\(size)-\(language)-shell-tabs"
+        var tabsMeasurement = ScreenshotMeasurement("matrix-\(tabsName)")
+        let tabs = tabsMeasurement.render { render(TabBar(selected: .forecast, colors: legacyColors, catalog: catalog, insets: insets, onTap: { _ in })
+            .frame(width: display.width), display, width: display.width, language: language) }
+        let tabsReference = try tabsMeasurement.reference(Self.file(display, language, "shell-\(language)-light-forecast-tabs.png"))
         // The home indicator iOS drew over the WebView's bottom inset in some captures (system UI, not the page's).
         let indicator = CGRect(x: display.width / 2 - 75, y: CGFloat(tabsReference.height) / display.scale - 14, width: 150, height: 12)
-        let masks = ShellScreenshotTests.legacyRefreshGlyph(.forecast, width: display.width) + (display.bottom > 0 ? [indicator] : [])
-        try report.compare("\(size)-\(language)-shell-tabs",
-                           tabs.copying(masks, from: tabsReference, scale: display.scale), tabsReference)
-        let reference = try References.image(Self.file(display, language, "shell-\(language)-light-forecast-header.png"))
-        let header = render(HeaderBar(colors: colors, title: "회현동", insets: insets, onMenu: {}) { EmptyView() }
-            .background(reference.color(x: 2, y: 2)).frame(width: display.width), display, width: display.width, language: language)
+        let masks = ShellScreenshotTests.legacySelection(.forecast, width: display.width) + (display.bottom > 0 ? [indicator] : [])
+        let maskedTabs = tabsMeasurement.prepare { tabs.copying(masks, from: tabsReference, scale: display.scale) }
+        try report.measure(tabsMeasurement, tabsName, maskedTabs, tabsReference)
+        let headerName = "\(size)-\(language)-shell-header"
+        var headerMeasurement = ScreenshotMeasurement("matrix-\(headerName)")
+        let reference = try headerMeasurement.reference(Self.file(display, language, "shell-\(language)-light-forecast-header.png"))
+        let header = headerMeasurement.render { render(HeaderBar(colors: colors, title: "회현동", insets: insets, onMenu: {}) { EmptyView() }
+            .background(reference.color(x: 2, y: 2)).frame(width: display.width), display, width: display.width, language: language) }
         let mask = CGRect(x: display.width - 88, y: 0, width: 88, height: 44 + display.top + 0.5)
-        try report.compare("\(size)-\(language)-shell-header", header.copying([mask], from: reference, scale: display.scale), reference)
+        let maskedHeader = headerMeasurement.prepare { header.copying([mask], from: reference, scale: display.scale) }
+        try report.measure(headerMeasurement, headerName, maskedHeader, reference)
         report.print("shell")
     }
 
@@ -290,8 +302,11 @@ struct MatrixScreenshotTests {
                 }
             }
             .frame(width: display.width, height: display.webViewHeight)
-            try report.compare("\(size)-\(language)-push-\(state)", render(view, display, language: language),
-                               try References.image(Self.file(display, language, "alarms-\(language)-\(state).png")))
+            let name = "\(size)-\(language)-push-\(state)"
+            var measurement = ScreenshotMeasurement("matrix-\(name)")
+            let native = measurement.render { render(view, display, language: language) }
+            let reference = try measurement.reference(Self.file(display, language, "alarms-\(language)-\(state).png"))
+            try report.measure(measurement, name, native, reference)
         }
         report.print("push")
     }
@@ -373,6 +388,13 @@ struct MatrixScreenshotTests {
             #expect(diff.strong <= n(limit["strong"]) + n(margin?["strong"]), "\(name) strong \(diff.strong)")
             #expect(diff.mean <= n(limit["mean"]) + n(margin?["mean"]), "\(name) mean \(diff.mean)")
             #expect(Double(abs(height)) <= n(limit["heightDifference"]) + n(margin?["heightDifference"]), "\(name) height \(height)")
+        }
+
+        mutating func measure(_ measurement: ScreenshotMeasurement, _ name: String, _ native: Bitmap,
+                              _ reference: Bitmap, hidden: Int = 0) throws {
+            let diff = try measurement.compare(native, reference, limit: tolerances?["cases"]?[name],
+                                               margin: tolerances?["margin"], hidden: hidden)
+            lines.append("MATRIX-MEASURED \(name) \(diff.strong) \(diff.mean) \(diff.heightDifference - hidden)")
         }
 
         func print(_ set: String) {

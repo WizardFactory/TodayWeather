@@ -4,6 +4,10 @@
 
 **2026-09-28 — TodayAir retirement confirmed by AK.** TodayAir is no longer operated. This is the confirmation date; the actual shutdown date was not provided. Retained TodayAir source, build variants and provider configuration are historical artifacts, not evidence of an active service. TodayAir is excluded from push-service restoration and credential renewal.
 
+**2026-11-20 — TodayWeather operating scope confirmed by AK.** The maintained clients are the WebApp in PWA and desktop modes (`web/`, `packages/weather-core/`), native iOS (`ios/`) and native Android (`android/`). Server1, the legacy Node.js backend under `server/`, owns current backend delivery. Rust server2 under `server2/` is its planned successor. The Cordova client has left ongoing operations; its code and release instructions remain available for historical reference. The earlier TodayAir retirement also applies.
+
+The [Korean solar-term plan](../../plans/issue-3050.md) applies this scope to #3050: server1 supplies the ranked daily summary and the complete annual calendar to the maintained clients, with the same API contract planned for server2.
+
 ## System shape
 
 The repository contains the Node.js/Express weather backend, the Ionic 1/AngularJS/Cordova app source shared by TodayWeather and TodayAir, and native client projects including the SwiftUI TodayWeather app under `ios/`. The backend contains API serving, scheduled data gathering, scraping, and push workers in one codebase. `SERVER_MODE` selects background work; it does not select which HTTP routes exist.
@@ -80,7 +84,7 @@ App coordinates use `{lat,long}`; server geography often uses `{lat,lon}`; Mongo
 ## Other service paths
 
 - Push registration uses versioned REST endpoints; delivery runs in `push` mode and requests weather from `SERVICE_SERVER`. Delivery uses Firebase for FCM tokens, including iOS, with legacy GCM retained for Android. Direct APNs has been removed; see the [push contract and deployment observations](push-notifications.md). [Push client](../../client/www/js/service.push.js), [scheduled push](../../server/controllers/controllerPush.js), [alerts](../../server/controllers/alert.push.controller.js).
-- Purchase validation is retired (#2642): the five versioned `/check-purchase` mounts, validator, payment SDK and its six exclusive platform settings are removed. Requests follow existing unmatched-route behavior after middleware; v000803 POST authorization remains ahead of matching. The maintained Cordova app and shared Gulp tasks already removed billing (#2641). See [retirement contract](mobile-api.md#server-payment-retirement-2642), [sequence](diagrams/server-payment-retirement.html) and [build selection](../../client/gulpfile.js).
+- Purchase validation is retired (#2642): the five versioned `/check-purchase` mounts, validator, payment SDK and its six exclusive platform settings are removed. Requests follow existing unmatched-route behavior after middleware; v000803 POST authorization remains ahead of matching. The Cordova app and shared Gulp tasks removed billing (#2641). See [retirement contract](mobile-api.md#server-payment-retirement-2642), [sequence](diagrams/server-payment-retirement.html) and [build selection](../../client/gulpfile.js).
 - Air forecast image processing and S3 helpers exist alongside the weather pipeline. A CloudFront invalidation helper exists, but its periodic manager dispatch is commented out; current CloudFront existence/routing is established separately by AWS evidence. [Manager](../../server/controllers/controllerManager.js), [S3 helpers](../../server/s3).
 - Localization uses server `i18n` and client Angular Translate; analytics and advertising are app concerns, separate from the weather HTTP wrapper. [Client utility](../../client/www/js/service.util.js), [app](../../client/www/js/app.js).
 

@@ -34,26 +34,28 @@ struct HourlyChartContent: View {
     let expanded: Bool
     let colors: ChartColors
 
+    @State private var textCache = ChartTextCache()
+
     var body: some View {
         let layout = HourlyChartLayout(chart, expanded: expanded)
         Canvas { context, size in
             context.withCGContext { cg in
                 for label in chart.dayLabels {
                     // `.day-title`: absolutely positioned at its left edge, text-align left, at the row's top.
-                    let line = CssText.line([(label.text, CssText.dayTitle)], color: colors.label)
-                    CssText.draw(line, x: label.left, baseline: CssText.metrics(label.text, size: CssText.dayTitle).ascent, in: cg)
+                    let header = textCache.header(label.text, size: CssText.dayTitle, color: colors.label)
+                    CssText.draw(header.line, x: label.left, baseline: header.ascent, in: cg)
                 }
                 for (i, text) in chart.hourLabels.enumerated() {
                     // `.chart-title`: a column with 2 pt padding, text centered.
-                    let line = CssText.line([(text, CssText.title)], color: colors.label)
+                    let header = textCache.header(text, size: CssText.title, color: colors.label)
                     let center = (Double(i) + 0.5) * chart.columnWidth
-                    let baseline = layout.hourRowTop + 2 + CssText.metrics(text, size: CssText.title).ascent
-                    CssText.draw(line, x: center - CssText.width(line) / 2, baseline: baseline, in: cg)
+                    let baseline = layout.hourRowTop + 2 + header.ascent
+                    CssText.draw(header.line, x: center - CssText.width(header.line) / 2, baseline: baseline, in: cg)
                 }
             }
-            SvgDrawing.draw(chart.chart, top: layout.chartTop, colors: colors, in: &context)
+            SvgDrawing.draw(chart.chart, top: layout.chartTop, colors: colors, textCache: textCache, in: &context)
             separator(layout.firstSeparator, size.width, &context)
-            if expanded { SvgDrawing.draw(chart.detail, top: layout.detailTop, colors: colors, in: &context) }
+            if expanded { SvgDrawing.draw(chart.detail, top: layout.detailTop, colors: colors, textCache: textCache, in: &context) }
             separator(layout.secondSeparator, size.width, &context)
         }
         .frame(width: chart.width, height: layout.contentHeight)

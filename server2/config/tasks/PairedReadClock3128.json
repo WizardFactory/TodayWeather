@@ -1,0 +1,10 @@
+{
+  "task": "PairedReadClock3128",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3128",
+  "scope": "Script the paired-read clock through paired_read's own time binding so other threads cannot consume the scripted values.",
+  "server2_paths": [
+    "server2/config/tasks/PairedReadClock3128.json",
+    "server2/tests/integration/test_paired_read.py"
+  ],
+  "outside": []
+}

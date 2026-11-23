@@ -114,6 +114,162 @@ function request(port, method, urlPath, headers, abortAfterMs) {
     });
 }
 
+test('French Vigilance applies department membership, snapshot freshness and exact published intervals', async () => {
+    const {createVigilanceService} = require('../../lib/warnings/franceVigilance');
+    const at = time => '2026-11-20T' + time + ':00Z';
+    let now = Date.parse(at('15:05'));
+    const metadata = {product_datetime: at('15:00'), snapshot_id: 'snapshot-one'};
+    const wind = {phenomenon_id: '1', phenomenon_max_color_id: 2, timelaps_items: [
+        {begin_time: at('15:00'), end_time: at('16:00'), color_id: 2},
+        {begin_time: at('16:00'), end_time: at('23:00'), color_id: 1}
+    ]};
+    const map = {meta: metadata, product: {
+        domain_id: 'FRA', warning_type: 'vigilance', type_cdp: 'cdp_carte_externe',
+        update_time: at('15:01'), periods: [{
+            echeance: 'J', begin_validity_time: at('15:00'), end_validity_time: at('23:00'),
+            timelaps: {domain_ids: [
+                {domain_id: '75', max_color_id: 2, phenomenon_items: [wind]},
+                {domain_id: '69', max_color_id: 1, phenomenon_items: []},
+                {domain_id: '92', max_color_id: 3, phenomenon_items: [
+                    {phenomenon_id: '4', phenomenon_max_color_id: 3, timelaps_items: []}
+                ]}
+            ]}
+        }]
+    }};
+    const texts = {meta: metadata, product: {
+        domain_id: 'FRA', warning_type: 'vigilance', type_cdp: 'cdp_textes', text_bloc_items: [
+            {domain_id: '75', bloc_id: 'BULLETIN_DEPARTEMENTAL', bloc_items: [{
+                text_items: [{hazard_code: '1', term_items: [{
+                    start_time: at('15:01'), end_time: at('16:00'), risk_code: '2',
+                    subdivision_text: [{text: ['Consignes locales.']}]
+                }]}]
+            }]}
+        ]
+    }};
+    const calls = [];
+    let publishedMap = map;
+    let publishedTexts = texts;
+    const service = createVigilanceService({
+        apiKey: 'test-provider-key',
+        now: () => now,
+        getJson: async (url, options) => {
+            const target = new URL(url);
+            calls.push(target);
+            if (target.hostname === 'geo.api.gouv.fr') {
+                assert.equal(options.headers.apikey, undefined);
+                const paris = target.searchParams.get('lat') === '48.85661';
+                const department = paris ? '75' : ({
+                    '45.764': '69', '48.8397': '92', '48.80001': '77'
+                })[target.searchParams.get('lat')];
+                return {status: 200, json: true, body: department ? [{codeDepartement: department}] : []};
+            }
+            assert.equal(options.headers.apikey, 'test-provider-key');
+            if (target.pathname.includes('/cartevigilance/')) {
+                return {status: publishedMap ? 200 : 503, json: Boolean(publishedMap), body: publishedMap};
+            }
+            return {status: publishedTexts ? 200 : 404, json: Boolean(publishedTexts), body: publishedTexts};
+        }
+    });
+    const app = await startApp({vigilance: service});
+    const get = coordinates => request(app.port, 'GET', '/weather/v000903/coord/' + coordinates + '/warnings');
+    try {
+        const [paris, lyon, flood] = await Promise.all([get('48.85661,2.3522'),
+            get('45.764,4.8357'), get('48.8397,2.2397')]);
+        assert.equal(paris.status, 200);
+        assert.equal(paris.headers['cache-control'], 'no-store');
+        assert.equal(paris.headers['access-control-allow-origin'], '*');
+        assert.equal(paris.json.location.lat, 48.85661);
+        assert.equal(paris.json.sources[0].state, 'current');
+        assert.deepEqual(paris.json.warnings.map(w => [w.eventCode, w.severity, w.onsetAt, w.endsAt, w.description]),
+            [['1', 'Jaune', at('15:00').replace('Z', '.000Z'), at('16:00').replace('Z', '.000Z'), 'Consignes locales.']]);
+        assert.equal(lyon.json.sources[0].state, 'current');
+        assert.deepEqual(lyon.json.warnings, []);
+        assert.equal(flood.json.warnings[0].timing, 'period-maximum');
+        assert.equal(flood.json.warnings[0].onsetAt, undefined);
+        assert.equal(calls.filter(url => url.hostname === 'public-api.meteofrance.fr').length, 2);
+        assert.equal((await get('48.80001,2.301')).json.sources[0].state, 'unavailable');
+        assert.equal((await get('46.2044,6.1432')).json.sources[0].state, 'unsupported');
+        assert.equal((await get('4.9224,-52.3135')).json.sources[0].state, 'unsupported');
+
+        now = Date.parse(at('15:11'));
+        publishedMap = clone(map);
+        publishedMap.meta = {product_datetime: at('15:10'), snapshot_id: 'snapshot-two'};
+        publishedMap.product.update_time = at('15:10');
+        const updated = await get('48.85661,2.3522');
+        assert.equal(updated.json.warnings[0].description, undefined);
+
+        now = Date.parse(at('15:17'));
+        publishedMap = clone(publishedMap);
+        publishedMap.meta.snapshot_id = 'ambiguous-clear';
+        Object.assign(publishedMap.product.periods[0].timelaps.domain_ids[0], {max_color_id: 1, phenomenon_items: []});
+        const conflictingClear = await get('48.85661,2.3522');
+        assert.equal(conflictingClear.json.sources[0].state, 'unavailable');
+        assert.deepEqual(conflictingClear.json.warnings, []);
+
+        now = Date.parse(at('15:19'));
+        publishedMap = map;
+        assert.equal((await get('48.85661,2.3522')).json.sources[0].state, 'unavailable');
+        now = Date.parse(at('16:00'));
+        publishedMap = clone(map);
+        publishedMap.meta = {product_datetime: at('15:58'), snapshot_id: 'snapshot-three'};
+        publishedMap.product.update_time = at('15:58');
+        publishedTexts = undefined;
+        const expiredInterval = await get('48.85661,2.3522');
+        assert.equal(expiredInterval.json.sources[0].state, 'current');
+        assert.deepEqual(expiredInterval.json.warnings, []);
+        now = Date.parse(at('16:06'));
+        const verifiedClear = publishedMap;
+        publishedMap = clone(verifiedClear);
+        publishedMap.meta.snapshot_id = 'ambiguous-alert';
+        const ambiguous = publishedMap.product.periods[0].timelaps.domain_ids[0].phenomenon_items[0].timelaps_items;
+        ambiguous[0].end_time = at('17:00');
+        ambiguous[1].begin_time = at('17:00');
+        const conflictingAlert = await get('48.85661,2.3522');
+        assert.equal(conflictingAlert.json.sources[0].state, 'unavailable');
+        assert.deepEqual(conflictingAlert.json.warnings, []);
+
+        now = Date.parse(at('16:08'));
+        publishedMap = verifiedClear;
+        assert.equal((await get('48.85661,2.3522')).json.sources[0].state, 'current');
+
+        now = Date.parse(at('16:14'));
+        publishedMap = clone(publishedMap);
+        publishedMap.meta = {product_datetime: at('16:13'), snapshot_id: 'snapshot-four'};
+        publishedMap.product.update_time = at('16:13');
+        publishedMap.product.periods[0].timelaps.domain_ids[0].phenomenon_items[0].timelaps_items = [];
+        const incomplete = await get('48.85661,2.3522');
+        assert.equal(incomplete.json.sources[0].state, 'unavailable');
+        assert.deepEqual(incomplete.json.warnings, []);
+        now = Date.parse(at('16:20'));
+        publishedMap = clone(publishedMap);
+        publishedMap.meta = {product_datetime: at('16:19'), snapshot_id: 'snapshot-five'};
+        publishedMap.product.update_time = at('16:19');
+        publishedMap.product.periods[0].timelaps.domain_ids[1].max_color_id = [1];
+        const malformedColor = await get('45.764,4.8357');
+        assert.equal(malformedColor.json.sources[0].state, 'unavailable');
+        assert.deepEqual(malformedColor.json.warnings, []);
+
+        now = Date.parse(at('16:26'));
+        publishedMap = clone(publishedMap);
+        publishedMap.meta = {product_datetime: at('16:25'), snapshot_id: 'snapshot-six'};
+        publishedMap.product.update_time = at('16:25');
+        const corruptFlood = publishedMap.product.periods[0].timelaps.domain_ids[2].phenomenon_items[0];
+        corruptFlood.phenomenon_id = ['4'];
+        corruptFlood.phenomenon_max_color_id = [3];
+        const malformedHazard = await get('48.8397,2.2397');
+        assert.equal(malformedHazard.json.sources[0].state, 'unavailable');
+        assert.deepEqual(malformedHazard.json.warnings, []);
+
+        now = Date.parse(at('16:32'));
+        publishedMap = undefined;
+        assert.equal((await get('48.85661,2.3522')).json.sources[0].state, 'unavailable');
+        assert.equal((await get('48.8,')).status, 400);
+        assert.equal((await request(app.port, 'GET', '/weather/v000902/coord/48.8,2.1/warnings')).status, 404);
+    } finally {
+        await app.close();
+    }
+});
+
 function reset(geocoder) {
     state.geocoder = geocoder;
     state.backendHits = [];
@@ -130,6 +286,110 @@ function assertErrorResponse(res, status) {
     assert.equal(res.headers['set-cookie'], undefined);
     assert.doesNotMatch(res.text, /<html|http|\.net|\.com|key/i);
 }
+
+test('coordinate air forecast is separately requested, never stored by HTTP caches, and skips Korea', async () => {
+    const calls = [];
+    const forecast = {source: 'openweather', attribution: 'OpenWeather',
+        retrievedAt: '2026-11-20T14:50:00.000Z', rows: [{
+        at: '2026-11-20T15:00:00.000Z', pollutants: {pm25: 9, pm10: 12, o3: 0.02}, indexes: {owm: 2}
+    }]};
+    const app = await startApp({
+        geocoder: () => ({
+            coord: async loc => ({
+                country: loc[0] > 0 ? 'KR' : 'UY', location: {lat: loc[0], long: loc[1]},
+                kmaAddress: {name1: 'Seoul', name2: 'Jung-gu'}
+            })
+        }),
+        loopback: async () => ({status: 200, json: true, body: {}}),
+        airForecast: (location, country, now, callback) => {
+            calls.push({location, country});
+            callback(location.lon === -56.165 ? forecast : undefined);
+        }
+    });
+    try {
+        const weather = await request(app.port, 'GET', '/weather/v000903/coord/-34.901,-56.165');
+        assert.equal(weather.json.airForecastAvailable, true);
+        assert.equal(weather.json.rows, undefined);
+        assert.equal(weather.headers['cache-control'], 'max-age=300');
+        assert.deepEqual(calls, []);
+
+        const response = await request(app.port, 'GET', '/weather/v000903/coord/-34.901,-56.165/air-forecast');
+        assert.equal(response.status, 200);
+        assert.equal(response.headers['cache-control'], 'no-store');
+        assert.equal(response.headers['access-control-allow-origin'], '*');
+        assert.deepEqual(response.json, forecast);
+        if (process.env.TW_AIR_FORECAST_CAPTURE) {
+            fs.writeFileSync(process.env.TW_AIR_FORECAST_CAPTURE, JSON.stringify({
+                path: '/weather/v000903/coord/-34.901,-56.165/air-forecast',
+                status: response.status,
+                cacheControl: response.headers['cache-control'],
+                body: response.json
+            }, null, 2) + '\n');
+        }
+        assert.deepEqual(calls, [{location: {lat: -34.901, lon: -56.165}, country: 'UY'}]);
+
+        const unavailable = await request(app.port, 'GET', '/weather/v000903/coord/-34.901,-56.166/air-forecast');
+        assert.deepEqual(unavailable.json, {available: false});
+        assert.equal(unavailable.headers['cache-control'], 'no-store');
+        assert.equal(calls.length, 2);
+
+        const korea = await request(app.port, 'GET', '/weather/v000903/coord/37.567,126.978');
+        assert.equal(korea.json.airForecastAvailable, undefined);
+        const koreanForecast = await request(app.port, 'GET', '/weather/v000903/coord/37.567,126.978/air-forecast');
+        assert.deepEqual(koreanForecast.json, {available: false});
+        assert.equal(calls.length, 2);
+    } finally {
+        await app.close();
+    }
+});
+
+test('pollen forecast uses viewed ISO country, leaving Korea and unsupported ordinary weather intact', async () => {
+    const fetched = [];
+    const app = await startApp({
+        geocoder: () => ({
+            coord: async loc => ({
+                country: loc[0] > 36 ? 'KR' : loc[0] > 0 ? 'JP' : 'UY',
+                location: {lat: loc[0], long: loc[1]}, kmaAddress: {name1: 'Seoul'}
+            })
+        }),
+        loopback: async () => ({status: 200, json: true, body: {current: {pollenGrade: 1}}}),
+        pollenForecast: {
+            supports: country => country === 'KR' || country === 'JP',
+            fetch: (coordinate, country, now, callback) => {
+                fetched.push({coordinate, country});
+                callback(country === 'JP' ? {source: 'google', attribution: 'Google Maps', region: 'JP',
+                    retrievedAt: '2026-11-20T15:56:10.000Z',
+                    days: [{dateUtc: '2026-11-20', plants: [{code: 'JAPANESE_CEDAR'}], types: []}]} : undefined);
+            }
+        }
+    });
+    try {
+        const weather = await request(app.port, 'GET', '/weather/v000903/coord/35.681,139.767', {'Accept-Language': 'ko-KR'});
+        assert.equal(weather.json.pollenForecastAvailable, true);
+        assert.equal(weather.json.days, undefined);
+        assert.equal(weather.headers['cache-control'], 'max-age=300');
+        assert.deepEqual(fetched, []);
+        const forecast = await request(app.port, 'GET', '/weather/v000903/coord/35.681,139.767/pollen-forecast', {'Accept-Language': 'ko-KR'});
+        assert.equal(forecast.status, 200);
+        assert.equal(forecast.headers['cache-control'], 'no-store');
+        assert.equal(forecast.json.region, 'JP');
+        assert.equal(forecast.json.days[0].dateUtc, '2026-11-20');
+        if (process.env.TW_POLLEN_FORECAST_CAPTURE) {
+            fs.writeFileSync(process.env.TW_POLLEN_FORECAST_CAPTURE, JSON.stringify({
+                path: '/weather/v000903/coord/35.681,139.767/pollen-forecast',
+                status: forecast.status, cacheControl: forecast.headers['cache-control'], body: forecast.json
+            }, null, 2) + '\n');
+        }
+        assert.deepEqual(fetched, [{coordinate: {lat: 35.681, lon: 139.767}, country: 'JP'}]);
+        const korea = await request(app.port, 'GET', '/weather/v000903/coord/37.567,126.978');
+        assert.equal(korea.json.current.pollenGrade, 1);
+        const uy = await request(app.port, 'GET', '/weather/v000903/coord/-34.901,-56.165');
+        assert.equal(uy.json.pollenForecastAvailable, undefined);
+        assert.equal(uy.status, 200);
+    } finally {
+        await app.close();
+    }
+});
 
 function queryPairs(url) {
     const q = url.indexOf('?') < 0 ? '' : url.slice(url.indexOf('?') + 1);
@@ -466,4 +726,32 @@ test('#2635 typed backend outages preserve deadline, CORS and no-store without r
             assert.equal(state.backendHits.length, 3);
         }
     } finally { await app.close(); }
+});
+
+test('marked v000903 forecast revalidates final JSON across a solar-term correction', async () => {
+    const app = await startApp();
+    const path = '/weather/v000903/coord/37.5665,126.9780?temperatureUnit=C';
+    try {
+        reset(realGeocoder({kakao:Array(3).fill('kakao.coord.seoul')}));
+        const term = '최저 0℃, 춘분';
+        const corrected = '최저 0℃, 맑음';
+        for (const summary of [term,term,corrected]) {
+            state.backendScript.push((req,res) => res.json({current:{summary,summaryForDate:'2001-03-20'}}));
+        }
+        const headers = {'Accept-Language':'ko'};
+        const first = await request(app.port,'GET',path,headers);
+        assert.equal(first.status,200);
+        assert.equal(first.json.current.summary,term);
+        assert.equal(first.headers['cache-control'],'max-age=0, must-revalidate');
+        assert.match(first.headers.vary,/Accept-Language/i);
+        assert.ok(first.headers.etag);
+        headers['If-None-Match'] = first.headers.etag;
+        assert.equal((await request(app.port,'GET',path,headers)).status,304);
+        const refreshed = await request(app.port,'GET',path,headers);
+        assert.equal(refreshed.status,200);
+        assert.equal(refreshed.json.current.summary,corrected);
+        assert.notEqual(refreshed.headers.etag,first.headers.etag);
+    } finally {
+        await app.close();
+    }
 });

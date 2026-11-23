@@ -249,6 +249,28 @@ function createBudget(options) {
         });
     }
 
+    // Reserve a forecast call within the same free monthly counter before sending
+    // HTTP. Existing observation admission keeps its original policy.
+    function reserveForecast(provider, callback) {
+        var cap = freeCap(provider);
+        if (!(cap > 0)) {
+            return callback('free-cap');
+        }
+        checkMinute(provider, true, function (reason) {
+            if (reason) {
+                return callback(reason);
+            }
+            var now = new Date();
+            var id = provider + ':m:' + monthKey(now);
+            reserve(AirProviderUsage, id, Math.ceil(cap * (1 - config.RESERVE)), monthExpiry(now), function (result) {
+                if (result !== 'reserved') {
+                    return callback(result === 'paid-cap' ? 'free-cap' : result);
+                }
+                callback(undefined, id);
+            });
+        });
+    }
+
     /** Paid admission (D20): policy reads first, then the reservation, so a denied call reserves nothing. */
     function checkPaid(provider, cost, callback) {
         if (!config.paidProvidersEnabled) {
@@ -278,15 +300,15 @@ function createBudget(options) {
 
     return {
         /**
-         * @param phase 'free' | 'paid'
+         * @param phase 'free' | 'paid' | 'forecast'
          * @param callback ({allowed: true}) or ({allowed: false, reason})
          *   reason: down | free-cap | minute-cap | free-phase-excluded | paid-disabled | paid-cap | vc-record-limit
          *   | store-error (paid read failed) | reserve-error (paid reservation failed or unacknowledged)
-         *   An allowed paid call carries `reservation`, the monthly counter it was charged to; pass it to record().
+         *   An allowed paid or forecast call carries `reservation`, the monthly counter it was charged to.
          */
         check: function (provider, phase, cost, callback) {
             readById(AirProviderUsage, provider + ':down', function (marker, failed) {
-                if (phase === 'paid' && failed) {
+                if (phase !== 'free' && failed) {
                     return callback({allowed: false, reason: 'store-error'});
                 }
                 if (active(marker)) {
@@ -301,6 +323,9 @@ function createBudget(options) {
                 if (phase === 'paid') {
                     return checkPaid(provider, cost || 1, done);
                 }
+                if (phase === 'forecast') {
+                    return reserveForecast(provider, done);
+                }
                 if (provider === 'visualcrossing') {
                     return done('free-phase-excluded');
                 }
@@ -309,14 +334,14 @@ function createBudget(options) {
         },
 
         /**
-         * Count one request (including failures) in the phase's window(s). A paid call was counted by its
+         * Count one request (including failures) in the phase's window(s). A reserved call was counted by its
          * reservation (result.reservation, the reserved month's counter): only a failure is added there.
          */
         record: function (provider, phase, result, callback) {
             result = result || {};
             var now = new Date();
             var updates = [];
-            if (phase !== 'paid') {
+            if (phase === 'free') {
                 updates.push([AirProviderUsage, provider + ':m:' + monthKey(now),
                     {$inc: {calls: 1, failures: result.failed ? 1 : 0}, $set: {expireAt: monthExpiry(now)}}]);
             }

@@ -2,6 +2,10 @@ package net.wizardfactory.todayweather.core.data
 
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.runBlocking
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -13,6 +17,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
@@ -41,6 +46,177 @@ class WeatherRepositoryTest {
     private fun currentOf(entry: WeatherEntry?) = entry!!.weather["currentWeather"]!!.jsonObject
 
     private fun repository(http: HttpGet, cache: File? = null) = WeatherRepository("https://server.test.invalid", cache, http, { now })
+
+    @Test
+    fun datedSummaryKeepsItsRequestWhenReopeningOffline() = runTest {
+        val dir = Files.createTempDirectory("summary-cache").toFile()
+        try {
+            val body = Json.parseToJsonElement(seoulBody).jsonObject
+            val current = body.getValue("current").jsonObject + mapOf(
+                "summary" to JsonPrimitive("calendar"), "summaryForDate" to JsonPrimitive("2026-02-04"))
+            val marked = JsonObject(body + ("current" to JsonObject(current))).toString()
+            val place = seoul.copy(country = "KR")
+            val live = repository({ _, _ -> marked }, dir)
+            assertIs<LoadResult.Loaded>(live.load(place, units, listOf("ko"), true))
+            val cached = repository({ _, _ -> error("offline") }, dir).cached(place)
+            fun summary(p: Place, u: UnitSettings, lang: String) = cityRecord(p, cached,
+                WeatherRepository.summaryRequest(p, u, listOf(lang)))["currentWeather"]!!.jsonObject["summary"]
+            assertEquals(JsonPrimitive("calendar"), summary(place, units, "ko"))
+            assertNull(summary(place, units, "en"))
+            assertNull(summary(place, units.copy(temperatureUnit = "F"), "ko"))
+            assertNull(summary(london, units, "ko"))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun storesTheProviderTimeZoneWithItsPlaceCache() = runTest {
+        val dir = Files.createTempDirectory("place-clock").toFile()
+        try {
+            val repo = repository({ _, _ -> londonBody }, dir)
+            assertIs<LoadResult.Loaded>(repo.load(london, units, emptyList(), true))
+            val disk = Json.parseToJsonElement(dir.listFiles()!!.single().readText()).jsonObject
+            assertEquals("Europe/London", disk["timeZoneId"]?.jsonPrimitive?.content)
+            fun offline() = repository({ _, _ -> error("offline") }, dir)
+            assertEquals("Europe/London", offline().cachedForWidget(london)?.timeZoneId)
+            val cacheFile = dir.listFiles()!!.single()
+            cacheFile.writeText(JsonObject(disk - "timeZoneId").toString())
+            assertNull(offline().cachedForWidget(london)?.timeZoneId)
+            val bad = londonBody.replace("Europe/London", "Missing/City")
+            val invalid = repository({ _, _ -> bad }, dir)
+            assertIs<LoadResult.Loaded>(invalid.load(london, units, emptyList(), true))
+            assertNull(offline().cachedForWidget(london)?.timeZoneId)
+            assertIs<LoadResult.Loaded>(repository({ _, _ -> seoulBody }, dir).load(seoul, units, emptyList(), true))
+            assertEquals("Asia/Seoul", offline().cachedForWidget(seoul)?.timeZoneId)
+            val korean = dir.listFiles()!!.single { it != cacheFile }
+            val legacy = Json.parseToJsonElement(korean.readText()).jsonObject - "timeZoneId"
+            korean.writeText(JsonObject(legacy).toString())
+            assertEquals("Asia/Seoul", offline().cachedForWidget(seoul)?.timeZoneId)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun readsCoordinateAirForecastThroughLiveWeatherWithoutPersistingIt() = runTest {
+        val dir = Files.createTempDirectory("coordinate-air").toFile()
+        try {
+            now = 1_800_000_000_000
+            val requests = mutableListOf<String>()
+            val liveBody = JsonObject(Json.parseToJsonElement(londonBody).jsonObject +
+                ("airForecastAvailable" to kotlinx.serialization.json.JsonPrimitive(true))).toString()
+            val repo = repository({ url, _ ->
+                requests += url
+                if (!url.endsWith("/air-forecast")) liveBody
+                else """{
+                    "source":"google", "attribution":"Source: Includes air quality data from Google",
+                    "retrievedAt":"2027-01-15T08:00:00.000Z",
+                    "rows":[{"at":"2027-01-15T09:00:00.000Z","pollutants":{"pm25":0},"indexes":{"uaqi":80}}]
+                }"""
+            }, dir)
+            val loaded = assertIs<LoadResult.Loaded>(repo.load(london, units, listOf("en"), true))
+            val air = repo.coordinateAirForecast(loaded, listOf("en"))
+            assertEquals("google", air?.source)
+            assertEquals("Europe/London", air?.timeZoneId)
+            assertEquals(0, air?.rows?.single()?.jsonObject?.get("pollutants")?.jsonObject?.get("pm25")?.jsonPrimitive?.int)
+            assertTrue(requests.last().endsWith("/weather/v000903/coord/51.51,-0.13/air-forecast"))
+            assertFalse(dir.listFiles()!!.single().readText().contains("airForecastAvailable"))
+            assertFalse(dir.listFiles()!!.single().readText().contains("retrievedAt"))
+            now += 3_600_000
+            assertNull(repo.coordinateAirForecast(loaded, listOf("en")))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun readsUnroundedPollenDateAndOptionalIndexFromLiveWeather() = runTest {
+        val dir = Files.createTempDirectory("coordinate-pollen").toFile()
+        try {
+            now = 1_800_000_000_000
+            val requests = mutableListOf<String>()
+            val liveBody = JsonObject(Json.parseToJsonElement(londonBody).jsonObject +
+                ("pollenForecastAvailable" to kotlinx.serialization.json.JsonPrimitive(true))).toString()
+            val repo = repository({ url, _ ->
+                requests += url
+                if (!url.endsWith("/pollen-forecast")) liveBody
+                else """{
+                    "source":"google", "attribution":"Google Maps", "region":"GB", "retrievedAt":"2027-01-15T08:00:00.000Z",
+                    "days":[{"dateUtc":"2027-01-15","plants":[{"code":"BIRCH"},{"code":"OAK","index":0}],"types":[]}]
+                }"""
+            }, dir)
+            val loaded = assertIs<LoadResult.Loaded>(repo.load(london, units, listOf("ko"), true))
+            val pollen = repo.coordinatePollenForecast(loaded, listOf("ko"))
+            assertEquals("google", pollen?.source)
+            assertEquals("GB", pollen?.region)
+            val day = pollen?.days?.single()?.jsonObject
+            assertEquals("2027-01-15", day?.get("dateUtc")?.jsonPrimitive?.content)
+            val plants = day?.get("plants")?.jsonArray
+            assertNull(plants?.get(0)?.jsonObject?.get("index"))
+            assertEquals(0, plants?.get(1)?.jsonObject?.get("index")?.jsonPrimitive?.int)
+            assertTrue(requests.last().endsWith("/weather/v000903/coord/51.51,-0.13/pollen-forecast"))
+            assertFalse(dir.listFiles()!!.single().readText().contains("pollenForecastAvailable"))
+            now += 86_400_000
+            assertNull(repo.coordinatePollenForecast(loaded, listOf("ko")))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun widgetUsesOneWireRequestIncludingSlowRetryableResponses() = runBlocking {
+        MockWebServer().use { server ->
+            server.start()
+            server.enqueue(MockResponse.Builder().code(503).addHeader("Retry-After", "0")
+                .headersDelay(3, TimeUnit.SECONDS).build())
+            server.enqueue(MockResponse.Builder().body(seoulBody).build())
+            val repo = WeatherRepository(server.url("/").toString().trimEnd('/'), null)
+            val result = repo.loadFromWidget(seoul, units, listOf("ko")) { true }
+            assertIs<LoadResult.Failed>(result)
+            assertEquals(1, server.requestCount)
+            assertNull(repo.cached(seoul))
+        }
+    }
+
+    @Test
+    fun widgetSharesAnInFlightForegroundRequestWithoutSupersedingIt() = runTest {
+        val response = CompletableDeferred<String>()
+        var calls = 0
+        val repo = repository({ _, _ -> calls++; response.await() })
+        val appLoad = async { repo.load(seoul, units, listOf("ko"), force = true) }
+        runCurrent()
+        assertIs<LoadResult.Skipped>(repo.loadFromWidget(seoul.copy(currentPosition = true), units, listOf("ko")) { error("busy request must not consume another attempt") })
+        response.complete(seoulBody)
+        assertIs<LoadResult.Loaded>(appLoad.await())
+        assertEquals(1, calls)
+    }
+
+    @Test
+    fun widgetsShareOnlyMatchingCoordinatesAndCanReadLegacyCurrentCaches() = runTest {
+        val dir = Files.createTempDirectory("widget-weather").toFile()
+        try {
+            val current = seoul.copy(currentPosition = true)
+            val moved = london.copy(currentPosition = true)
+            val initial = repository({ _, _ -> seoulBody }, dir)
+            val seoulEntry = assertIs<LoadResult.Loaded>(initial.load(current, units, emptyList(), true)).entry
+            val reopened = repository({ _, _ -> londonBody }, dir)
+            assertEquals(seoulEntry, reopened.cachedForWidget(seoul))
+            assertNull(reopened.cachedForWidget(london))
+            assertNull(reopened.cachedForWidget(moved))
+            val currentFile = dir.listFiles()!!.single()
+            val old = JsonObject(Json.parseToJsonElement(currentFile.readText()).jsonObject - "currentLocationKey")
+            currentFile.writeText(old.toString())
+            val legacy = repository({ _, _ -> londonBody }, dir)
+            assertNull(legacy.cachedForWidget(seoul)) // An old current cache has no proven coordinates.
+            assertEquals(seoulEntry.weather, legacy.cachedForWidget(current)?.weather)
+            now++
+            val londonEntry = assertIs<LoadResult.Loaded>(legacy.load(london, units, emptyList(), true)).entry
+            assertEquals(londonEntry, legacy.cachedForWidget(moved))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
 
     /** #2887 A01: Cordova put the answer for the place it asked about on the place selected when it came. */
     @Test
@@ -98,6 +274,26 @@ class WeatherRepositoryTest {
         assertEquals(currentOf(repo.cached(seoul)), currentOf(restarted.cached(seoul)))
         assertTrue(restarted.canLoad(seoul))
         cache.deleteRecursively()
+    }
+
+    @Test
+    fun diskCacheKeepsTheResponseUnitAndReadsEntriesFromBeforeWidgets() = runTest {
+        val cache = Files.createTempDirectory("weather-unit").toFile()
+        try {
+            val fahrenheit = File(corpus, "inputs/kma-seoul-imperial.json").readText()
+            val repo = repository({ _, _ -> fahrenheit }, cache)
+            assertIs<LoadResult.Loaded>(repo.load(seoul, units, listOf("ko"), force = true))
+            val restart = { repository({ _, _ -> error("offline") }, cache) }
+            val stored = restart().cached(seoul)!!
+            assertEquals("F", stored.temperatureUnit, "the cached response carries its own units")
+            val file = cache.listFiles()!!.single()
+            file.writeText(JsonObject(Json.parseToJsonElement(file.readText()).jsonObject - "temperatureUnit").toString())
+            val legacy = restart().cached(seoul)!!
+            assertEquals(stored.weather, legacy.weather)
+            assertNull(legacy.temperatureUnit)
+        } finally {
+            cache.deleteRecursively()
+        }
     }
 
     @Test

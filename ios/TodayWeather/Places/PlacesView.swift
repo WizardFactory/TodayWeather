@@ -213,6 +213,9 @@ struct PlacesPageView: View {
                 PlaceRowView(row: rows[i], index: i, theme: theme, colors: colors, editing: screens.editing,
                              first: n == 0, last: n == shown.count - 1, screens: screens)
             }
+            if !shown.isEmpty && !screens.editing {
+                ForecastNativeSlot(tab: .search, theme: theme)
+            }
         }
         .padding(.top, PlacesMetrics.listTop)
         .padding(.bottom, PlacesMetrics.listInset)

@@ -1,0 +1,14 @@
+<resources>
+    <string name="widget_cfg_title">小工具設定</string>
+    <string name="widget_cfg_place">地點</string>
+    <string name="widget_cfg_follow">使用應用程式中選取的地點</string>
+    <string name="widget_cfg_position">目前位置</string>
+    <string name="widget_cfg_missing">無法使用此地點，請選擇其他地點。</string>
+    <string name="widget_cfg_forecast">預報</string>
+    <string name="widget_cfg_hourly">逐小時</string>
+    <string name="widget_cfg_daily">逐日</string>
+    <string name="widget_cfg_compare">與昨天的氣溫比較</string>
+    <string name="widget_cfg_yesterday">包含昨天</string>
+    <string name="widget_cfg_visit">請至少每五天開啟一次主程式，讓小工具繼續顯示天氣。</string>
+    <string name="widget_cfg_save">儲存</string>
+</resources>

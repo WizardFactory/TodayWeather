@@ -1,0 +1,21 @@
+{
+  "capture_date": "2026-11-20",
+  "source_commit": "5fa646177f3912a93c4884e02eaa12ad83f132af",
+  "capture_environment": "iPhone 16 simulator, iOS 26.5, Xcode 27.2; app-hosted TodayWeather shell at 393 × 798 pt; Korean controls, default text size, reference weather and saved-place fixtures.",
+  "test": "HostedShellTests.NativeAdScreenTests.captureTheFourTestAdPlacements; TEST_RUNNER_TW_NATIVE_CAPTURE=1; same production NativeAdView hierarchy, text labels, media dimensions, registered asset views, and screen slots.",
+  "creative": "A local test supplies the sample text and cloud symbol. Google did not supply the creative or render its AdChoices icon in these captures. Separate requests with the official iOS Native and Native Video test units each returned SDK code 1 (no fill). Live reporting, revenue and store rollout were not exercised.",
+  "card_height_pt": {
+    "forecast": 158,
+    "dailyforecast": 158,
+    "air": 158,
+    "search": 315
+  },
+  "files": {
+    "air.png": "d1980daab8c6c88285318283b6208cb91a4bc487bce21a6cf93242255bcb5f63",
+    "dailyforecast.png": "17f75756519bd2ae32243902dea633ecddd73940f53bd8f9740bab12a74bf546",
+    "forecast.png": "99614e7b86fd253c7db1866c610a9bee054919a9faa45004e76bd6fc01253ef8",
+    "manual.json": "66238d0c366e421932eb579420ae4b0f39e41db220b3ce11966f7615a96cca68",
+    "manual.pdf": "869e2517f0de79df3207fe9fa06eb9a18865a9addadf26c4c02dd2f4327ff217",
+    "search.png": "abe6473cf945382f236dcb58c7fb93f525ac2c8761c185482d941a7c3766e1be"
+  }
+}

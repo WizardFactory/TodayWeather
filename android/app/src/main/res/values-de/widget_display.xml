@@ -1,0 +1,21 @@
+<resources>
+    <string name="widget_display_current">Aktuelles Wetter</string>
+    <string name="widget_display_forecast">Vorhersage</string>
+    <string name="widget_display_clock">Uhr und Wetter</string>
+    <string name="widget_display_air">Luftqualität</string>
+    <string name="widget_display_expired">Wetter in der App ansehen</string>
+    <string name="widget_display_no_place">Gespeicherten Ort in den Widget-Einstellungen auswählen</string>
+    <string name="widget_display_no_weather">App öffnen, um das Wetter zu laden</string>
+    <string name="widget_display_expired_compact">Wetter in App</string>
+    <string name="widget_style_title">Widget-Design</string>
+    <string name="widget_style_classic">Klassisch Schwarz</string>
+    <string name="widget_style_paper">Morgenpapier</string>
+    <string name="widget_style_blue">Blaue Stunde</string>
+    <string name="widget_style_open">App öffnen</string>
+    <string name="widget_refresh_mode">Wetteraktualisierung</string>
+    <string name="widget_refresh_auto">Automatisch · stündlich</string>
+    <string name="widget_refresh_manual">Manuell · per Tastendruck</string>
+    <string name="widget_refresh_stamp">Stand %1$s</string>
+    <string name="widget_refresh_action">Wetter aktualisieren</string>
+    <string name="widget_refresh_empty">Aktualisieren</string>
+</resources>

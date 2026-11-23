@@ -7,7 +7,12 @@ const repo=path.resolve(process.argv[2]||'.'), revision=process.argv[3]||'workin
 const files=['server/lib/pushCoordinator/warningFeed.js','server/lib/pushCoordinator/registry.js',
  'server/lib/pushCoordinator/engine.js','server/lib/pushCoordinator/runtime.js',
  'server/lib/pushCoordinator/transport.js','server/lib/kmaWarningZones.js',
- 'server/utils/data/kma_warning_zones.csv'];
+ 'server/utils/data/kma_warning_zones.csv',
+ 'server/lib/geocoder/transport.js',
+ 'server/lib/gwangjuJeonnam.js',
+ 'server/lib/pushCoordinator/errors.js',
+ 'server/lib/pushCoordinator/region.js',
+ 'server/lib/pushCoordinator/storage.js'];
 const sourceHashes=Object.fromEntries(files.map(f=>[f,crypto.createHash('sha256').update(fs.readFileSync(path.join(repo,f))).digest('hex')]));
 const actualRequire=createRequire(path.join(repo,'server/lib/pushCoordinator/warningFeed.js'));
 const {Feed,eventId,publishedAt}=actualRequire('./warningFeed'),{Engine}=actualRequire('./engine');

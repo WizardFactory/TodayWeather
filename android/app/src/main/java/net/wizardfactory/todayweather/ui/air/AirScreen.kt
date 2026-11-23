@@ -138,6 +138,7 @@ fun AirScreen(
     onAction: (PageAction) -> Unit,
     modifier: Modifier = Modifier,
     scrollState: ScrollState = rememberScrollState(),
+    nativeAd: (@Composable () -> Unit)? = null,
 ) {
     val colors = AirColors.of(theme)
     val page = content.page
@@ -157,6 +158,7 @@ fun AirScreen(
                 if (series != null) Zoomed { AirChartView(series, content.standard, content.hour, colors) }
             }
         }
+        if (page.main != null) nativeAd?.invoke()
         page.daily?.let { cells ->
             Card(colors.page, page.dailyTitle, Modifier.testTag(AirTags.block(block++)), null) {
                 AqiTable(cells.map { AqiCell(it.heading, it.glyph, it.color, it.text) }, colors.page, null)

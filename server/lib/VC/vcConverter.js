@@ -113,6 +113,42 @@ function toDarkSkyHour(row, time) {
     return point;
 }
 
+function toForecastHour(row) {
+    const point = toDarkSkyHour(row);
+    const at = num(row.datetimeEpoch);
+    if (at === undefined) {
+        return point;
+    }
+    const details = {forecastAtMs: at * 1000};
+    if (point.uvIndex !== undefined) {
+        details.uvIndex = point.uvIndex;
+    }
+    const gust = num(row.windgust);
+    if (gust !== undefined && gust >= 0) {
+        details.windGustMps = Number((gust * 0.44704).toFixed(2));
+    }
+    const wbgt = num(row.wbgt);
+    if (wbgt !== undefined) {
+        details.wbgtC = Number(((wbgt - 32) * 5 / 9).toFixed(1));
+    }
+    const solarRadiation = num(row.solarradiation);
+    if (solarRadiation !== undefined && solarRadiation >= 0) {
+        details.solarRadiationWm2 = solarRadiation;
+    }
+    const solarEnergy = num(row.solarenergy);
+    if (solarEnergy !== undefined && solarEnergy >= 0) {
+        details.solarEnergyMjm2 = solarEnergy;
+    }
+    const severeRisk = num(row.severerisk);
+    if (severeRisk !== undefined && severeRisk >= 0 && severeRisk <= 100) {
+        details.severeRisk = severeRisk;
+    }
+    if (Object.keys(details).length > 1) {
+        point.details = details;
+    }
+    return point;
+}
+
 function extreme(hours, field, pickMax) {
     let best;
     hours.forEach((hour) => {
@@ -204,7 +240,7 @@ function toDarkSkyDocs(vc, now) {
         timezone: vc.timezone,
         offset: offset,
         currently: currently,
-        hourly: {summary: '', data: hours.map((hour) => toDarkSkyHour(hour))},
+        hourly: {summary: '', data: hours.map(toForecastHour)},
         daily: {summary: '', data: dailyPoints}
     });
     const dayRecord = (day, start) => {

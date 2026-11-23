@@ -4,10 +4,7 @@ var https = require('https');
 var DAY = 86400000;
 var ENDPOINT = 'https://poisonmap.mfds.go.kr/api/risk.do';
 var USER_AGENT = 'TodayWeather/1.0 (+https://github.com/WizardFactory/TodayWeather)';
-var gwangju = ['동구', '서구', '남구', '북구', '광산구'];
-var jeonnam = ['목포시', '여수시', '순천시', '나주시', '광양시', '담양군', '곡성군', '구례군',
-    '고흥군', '보성군', '화순군', '장흥군', '강진군', '해남군', '영암군', '무안군',
-    '함평군', '영광군', '장성군', '완도군', '진도군', '신안군'];
+var provinceForDistrict = require('./gwangjuJeonnam');
 
 function dateKey(ms) { return new Date(ms).toISOString().slice(0, 10).replace(/-/g, ''); }
 function today(now) { return dateKey(now.getTime() + 9 * 3600000); }
@@ -109,9 +106,8 @@ function region(town) {
     var sd = town.first.trim(), sgg = typeof town.second === 'string' ? town.second.replace(/\s+/g, '') : '';
     // Provider concatenates city/district names (e.g. 수원시장안구).
     if (sd === '전남광주통합특별시') {
-        if (gwangju.indexOf(sgg) !== -1) sd = '광주광역시';
-        else if (jeonnam.indexOf(sgg) !== -1) sd = '전라남도';
-        else return null;
+        sd = provinceForDistrict(sgg);
+        if (!sd) return null;
     }
     sd = {'전라북도': '전북특별자치도', '강원도': '강원특별자치도'}[sd] || sd;
     return sd ? {sd: sd, sgg: sgg} : null;

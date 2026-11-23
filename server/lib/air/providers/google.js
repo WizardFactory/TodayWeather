@@ -8,6 +8,7 @@
 
 var http = require('../httpClient');
 var observation = require('../observation');
+var forecastRows = require('../forecastRows');
 
 var URL = 'https://airquality.googleapis.com/v1/currentConditions:lookup?key=';
 var CODES = {pm25: 'pm25', pm10: 'pm10', o3: 'o3', no2: 'no2', so2: 'so2', co: 'co'};
@@ -76,6 +77,22 @@ module.exports = {
     stationBased: false,
     isConfigured: function (keyString) {
         return http.isValidKey(key(keyString));
+    },
+    fetchForecast: function (gCoord, now, deps, callback) {
+        var range = forecastRows.period(now, 24);
+        var url = 'https://airquality.googleapis.com/v1/forecast:lookup?key=' +
+            encodeURIComponent(key(deps.keyString));
+        var body = {
+            location: {latitude: Number(gCoord.lat), longitude: Number(gCoord.lon)},
+            period: {startTime: forecastRows.timeString(range.start), endTime: forecastRows.timeString(range.end)},
+            pageSize: 24,
+            extraComputations: ['LOCAL_AQI', 'POLLUTANT_CONCENTRATION'],
+            universalAqi: true
+        };
+        http.request(deps.axios, {method: 'post', url: url, data: body,
+            timeoutMs: deps.timeoutMs}, function (result) {
+            callback(forecastRows.read(http, result, 'hourlyForecasts', parse, range));
+        });
     },
     fetchCurrent: function (gCoord, deps, callback) {
         var body = {

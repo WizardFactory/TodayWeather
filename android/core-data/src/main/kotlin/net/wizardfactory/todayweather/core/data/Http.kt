@@ -19,6 +19,9 @@ import okhttp3.Response
 /** Gets the body of a URL sent with [headers]; throws [HttpStatusException] for an error status, IOException otherwise. */
 fun interface HttpGet {
     suspend fun get(url: String, headers: Map<String, String>): String
+
+    /** A single exchange, including when the origin asks for an immediate retry. */
+    suspend fun getOnce(url: String, headers: Map<String, String>): String = get(url, headers)
 }
 
 /** An error status, as `$http` reports it to `_retryGetHttp` (`err.code = status`). */
@@ -38,7 +41,24 @@ class OkHttpGet(timeoutMs: Long) : HttpGet {
         .writeTimeout(0, TimeUnit.MILLISECONDS)
         .build()
 
-    override suspend fun get(url: String, headers: Map<String, String>): String = suspendCancellableCoroutine { continuation ->
+    private val singleAttemptClient by lazy {
+        client.newBuilder().retryOnConnectionFailure(false).followRedirects(false)
+            .addNetworkInterceptor { chain ->
+                val response = chain.proceed(chain.request())
+                // OkHttp may otherwise follow up a 503 with Retry-After: 0.
+                if (!response.isSuccessful) {
+                    response.close()
+                    throw HttpStatusException(response.code)
+                }
+                response
+            }.build()
+    }
+
+    override suspend fun get(url: String, headers: Map<String, String>): String = request(client, url, headers)
+
+    override suspend fun getOnce(url: String, headers: Map<String, String>): String = request(singleAttemptClient, url, headers)
+
+    private suspend fun request(client: OkHttpClient, url: String, headers: Map<String, String>): String = suspendCancellableCoroutine { continuation ->
         val request = Request.Builder().url(url).apply { headers.forEach { (k, v) -> header(k, v) } }.build()
         val call = client.newCall(request)
         continuation.invokeOnCancellation { call.cancel() }

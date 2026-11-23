@@ -1,6 +1,16 @@
 # Mobile application and API calls
 
-## Entry and refresh lifecycle
+## Korean daily summary and annual solar terms
+
+For a supported Korean location, the normal v000903 forecast can return a ranked, plain-text `current.summary` and its Korean civil date in `current.summaryForDate` (`YYYY-MM-DD`). The server selects up to two messages. Distinct warnings and health risks take precedence. The bare Korean name (for example, 입춘) can occupy one slot according to the [KR grouping](../../server/config/solar-terms/kr.json). The place determines eligibility and Asia/Seoul determines the date. A Korean-language setting alone does not qualify an overseas place.
+
+The WebApp and native clients display the dated summary in the forecast hero for that place. Its validity ends at the next Korean midnight, including on resume or offline restoration. Older payloads and expired markers use the usual weather presentation. The combined text has no air-detail action.
+
+`GET /calendar/v1/kr/solar-terms/{year}` is an independent server1 resource for all 24 Korean names and dates, including terms with no hero priority. It identifies the active revision, calculation or verification status and any official date corrections. The forecast screen does not fetch this resource. Public gateway routing and deployment must be verified independently before release.
+
+See the [client flow diagram](diagrams/issue-3050-client.html), [delivery plan](../../plans/issue-3050.md), [calendar operations](../operations/solar-terms.md) and [illustrated forecast guide](../user/solar-terms/manual.pdf).
+
+## Historical Cordova entry and refresh lifecycle
 
 The main application uses Ionic/Angular controllers and services. `controller.start.js` handles initial location/weather loading; `controller.tabctrl.js` handles existing city refreshes, resume and presentation. Both call `WeatherUtil.getWeatherByGeoInfo()`.
 
@@ -86,6 +96,122 @@ See the [selection sequence](diagrams/air-forecast-selection.html),
 [`_getAirForecast` / `_insertForecastPollutants`](../../server/controllers/controllerTown24h.js).
 
 ## Public API and implemented backend
+
+### Coordinate air-quality forecast (#3072)
+
+When enabled, server1's v000903 coordinate weather response advertises
+`airForecastAvailable: true` for a non-Korean viewed location. The ordinary
+weather lookup makes no additional forecast call. WebApp (desktop and PWA) and
+the native repositories can then request the same viewed coordinates via
+`GET /weather/v000903/coord/{lat},{lon}/air-forecast`. Keep the result outside
+the saved place weather snapshot. The device country has no bearing on
+forecast applicability. The Korean station and stored forecast rules above
+continue to serve Korean coordinates.
+
+The separate response sends `Cache-Control: no-store` and either
+`{source, attribution, retrievedAt, rows}` or `{available: false}`. Each
+`row.at` is an ISO UTC forecast-valid hour. The forecast-only `pollutants`
+object holds PM2.5 and PM10 in µg/m³ and available gases in ppm. Google's
+universal and named local scales and OpenWeather's 1–5 index are represented
+separately under `indexes`. Format UTC values in the viewed weather's IANA
+time zone where known. A failed optional read leaves current weather and its
+station observation available.
+
+The read-only 2026-11-20 AWS check reported `weather/*` targeted directly to
+the server1 spot origin, `MinTTL=0`, and no cookie forwarding. The optional
+data use a distinct path, so their cache key cannot alias ordinary weather.
+The default server configuration leaves this product disabled. See the
+[request sequence](diagrams/coordinate-air-forecast.html),
+[editable source](diagrams/coordinate-air-forecast.json), and
+[provider budget and rollout](../operations/air-provider-policy.md#coordinate-hourly-forecast).
+
+### Coordinate pollen forecast (#3073)
+
+When `POLLEN_MONTHLY_REQUEST_CAP` is greater than zero, server1 can advertise
+`pollenForecastAvailable: true` on an ordinary v000903 coordinate weather reply.
+The follow-up `GET /weather/v000903/coord/{lat},{lon}/pollen-forecast` resolves the
+viewed coordinate's ISO country before a provider request. The operation uses
+the existing `GOOGLE_SECRET_KEY` with the Pollen API enabled. The allowance
+belongs to the separate Pollen SKU.
+
+The optional response uses `Cache-Control: no-store` and returns `source`,
+`attribution`, `region`, `retrievedAt`, and `days`. Each `day.dateUtc` is the
+UTC date reported by Google for the viewed coordinate. The API does not
+deliver intraday values for a conversion to a complete local civil day.
+For example, a one-day Tokyo lookup at 2026-11-20 15:56 UTC returned November
+20 while Tokyo's local date was November 21. Display the source date with
+its UTC basis. [Google's DayInfo contract](https://developers.google.com/maps/documentation/pollen/reference/rest/v1/forecast/lookup#DayInfo)
+
+The `plants` and `types` have their source codes,
+optional season flags and optional index values 0 through 5. Missing indices
+stay absent. A Google index, measured pollen concentration and Korean KMA
+risk grade are separate. Colombia and Uruguay are absent from Google coverage.
+The Korean Google product supplies grass where available. Existing KMA
+oak, pine and weed products keep their current route, dates and scale.
+[Google's country and species table](https://developers.google.com/maps/documentation/pollen/coverage)
+
+WebApp (PWA and desktop) and the native weather repositories make the
+optional read independently of saved weather. Keep provider data out of disk
+weather snapshots and reject payloads aged 24 hours or more. An unavailable
+response is `{available: false}`; the normal forecast remains readable. The
+default cap is zero (disabled). It accepts at most 4,750 reservations per UTC
+calendar month, leaving headroom below the documented 5,000 monthly free
+usage threshold. The shared Mongo collection stores only per-month counts
+for `pollen:google:m:YYYY-MM`. A missing or invalid reservation denies the
+provider request. Normal weather and other Google billing totals have their
+own paths. External calls by other consumers of the same Google project are
+outside this local counter. [Google Maps Platform pricing](https://developers.google.com/maps/billing-and-pricing/pricing)
+
+Both the [standard service terms](https://cloud.google.com/maps-platform/terms/maps-service-terms)
+and the [EEA service terms](https://cloud.google.com/terms/maps-platform/eea/maps-service-terms)
+give future pollen forecasts a 24-hour storage limit. Retain [Google Maps
+attribution](https://developers.google.com/maps/documentation/pollen/policies)
+at display time. See the [request sequence](diagrams/coordinate-pollen-forecast.html)
+and its [editable source](diagrams/coordinate-pollen-forecast.json).
+
+### Météo-France Vigilance by coordinate
+
+`GET /weather/v000903/coord/{lat},{lon}/warnings` is a separate `no-store`
+read for metropolitan land departments. Enable it with
+`METEOFRANCE_VIGILANCE_ENABLED=true` and configure
+`METEOFRANCE_VIGILANCE_API_KEY` on server1. The code defaults to disabled.
+The coordinate is validated without rounding and the official French
+[administrative API](https://geo.api.gouv.fr/decoupage-administratif/communes)
+resolves the containing municipality and department. Points with no match
+include ocean and points outside the territory. Four-digit coastal product
+domains and overseas bulletins are outside this route's scope.
+
+The [provider adapter](../../server/lib/warnings/franceVigilance.js)
+shares one national map refresh among concurrent requests in each worker.
+Successful reads are reused for up to five minutes, bounded by product
+validity and a 16-hour age ceiling. Failed or regressing refreshes and conflicting snapshot IDs with equal
+publication times enter a one-minute cooldown and return unavailable coverage.
+Malformed color and phenomenon codes leave the affected coverage unavailable. No provider data enter
+the normal weather cache. Météo-France requests have a bounded timeout and
+body size. The API key is attached to the Météo-France host only.
+
+The response is `{location, checkedAt, sources, warnings}`. A matching
+department sets `location.country` to `FR`; the source reports the actual
+department code and, where available, publication and freshness times.
+A current source and empty warnings are a successful clear result for the
+covered scope. Unsupported and unavailable coverage are explicit. One
+incomplete period can produce unavailable coverage alongside independently
+validated intervals from another period.
+
+The map provides department-specific warning intervals in UTC. Upcoming
+intervals carry their actual onset while `effectiveAt` records the source
+product's effective time. For un-timed river-flood maxima, `timing` is
+`period-maximum` and `periodStartsAt` and `expiresAt` bound the reported
+window. These are summary values without a known hazard onset. French
+bulletin text is optional and must match the map snapshot, department,
+hazard, severity and validity. Render issuer text as text and show the
+official source and publication time.
+
+See the [request sequence](diagrams/france-vigilance.html),
+[editable source](diagrams/france-vigilance.json), and
+[illustrated API examples](../user/weather-api/france-vigilance/manual.pdf).
+The [issuer record](../reference/regional-weather/official-warnings.md#direct-france-sample)
+documents the earlier report, product reference and territory resolution.
 
 ### Current public-origin check, 2026-11-12 (#2937)
 
@@ -297,6 +423,29 @@ smoke: `server/test/offline/overseas-uv-smoke.js`. The Tokyo UV fixture was reco
 explicitly synthetic UV. A paired live Tokyo request returned queryCost 49 both
 before and after adding UV (same last1days/next7days range). Local evidence does
 not establish production rollout. [Updated request diagram](diagrams/mobile-weather-request.html).
+
+### Supplemental overseas hourly forecasts (#3071)
+
+The overseas v000903 response can include `hourlyDetails[]`. It contains
+future one-hour Visual Crossing values for the viewed location in UTC order.
+`at` is an ISO 8601 UTC timestamp. Each row has at least one available metric.
+
+| Field | Unit or definition |
+| --- | --- |
+| `uvIndex` | UV index |
+| `windGustMps` | Metres per second |
+| `wbgtC` | Modeled wet-bulb globe temperature in °C |
+| `solarRadiationWm2` | Irradiance in W/m² |
+| `solarEnergyMjm2` | Solar energy in MJ/m² |
+| `severeRisk` | Visual Crossing convective storm score on a 0–100 scale |
+
+The solar fields express radiation and energy. Official warning and
+sunshine-duration products have their own sources. Optional unavailable metrics
+are omitted. A valid zero remains zero. Pre-extension cache records remain
+readable and gain data on a normal refresh. The legacy overseas `hourly[]`
+continues to contain three-hour chart rows with existing precipitation
+totals. The desktop/PWA weather model and native iOS/Android converters expose
+the supplemental series to their data consumers. [Request diagram](diagrams/mobile-weather-request.html) · [Response example](../user/weather-api/hourly-details/manual.pdf).
 
 ### Overseas request-time air provider chain (#2628 PR 2)
 
@@ -646,3 +795,24 @@ for office mapping, cache/expiry, production readback and rollback boundaries.
 After successful `getAirFallback`, both single/list builders restore the existing selected nearby station history into the preceding 24 hourly slots. This uses the already retrieved list, with no new DB/provider call. Slots strictly precede the provider current hour; invalid/non-hour KST times, unnamed/other-source rows, other stations, negative/nonfinite values and older rows are skipped. Partial pollutants and zero remain valid; duplicate hours take the first valid concentration per pollutant. The existing converter calculates indices/AQI from cloned inputs in the requested air unit. Numeric restored slots carry `source: airkorea` and their actual `stationName`; `date` is the normalized KST hour (`24:00` becomes next midnight). Minute-based provider placeholders are replaced by matching past hour, so chart indexing stays compatible. Current `last`, source/attribution and its exact-minute slot remain unchanged. Future stored forecast selection/publication is independent. Missing history remains a gap; the installed chart displays its existing 24-slot subset.
 
 Historical restoration also retains a valid pollutant absent from provider current. Its past series has real observed values, while current remains unavailable (`-` in the existing partial-data client list); no current reading is fabricated.
+
+## Native Android home-screen widgets
+
+Each Android widget placement stores an automatic or manual refresh preference. Launcher events request hourly updates for places displayed by automatic widgets. A manual tap requests its own place. Both paths check access, reuse the app cache and share a persistent one-hour interval between widget attempts for the same place. Each admitted attempt issues one GET. The widget keeps cached readings after a failure, and the next main-app visit can supply newer data through the shared repository.
+
+The four native widgets use the app's place-keyed weather repository. Each cached entry carries its retrieval time and may carry a temperature unit. The widgets can read older entries without the unit, displaying degrees without a Celsius/Fahrenheit label until a fresh response supplies it.
+
+The clock widget reads the selected place's optional `timeZoneId` from the same cache entry. The repository stores `Asia/Seoul` for KMA and a recognized `timezone.timezoneId` from a world weather response. Older KMA entries also resolve to `Asia/Seoul` from their cached source. Android's native clocks show the time and date in that zone, including daylight-saving changes and local midnight, without a weather request. If the zone is unknown, the clock shows a dash and omits the date while the forecast stays visible. Forecast hours come from the provider. The update stamp uses the phone's time zone. [Weather repository](../../android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherRepository.kt) · [Widget clock](../../android/app/src/main/java/net/wizardfactory/todayweather/widget/WeatherWidgets.kt)
+
+Only a main-activity visit renews the device-local 120-hour window. The expiry worker redraws offline; Android controls when it runs. The [access lifecycle](diagrams/android-widget-access.html) shows the product rule. See the [widget sources](../../android/app/src/main/java/net/wizardfactory/todayweather/widget/) and [launcher guide](../user/android-app/widgets/README.md).
+
+
+## Spain AEMET CAP data
+
+Server1's existing `GET /weather/v000903/coord/{lat},{lon}/warnings` route selects AEMET when the exact viewed coordinate matches a qualified Spanish Meteoalerta zone. Other points can use the existing France adapter when enabled. `AEMET_WARNINGS_ENABLED` defaults to false. The public warnings feed uses no key. The separately configured OpenData key is for authorized verification and other OpenData products.
+
+The AEMET adapter follows the first official national Atom archive link, verifies the declared archive revision and the inventory of all 233 official zone identifiers, and atomically replaces its worker-local snapshot. A five-minute lease bounds rechecks on demand. For a selected zone, the reported lease also ends at the last surviving issuer validity boundary. An unchanged archive cannot extend that boundary. Worker requests coalesce within each process. Failed refreshes return unavailable outside the lease and use a bounded cooldown. There is no intermediary caching of the coordinate response. Separate source time, effective time, onset and expiry allow consumers to distinguish upcoming warnings, current empty coverage and unavailable coverage.
+
+WebApp desktop/PWA and native iOS/Android can read the response through their existing transport boundaries. The decoded result retains its requested coordinates. Web search and GPS keep their unrounded warning point across saved place restoration without changing ordinary weather keys. Reevaluate expiry and source freshness when consuming a retained response. The ordinary weather cache does not confer warning status. This integration adds no page or notification behavior.
+
+[AEMET CAP request flow](diagrams/aemet-cap.html) · [Diagram source](diagrams/aemet-cap.json) · [Official warning contract](../reference/regional-weather/official-warnings.md) · [API manual](../user/weather-api/aemet-cap/manual.pdf)

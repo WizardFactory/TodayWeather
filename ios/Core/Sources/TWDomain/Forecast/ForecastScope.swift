@@ -46,6 +46,7 @@ public struct ForecastScope: Sendable {
     public private(set) var chartShortDetailHeight: Double?
     public private(set) var chartMidHeight: Double?
     public private(set) var showDetailWeather = false
+    public private(set) var summaryExpiresAt: Date?
     public private(set) var summary: JSONValue?
     /// Nil when deleted: `delete $scope.summaryAir` for a place without one.
     public private(set) var summaryAir: JSONValue?
@@ -81,7 +82,12 @@ public struct ForecastScope: Sendable {
     }
 
     /// `applyWeatherData` for the selected place's record (`city` nil: no place at the selected index).
-    public mutating func apply(_ city: JSONObject?, hasPush: Bool) {
+    public mutating func apply(_ city: JSONObject?, hasPush: Bool, now: Date = Date()) {
+        // An incomplete replacement record must never keep another place's dated prose.
+        if summaryExpiresAt != nil {
+            summary = nil
+            summaryExpiresAt = nil
+        }
         guard let city, city["address"]?.isNull != true else { return }
         guard let dayCharts = city["dayChart"]?.arrayValue else { return }
         guard let firstDay = dayCharts.first, !firstDay.isNull else { return }
@@ -158,8 +164,17 @@ public struct ForecastScope: Sendable {
         showDetailWeather = true
         if !Self.isObject(currentWeather) { return }
         let cw = currentWeather?.objectValue
-        summary = Js.truthy(cw?["summaryWeather"]) ? cw?["summaryWeather"] : cw?["summary"]
-        summaryAir = Js.truthy(cw?["summaryAir"]) ? cw?["summaryAir"] : nil
+        let marked = cw?.contains("summaryForDate") == true
+        if marked, city["country"]?.stringValue == "KR", city["source"]?.stringValue == "KMA",
+           let text = cw?["summary"]?.stringValue, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           let expiry = Self.summaryExpiry(date: cw?["summaryForDate"]?.stringValue, now: now) {
+            summary = .string(text)
+            summaryAir = nil
+            summaryExpiresAt = expiry
+        } else {
+            summary = Js.truthy(cw?["summaryWeather"]) ? cw?["summaryWeather"] : (marked ? nil : cw?["summary"])
+            summaryAir = Js.truthy(cw?["summaryAir"]) ? cw?["summaryAir"] : nil
+        }
         let yesterdayValue = cw?["yesterday"]
         diffTempStr = ForecastText.diffTodayYesterday(
             cw?["t1h"], Js.truthy(yesterdayValue) ? (yesterdayValue?.objectValue ?? JSONObject()) : nil,
@@ -177,6 +192,14 @@ public struct ForecastScope: Sendable {
         chartPlace = JSONObject(place)
         // A complete apply scrolls both charts to today's position 300 ms later (`getTodayPosition`), the same data too.
         scrolls += 1
+    }
+
+    private static func summaryExpiry(date: String?, now: Date) -> Date? {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let parts = calendar.dateComponents([.year, .month, .day], from: now)
+        let today = String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!)
+        return date == today ? calendar.dateInterval(of: .day, for: now)?.end : nil
     }
 
     /// `loadWeatherPhotosEvent`: the feed gave the selected place a photo; in the photo theme the page takes it, without

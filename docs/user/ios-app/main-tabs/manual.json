@@ -1,6 +1,6 @@
 {
   "title": "TodayWeather for iOS · Main tabs",
-  "scenario": "Seoul fixture forecast, Korean controls and default text size. Each image shows the native app and system status bar on an iPhone 17 Pro simulator running iOS 26.5.",
+  "scenario": "On the iPhone 16 simulator (iOS 26.5), open each tab with Seoul saved, Korean controls and default text size. The selected icon and label use the theme accent. A short line above them marks the current page.",
   "steps": [
     {
       "title": "Saved Places",

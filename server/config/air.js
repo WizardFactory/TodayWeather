@@ -46,6 +46,8 @@ function load(env) {
         // Paid calls are off unless the operator enables them; each paid provider is capped per month.
         paidProvidersEnabled: flag(env, 'AIR_PAID_PROVIDERS_ENABLED', false),
         paidMonthlyCallCap: integer(env, 'AIR_PAID_MONTHLY_CALL_CAP', 100000, 0),
+        coordinateForecastEnabled: flag(env, 'AIR_COORDINATE_FORECAST_ENABLED', false),
+        pollenMonthlyRequestCap: integer(env, 'POLLEN_MONTHLY_REQUEST_CAP', 0, 0, 4750),
         providerTimeoutMs: integer(env, 'AIR_PROVIDER_TIMEOUT_MS', 3000, 500, 10000),
         // Overseas weather waits at most this long for its air branch (cache read and provider chain
         // together); the chain may finish later and fill the shared cache for the next request.

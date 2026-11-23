@@ -15,6 +15,9 @@ import kotlinx.serialization.json.buildJsonObject
 object WeatherConverter {
     private class JsTypeError : RuntimeException()
 
+    /** True only for a provider-marked observation, independent of a chart positioning fallback. */
+    fun isCurrentHour(row: JsonObject): Boolean = Js.truthy(row["currentIndex"])
+
     /** Returns null where the Cordova code returns null (a response it cannot parse). */
     fun convert(response: JsonElement): JsonObject? {
         if (response == JsonNull) throw IllegalArgumentException("null weather data") // Cordova throws here too
@@ -65,6 +68,7 @@ object WeatherConverter {
                 if (pubDate is JsonObject && "VC" in pubDate) put("source", JsonPrimitive("VC"))
             }
             putAir(obj)
+            (obj["hourlyDetails"] as? JsonArray)?.let { put("hourlyDetails", it) }
         }
     }
 
@@ -127,7 +131,7 @@ object WeatherConverter {
         list.forEachIndexed { index, item ->
             if (item == JsonNull) throw JsTypeError() // tempObject.currentIndex on a null row
             val o = item as? JsonObject
-            if (o != null && Js.truthy(o["currentIndex"])) currentIndex = index
+            if (o != null && isCurrentHour(o)) currentIndex = index
             if (o != null && Js.greater(o["fromToday"], -2.0)) {
                 var c = 0
                 if (Js.present(o["skyIcon"])) c++

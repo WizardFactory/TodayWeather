@@ -1,0 +1,133 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Home-screen widget access",
+    "output": "docs/architecture/diagrams/android-widget-access.html",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "6a49043e5f18fa6b75fb9964f18355c68f228101",
+      "link_mode": "local-only"
+    }
+  },
+  "mainPath": [
+    "initial",
+    "eligible",
+    "expired"
+  ],
+  "states": [
+    {
+      "id": "initial",
+      "type": "start",
+      "label": "First placement",
+      "sublabel": "No recorded app visit",
+      "sources": [
+        {
+          "path": "android/app/src/main/java/net/wizardfactory/todayweather/widget/WidgetAccess.kt",
+          "line": 12,
+          "end_line": 15,
+          "label": "Access before first visit"
+        }
+      ]
+    },
+    {
+      "id": "eligible",
+      "type": "active",
+      "label": "Weather enabled",
+      "sublabel": "Last visit under 120 hours",
+      "sources": [
+        {
+          "path": "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherRepository.kt",
+          "line": 178,
+          "end_line": 185,
+          "label": "Cache the place time zone"
+        },
+        {
+          "path": "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherRepository.kt",
+          "line": 206,
+          "end_line": 214,
+          "label": "Read legacy cache entries"
+        },
+        {
+          "path": "android/app/src/main/java/net/wizardfactory/todayweather/widget/WeatherWidgets.kt",
+          "line": 368,
+          "end_line": 395,
+          "label": "Date and time in the same zone"
+        }
+      ]
+    },
+    {
+      "id": "expired",
+      "type": "waiting",
+      "label": "Open app prompt",
+      "sublabel": "Weather refresh suspended",
+      "sources": [
+        {
+          "path": "android/app/src/main/java/net/wizardfactory/todayweather/widget/WeatherWidgets.kt",
+          "line": 106,
+          "end_line": 111,
+          "label": "Expired widget display"
+        }
+      ]
+    }
+  ],
+  "transitions": [
+    {
+      "id": "open",
+      "from": "initial",
+      "to": "eligible",
+      "label": "Visit main app"
+    },
+    {
+      "id": "expiry",
+      "from": "eligible",
+      "to": "expired",
+      "label": "120 hours elapse"
+    },
+    {
+      "id": "return",
+      "from": "expired",
+      "to": "eligible",
+      "label": "Reopen main app"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Main app visits",
+      "items": [
+        "Entering the main screen renews access for every widget.",
+        "Changing widget settings leaves the visit time intact."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Offline and idle",
+      "items": [
+        "Cached readings show their update time while access is active.",
+        "Android can defer the scheduled redraw while the device sleeps."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Eligible weather requests",
+      "items": [
+        "Automatic widgets check hourly. Manual widgets check on tap.",
+        "A recent cached reading or widget attempt covers that place for one hour.",
+        "Each admitted widget request sends one GET. Failed refreshes retain cached data."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Clock for the selected place",
+      "items": [
+        "The live time and date use the zone in the cached reading. Clock ticks need no weather request.",
+        "KMA readings, including older entries, use Asia/Seoul.",
+        "An overseas reading with an unknown zone shows a dash for the clock. Its weather stays visible."
+      ]
+    }
+  ]
+}

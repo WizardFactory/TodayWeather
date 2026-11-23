@@ -3,16 +3,46 @@ import {
   coordinates,
   convertValue,
   DEFAULT_UNITS,
+  formatValue,
   normalizeWeather,
   normalizeNation,
   numberValue,
   rowTime,
+  setNumberLocale,
 } from "../src/index";
 import kma from "../../../docs/rewrite/examples/client-kma-response.json";
 import world from "../../../docs/rewrite/examples/client-world-response.json";
 import full from "../../../docs/rewrite/examples/screenshot-weather.json";
 
 describe("source adapters preserve meteorological meaning", () => {
+  it("exposes only dated Korean summaries, preserving punctuation", () => {
+    const current = {
+      ...kma.response.current,
+      summary: "최고 6도, 입춘",
+      summaryForDate: "2026-02-04",
+    };
+    const weather = (country: string, summaryForDate: string) =>
+      normalizeWeather({
+        ...kma.response,
+        country,
+        current: { ...current, summaryForDate },
+      });
+    expect(weather("KR", "2026-02-04").daySummary).toEqual({
+      date: "2026-02-04",
+      text: current.summary,
+    });
+    expect(weather("KR", "invalid").daySummary).toBeUndefined();
+    expect(weather("JP", "2026-02-04").daySummary).toBeUndefined();
+    expect(normalizeWeather(kma.response).daySummary).toBeUndefined();
+    expect(
+      normalizeWeather(
+        { ...kma.response, current },
+        {
+          units: { ...DEFAULT_UNITS, temperatureUnit: "F" },
+        },
+      ).daySummary,
+    ).toBeUndefined();
+  });
   it("normalizes KMA, including observed zero rain and yesterday", () => {
     const result = normalizeWeather(kma.response, {
       fetchedAt: "2026-09-24T00:00:00Z",
@@ -163,5 +193,26 @@ describe("national city identity", () => {
       { units: DEFAULT_UNITS, mode: "live" },
     );
     expect(data.weather.map((r) => r.name)).toEqual(["춘천시", "강릉시"]);
+  });
+});
+
+describe("number formatting", () => {
+  it("normalizes negative zero and near-zero negative values across locales (#3116)", () => {
+    expect(formatValue(0, 0)).toBe("0");
+    expect(formatValue(-0, 0)).toBe("0");
+    expect(formatValue(-0, 1)).toBe("0");
+    expect(formatValue(0.04, 0)).toBe("0");
+    expect(formatValue(-0.04, 0)).toBe("0");
+    expect(formatValue(-0.49, 0)).toBe("0");
+    expect(formatValue(-0.5, 0)).toBe("-1");
+    expect(formatValue(-0.04, 1)).toBe("0");
+    expect(formatValue(-0.05, 1)).toBe("-0.1");
+    try {
+      setNumberLocale("de-DE");
+      expect(formatValue(-0.04, 0)).toBe("0");
+      expect(formatValue(-0.5, 0)).toBe("-1");
+    } finally {
+      setNumberLocale("ko-KR");
+    }
   });
 });

@@ -34,4 +34,4 @@ function attach(result, stationId, res, done, reader) {
         });
     } catch (err) { log.warn('kma narrative optional read failed'); finish(); }
 }
-module.exports = {attach:attach};
+module.exports = {attach:attach, capCache:capCache};

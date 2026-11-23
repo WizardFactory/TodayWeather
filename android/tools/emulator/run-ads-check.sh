@@ -1,6 +1,6 @@
 #!/bin/sh
 # The debug build's ads and analytics on an emulator (#2894 AC2), with the Analytics debug log (FA and FA-SVC verbose):
-# 1. online: AdsDeviceTest waits until a banner of Google's test unit loads and shows; the log must show no analytics
+# 1. online: AdsDeviceTest waits until a Google native test ad loads on each of the four eligible pages; the log must show no analytics
 #    event, while it shows that Analytics ran (its own lines);
 # 2. offline: AdsDeviceTest opts in through 선택적 이용 통계 and changes tabs; the log must now show logged events, so
 #    the first check cannot pass vacuously. Nothing is uploaded: the device has no network, and the app is removed before
@@ -35,7 +35,7 @@ adb shell setprop log.tag.FA-SVC VERBOSE
 
 install
 adb logcat -c
-adb shell am instrument -w -e ads online -e class $PKG.AdsDeviceTest#aTestBannerLoadsAndShowsWhileAnalyticsStaysOff $RUNNER | tee "$OUT/online.txt"
+adb shell am instrument -w -e ads online -e class $PKG.AdsDeviceTest#aTestNativeCardLoadsOnAllFourPagesWhileAnalyticsStaysOff $RUNNER | tee "$OUT/online.txt"
 adb logcat -d > "$OUT/logcat-online.txt"
 adb pull "/sdcard/Android/data/$PKG/files/ads/." "$OUT/" >/dev/null
 adb uninstall $PKG.test >/dev/null

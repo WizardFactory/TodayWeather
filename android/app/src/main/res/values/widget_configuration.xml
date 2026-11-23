@@ -1,0 +1,14 @@
+<resources>
+    <string name="widget_cfg_title">Widget settings</string>
+    <string name="widget_cfg_place">Location</string>
+    <string name="widget_cfg_follow">Follow the selected location in the app</string>
+    <string name="widget_cfg_position">Current location</string>
+    <string name="widget_cfg_missing">This location is unavailable. Choose another location.</string>
+    <string name="widget_cfg_forecast">Forecast</string>
+    <string name="widget_cfg_hourly">Hourly</string>
+    <string name="widget_cfg_daily">Daily</string>
+    <string name="widget_cfg_compare">Compare with yesterday</string>
+    <string name="widget_cfg_yesterday">Include yesterday</string>
+    <string name="widget_cfg_visit">Open the main app at least once every five days to keep weather visible on the widget.</string>
+    <string name="widget_cfg_save">Save</string>
+</resources>

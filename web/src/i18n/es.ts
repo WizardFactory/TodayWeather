@@ -200,6 +200,10 @@ const es: Catalog = {
   "public.body":
     "Guárdala en tus ubicaciones para ver el tiempo por hora y la calidad del aire.",
   "public.open": "Ver el tiempo aquí",
+  "link.appOption": "Abrir o instalar la app",
+  "link.dismiss": "Cerrar",
+  "link.addFavorite": "Añadir a favoritos",
+  "link.invalidLocation": "Esta ubicación compartida no es válida.",
   "public.notFound": "No se encontró la ubicación compartida",
   "welcome.kicker": "El tiempo para hoy",
   "welcome.headline": "¿Hará más calor que ayer?",

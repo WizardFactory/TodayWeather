@@ -32,6 +32,25 @@ class ForecastScopeTest {
     private val golden = Json.parseToJsonElement(File(corpus, "forecast.json").readText()).jsonObject
 
     @Test
+    fun rankedSummaryExpiresAtSeoulMidnight() {
+        val record = Json.parseToJsonElement("""{"country":"KR","source":"KMA","dayChart":[{"values":[]}],"timeTable":[],"currentWeather":{"summary":"최저 -3도, 최고 6도, 입춘","summaryForDate":"2026-02-04","summaryWeather":"weather","summaryAir":"air"}}""").jsonObject
+        val scope = ForecastScope(ForecastType.MID, ChartMetrics(320.0, 600.0), false, false, yesterday("values-ko"), false)
+        val midnight = java.time.Instant.parse("2026-02-04T15:00:00Z").toEpochMilli()
+        scope.apply(record, false, midnight - 1)
+        assertEquals(JsonPrimitive("최저 -3도, 최고 6도, 입춘"), scope.summary)
+        assertEquals(null, scope.summaryAir)
+        assertEquals(midnight, scope.summaryExpiresAt)
+        scope.apply(record, false, midnight)
+        assertEquals(JsonPrimitive("weather"), scope.summary)
+        assertEquals(JsonPrimitive("air"), scope.summaryAir)
+        scope.apply(JsonObject(record + ("country" to JsonPrimitive("JP"))), false, midnight - 1)
+        assertEquals(JsonPrimitive("weather"), scope.summary)
+        scope.apply(record, false, midnight - 1)
+        scope.apply(null, false)
+        assertEquals(null, scope.summary)
+    }
+
+    @Test
     fun visitsMatchForecastCtrl() {
         val visits = golden["visits"]!!.jsonArray.map { it.jsonObject }
         assertEquals(58, visits.size)

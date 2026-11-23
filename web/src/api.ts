@@ -1,4 +1,4 @@
-import { type Place, type Units, type Weather } from "@todayweather/core";
+import { type CoordinateAirForecast, type CoordinatePollenForecast, type CoordinateWarnings, type Place, type Units, type Weather } from "@todayweather/core";
 import { readSnapshot, weatherKey, writeSnapshot } from "./state";
 import { directApi } from "./direct-api";
 import { readTransportSettings } from "./transport-config";
@@ -28,10 +28,45 @@ export async function api<T>(
 }
 export const unitQuery = (units: Units) =>
   new URLSearchParams(units).toString();
+
+/** Load only for live weather that advertised coordinate forecast availability. */
+async function fetchCoordinateForecast<Forecast>(
+  weather: Weather,
+  signal: AbortSignal,
+  product: "air-forecast" | "pollen-forecast",
+  available?: true,
+): Promise<Forecast | undefined> {
+  if (weather.mode !== "live" || !available) return;
+  const { lat, lon } = weather.location;
+  try {
+    return await api<Forecast | undefined>(`/weather/${product}?lat=${lat}&lon=${lon}`, signal);
+  } catch (error) {
+    if (signal.aborted) throw error;
+    return undefined;
+  }
+}
+
+export function fetchCoordinateAirForecast(weather: Weather, signal: AbortSignal) {
+  return fetchCoordinateForecast<CoordinateAirForecast>(weather, signal, "air-forecast", weather.coordinateAirForecastAvailable);
+}
+
+export function fetchCoordinatePollenForecast(weather: Weather, signal: AbortSignal) {
+  return fetchCoordinateForecast<CoordinatePollenForecast>(weather, signal, "pollen-forecast", weather.coordinatePollenForecastAvailable);
+}
+export async function fetchCoordinateWarnings(place: Place, signal: AbortSignal): Promise<CoordinateWarnings | undefined> {
+  const {lat, lon} = place.warningLocation ?? place;
+  try {
+    return await api<CoordinateWarnings | undefined>(`/weather/warnings?lat=${lat}&lon=${lon}`, signal);
+  } catch (error) {
+    if (signal.aborted) throw error;
+    return undefined;
+  }
+}
 export async function fetchWeather(
   place: Place,
   units: Units,
   signal: AbortSignal,
+  persistSnapshot = true,
 ): Promise<{
   weather: Weather;
   snapshot: boolean;
@@ -54,10 +89,10 @@ export async function fetchWeather(
       address: place.address || weather.location.address,
       country: place.country || weather.location.country,
     };
-    await writeSnapshot(key, weather);
+    if (persistSnapshot) await writeSnapshot(key, weather);
     return { weather, snapshot: false };
   } catch (error) {
-    if (signal.aborted) throw error;
+    if (signal.aborted || !persistSnapshot) throw error;
     const cached = await readAnySnapshot(key);
     if (cached) {
       const wait = (error as { retryAfterMs?: number }).retryAfterMs;
@@ -114,6 +149,10 @@ export async function readAnySnapshot(
       newest = found;
       newestAt = Number.isNaN(time) ? -Infinity : time;
     }
+  }
+  if (newest?.daySummary) {
+    const { daySummary: ignored, ...weather } = newest;
+    return weather;
   }
   return newest;
 }

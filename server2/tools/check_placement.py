@@ -341,9 +341,9 @@ def inert_golden_identities(tree):
 REVIEWED_VERIFICATION_POLICIES = {
     'server2/tools/golden/policies/air.json': '801d6dd66979e57b79fba98bf979a35d0911fce5ce2ea1538d1bb93d6a444c25',
     'server2/tools/golden/policies/nation.json': 'a0f09ab457274ffcbdde4f42fb7d13a239277f06446f5caf4cdb33ece957309a',
-    'server2/tools/golden/policies/delivery.json': 'a62cf9db9e87e663225fef5ffea5f96c788bb7ecb4568b3690adc945bc1cb0f5',
-    'server2/tools/golden/policies/domestic_http.json': 'dd8b921a92b98f158b55032e563c94d7bf3b67adf0379c3a1ebc8a5fe28f8bf8',
-    'server2/tools/golden/policies/rest_http.json': '00aa4df69d8bb3d4e7c534ecdc4bad214d0319459e7d9603119ea00ccc44fa7f',
+    'server2/tools/golden/policies/delivery.json': '2d302897c8019900d1477cb68c63eb710a9809d3e27ef8b91cfd82d1539c945f',
+    'server2/tools/golden/policies/domestic_http.json': 'a4416b8bccd1a3bd4e2cc419d4816a1e0fb80ba4509ca23d59d74eca87147d06',
+    'server2/tools/golden/policies/rest_http.json': '73593f09f64fc8250c112fc6a2da17f2f90edab809ac6a7bf53d7cf846914f90',
 }
 
 
@@ -355,7 +355,7 @@ def inert_provenance_registry(tree):
             not isinstance(tree['reader_sha256'], str) or not re.fullmatch('[0-9a-f]{64}', tree['reader_sha256'])):
         raise ValueError('invalid fingerprint registry schema/reader')
     sources = tree['legacy_sources']
-    if (not isinstance(sources, list) or len(sources) != 187 or
+    if (not isinstance(sources, list) or len(sources) != 195 or
             not all(isinstance(p, str) and p.startswith('server/') and clean(p) and '\\' not in p for p in sources) or
             sources != sorted(set(sources))):
         raise ValueError('invalid fingerprint source identities')
@@ -452,15 +452,124 @@ def audit_nonrust(path, body, raw_body=None):
     return [f'{path}: direct external resource reference' for value in values if external_literal(value)]
 
 
+GOLDEN_JOB = "  goldens:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '16.20.2'\n      - uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n      - run: python tools/golden/ci.py --install\n"
+VERIFIED_UPLOAD = '      - uses: actions/upload-artifact@v4\n        with:\n          name: server2-linux-musl-verified\n          path: reports/verification/server2-local-first/artifact-native/\n          if-no-files-found: error\n          retention-days: 7\n'
+PARALLEL_WORKFLOW_PREFIX = """name: Server2
+on:
+  pull_request:
+    paths:
+      - "server2/**"
+      - ".github/workflows/server2.yml"
+permissions:
+  contents: read
+jobs:
+  placement:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh placement
+  python:
+    needs: placement
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh python
+  rust:
+    needs: placement
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh rust
+  gnu:
+    needs: placement
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh gnu
+  musl:
+    needs: placement
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    outputs:
+      digest: ${{ steps.musl.outputs.digest }}
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: musl
+        run: bash tools/ci.sh musl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server2-linux-musl-candidate
+          path: reports/verification/server2-local-first/artifact-native/
+          if-no-files-found: error
+          retention-days: 1
+  foundation:
+    needs: [placement, python, rust, gnu, musl]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - name: Require all verification jobs to pass
+        if: >-
+          ${{ needs.placement.result != 'success' ||
+              needs.python.result != 'success' ||
+              needs.rust.result != 'success' ||
+              needs.gnu.result != 'success' ||
+              needs.musl.result != 'success' }}
+        working-directory: .
+        run: exit 1
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: server2-linux-musl-candidate
+          path: reports/verification/server2-local-first/artifact-native/
+      - run: bash tools/ci.sh promote
+        env:
+          SERVER2_CANDIDATE_DIGEST: ${{ needs.musl.outputs.digest }}
+"""
+
+
 def audit_workflow(body):
     errors = []
     if re.search(r'^jobs:\s*$', body, re.M):
         expected_foundation='name: Server2\non:\n  pull_request:\n    paths:\n      - "server2/**"\n      - ".github/workflows/server2.yml"\npermissions:\n  contents: read\njobs:\n  foundation:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 90\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - run: bash tools/ci.sh\n'
-        expected_goldens="  goldens:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '16.20.2'\n      - uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n      - run: python tools/golden/ci.py --install\n"
-        # Exact job/source wiring; no env, expressions, arbitrary actions or run steps.
-        artifact_upload = '      - uses: actions/upload-artifact@v4\n        with:\n          name: server2-linux-musl-verified\n          path: reports/verification/server2-local-first/artifact-native/\n          if-no-files-found: error\n          retention-days: 7\n'
-        if body.strip() in {expected_foundation.strip(), (expected_foundation+expected_goldens).strip(),
-                            (expected_foundation+artifact_upload+expected_goldens).strip()}:
+        # Accept only the reviewed job, dependency, guard, and action wiring.
+        if body.strip() in {(PARALLEL_WORKFLOW_PREFIX + VERIFIED_UPLOAD + GOLDEN_JOB).strip(),
+                            expected_foundation.strip(), (expected_foundation+GOLDEN_JOB).strip(),
+                            (expected_foundation+VERIFIED_UPLOAD+GOLDEN_JOB).strip()}:
             return []
         return ['server2 workflow differs from exact reviewed foundation/goldens wiring']
     runs = re.findall(r'^[ \t]*-?[ \t]*run:[ \t]*([^\r\n]+)$', body, re.M)

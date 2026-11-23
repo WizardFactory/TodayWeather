@@ -102,7 +102,10 @@ public final class WeatherSession {
     }
 
     /// The record the pages apply for `place`: its weather (this process or the cache) with its own fields.
-    public func record(_ place: Place) -> JSONObject { cityRecord(place, repository.cached(place)) }
+    public func record(_ place: Place) -> JSONObject {
+        let request = holder.state.flatMap { WeatherRepository.summaryRequest(place, $0.units, acceptLanguage()) }
+        return cityRecord(place, repository.cached(place), summaryRequest: request)
+    }
 
     /// TabCtrl's loading indicator (`showLoadingIndicator`): while the selected place's request is in flight; for the
     /// current position with a location lookup, while the lookup runs (it hides the indicator when it settles).
