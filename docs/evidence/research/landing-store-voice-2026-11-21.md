@@ -31,6 +31,8 @@ Counted over the same 70 reviews by keyword. A review can count under several th
 | Clear, at-a-glance screen | 6 | 6 | Apple, May 2023, "가장 깔끔하고 직관적이며, 필요한 기능이 모두 들어있어서 사용하기에 좋아요." Google Play, January 2021, "아주간단 명료, 심플하고 직관적이라 알아보기가 매우 편하고 복잡하지않아 좋네요." [2] [3] |
 | Hourly forecast | 4 | 2 | Apple, January 2022, "시간별 날씨를 좌우로 움직여서 보는 것도 이 어플만큼 직관적인게 없습니다." Apple, June 2024, "직관적으로 시간별 날씨를 파악할 수 있다는게 오늘날씨의 가장 큰 장점인 것 같아요." [2] |
 
+AK chose the section heading "오래 쓰는 분들이 꼽은 이유" (the reasons long-time users give) on November 24, 2026. Twelve of the 70 reviews state several years of use: nine on Apple and three on Google Play. Two of the eight excerpts come from one of them, the May 2023 Apple review titled "몇년간 유일하게 쓰고 있는 날씨 어플". The other six excerpts come from reviews that do not state how long the writer has used the app. The heading describes the reviewer base, and the sample does not show that every quoted writer is a long-time user.
+
 The landing quotes these excerpts verbatim with the store name only, without dates or reviewer names. The months in this table record where each excerpt comes from. The outfit theme has few keyword matches. It stays because both stores describe the same decision in concrete terms.
 
 ## Coverage
