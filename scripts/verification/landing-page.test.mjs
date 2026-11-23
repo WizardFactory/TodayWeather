@@ -141,6 +141,31 @@ test('the stylesheet loads the subset font beside it', () => {
   assert.deepEqual(attribute(css, /url\("([^"]+)"\)/g), ['assets/landing-sans.woff2']);
 });
 
+test('the native summaries link to the matching store fallback', () => {
+  const expected = new Map([['iPhone 앱', 'ios'], ['Android 앱', 'android']]);
+  for (const page of pages) {
+    const html = readFileSync(page, 'utf8');
+    const links = [...html.matchAll(/<h3><a href="(https:\/\/link\.todayweather\.ai\/[^"]+)">([^<]+)</g)]
+      .map((match) => [match[2].trim(), new URL(match[1].replace(/&amp;/g, '&'))]);
+    assert.deepEqual(links.map(([title]) => title).sort(), [...expected.keys()].sort(), page);
+    for (const [title, url] of links) {
+      assert.equal(url.pathname, '/open', `${page}: ${title}`);
+      assert.equal(url.searchParams.get('fallback'), 'store', `${page}: ${title}`);
+      assert.equal(url.searchParams.get('store'), expected.get(title), `${page}: ${title}`);
+    }
+  }
+});
+
+test('every open action uses the plain /open link', () => {
+  for (const page of pages) {
+    const html = readFileSync(page, 'utf8');
+    const actions = attribute(html, /<a class="primary" href="([^"]+)">/g);
+    assert.ok(actions.length >= 1, page);
+    assert.deepEqual([...new Set(actions)], ['https://link.todayweather.ai/open'], page);
+    assert.match(html, /<li><h3>웹앱<\/h3>/, `${page}: the WebApp summary title stays unlinked`);
+  }
+});
+
 test('the share image, touch icon and root files are present', () => {
   const site = 'https://todayweather.ai/';
   for (const page of pages) {
