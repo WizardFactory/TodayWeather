@@ -36,7 +36,7 @@ From `android/`:
 
 Set `ANDROID_SERIAL` to an emulator serial before any install or device test; a connected phone must not be the target by accident.
 
-The Robolectric tests read their Android runtimes (one jar per SDK level in `@Config`, listed in `app/build.gradle.kts`) from `app/build/robolectric-runtimes`, where Gradle copies them: Robolectric runs offline and downloads nothing while the tests run. A test of an SDK level without a listed runtime fails naming the missing jar; add the version Robolectric asks for.
+The Robolectric tests read their Android runtimes (one jar per SDK level in `@Config`, listed in `app/robolectric-runtimes.txt`) from `android/.gradle/robolectric-runtimes`, where Gradle fetches the ones that are missing (`:app:copyRobolectricRuntimes`): Robolectric runs offline and downloads nothing while the tests run. CI keeps that directory in the Actions cache, keyed by the list, because Maven Central often refuses these large jars to CI runners (429). A test of an SDK level without a listed runtime fails naming the missing jar; add the version Robolectric asks for to the list.
 
 CI (`.github/workflows/android.yml`) runs the same build and tests twice: once after re-running the import tool, the corpus generator and the server route table generator and checking that they change nothing, and once in a checkout whose `client/` directory has been deleted.
 

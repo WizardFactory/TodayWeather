@@ -92,27 +92,36 @@ android {
     }
 }
 
-// Robolectric's Android runtimes (one per SDK level the tests name in @Config) come through Gradle, with its
-// retries and cache, and the tests read them offline. Left to itself Robolectric downloads them from Maven Central
-// while the tests run, and a refused download fails every Robolectric class (IOException in MavenArtifactFetcher).
-// The versions are those Robolectric 4.17 (gradle/libs.versions.toml) asks for; without one, the tests of its SDK
-// level fail naming the missing file. Each version resolves on its own: together Gradle would keep only the newest.
-val robolectricRuntimes = listOf(
-    "14-robolectric-10818077-i7", // SDK 34
-    "7.0.0_r1-robolectric-r1-i7", // SDK 24
-).map { version ->
-    configurations.detachedConfiguration(dependencies.create("org.robolectric:android-all-instrumented:$version"))
-        .apply { isTransitive = false }
-}
-val robolectricRuntimeDir = layout.buildDirectory.dir("robolectric-runtimes")
-val copyRobolectricRuntimes = tasks.register<Copy>("copyRobolectricRuntimes") {
-    from(robolectricRuntimes)
-    into(robolectricRuntimeDir)
+// Robolectric's Android runtimes (one per SDK level the tests name in @Config) are fetched by Gradle, kept in
+// android/.gradle/robolectric-runtimes, and read by the tests offline. Left to itself Robolectric downloads them
+// from Maven Central while the tests run, and a refused download fails every Robolectric class (IOException in
+// MavenArtifactFetcher). Maven Central refuses these large jars to CI runners often enough (429) that CI keeps the
+// directory in its cache, keyed by robolectric-runtimes.txt: a jar that is already there is not fetched again.
+// The versions are those Robolectric 4.17 (gradle/libs.versions.toml) asks for, one per line of that file; without
+// one, the tests of its SDK level fail naming the missing jar.
+val robolectricVersions = file("robolectric-runtimes.txt").readLines().map { it.substringBefore('#').trim() }.filter { it.isNotEmpty() }
+val robolectricRuntimeDir = rootProject.layout.projectDirectory.dir(".gradle/robolectric-runtimes")
+fun robolectricJar(version: String) = robolectricRuntimeDir.file("android-all-instrumented-$version.jar").asFile
+val copyRobolectricRuntimes = tasks.register("copyRobolectricRuntimes") {
+    description = "Fetches the Robolectric runtimes that android/.gradle/robolectric-runtimes does not have yet"
+    inputs.property("versions", robolectricVersions)
+    outputs.files(robolectricVersions.map(::robolectricJar))
+    doLast {
+        // Each version resolves on its own: together Gradle would keep only the newest.
+        for (version in robolectricVersions.filterNot { robolectricJar(it).isFile }) {
+            val jar = configurations.detachedConfiguration(dependencies.create("org.robolectric:android-all-instrumented:$version"))
+                .apply { isTransitive = false }.singleFile
+            val target = robolectricJar(version)
+            target.parentFile.mkdirs()
+            jar.copyTo(File(target.path + ".part"), overwrite = true)
+            File(target.path + ".part").renameTo(target)
+        }
+    }
 }
 tasks.withType<Test>().configureEach {
     dependsOn(copyRobolectricRuntimes)
     systemProperty("robolectric.offline", "true")
-    systemProperty("robolectric.dependency.dir", robolectricRuntimeDir.get().asFile.absolutePath)
+    systemProperty("robolectric.dependency.dir", robolectricRuntimeDir.asFile.absolutePath)
 }
 
 // A release package refuses Google's sample IDs, as client/scripts/build-release.mjs does.

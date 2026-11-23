@@ -1,0 +1,4 @@
+# The android-all-instrumented versions Robolectric 4.17 asks for, one per SDK level the tests name in @Config.
+# CI caches android/.gradle/robolectric-runtimes by the hash of this file (.github/workflows/android.yml).
+14-robolectric-10818077-i7 # SDK 34
+7.0.0_r1-robolectric-r1-i7 # SDK 24
