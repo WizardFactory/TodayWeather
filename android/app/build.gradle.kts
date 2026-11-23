@@ -1,3 +1,6 @@
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 import java.util.Properties
 
 plugins {
@@ -96,32 +99,61 @@ android {
 // android/.gradle/robolectric-runtimes, and read by the tests offline. Left to itself Robolectric downloads them
 // from Maven Central while the tests run, and a refused download fails every Robolectric class (IOException in
 // MavenArtifactFetcher). Maven Central refuses these large jars to CI runners often enough (429) that CI keeps the
-// directory in its cache, keyed by robolectric-runtimes.txt: a jar that is already there is not fetched again.
-// The versions are those Robolectric 4.17 (gradle/libs.versions.toml) asks for, one per line of that file; without
-// one, the tests of its SDK level fail naming the missing jar.
-val robolectricVersions = file("robolectric-runtimes.txt").readLines().map { it.substringBefore('#').trim() }.filter { it.isNotEmpty() }
-val robolectricRuntimeDir = rootProject.layout.projectDirectory.dir(".gradle/robolectric-runtimes")
-fun robolectricJar(version: String) = robolectricRuntimeDir.file("android-all-instrumented-$version.jar").asFile
+// directory in its cache, keyed by robolectric-runtimes.txt. That file lists each version with the SHA-256 of its
+// jar: a jar that is there with that hash is used as it is, any other is fetched again and must match, and a jar of
+// a version no longer listed is removed. Without a listed version the tests of its SDK level fail naming the jar.
+data class RobolectricRuntime(val version: String, val sha256: String)
+val robolectricRuntimes = file("robolectric-runtimes.txt").readLines().map { it.substringBefore('#').trim() }.filter { it.isNotEmpty() }
+    .map { line -> line.split(Regex("\\s+")).let { RobolectricRuntime(it[0], it[1].lowercase()) } }
+val robolectricRuntimeDir = rootProject.layout.projectDirectory.dir(".gradle/robolectric-runtimes").asFile
+// Resolution stays lazy: a FileCollection is resolved only when the task reads it for a jar that is missing.
+val robolectricDownloads = robolectricRuntimes.associate { runtime ->
+    // Each version resolves on its own: together Gradle would keep only the newest.
+    runtime.version to configurations.detachedConfiguration(dependencies.create("org.robolectric:android-all-instrumented:${runtime.version}"))
+        .apply { isTransitive = false }.incoming.files
+}
+fun sha256(file: File): String = MessageDigest.getInstance("SHA-256").let { digest ->
+    file.inputStream().use { input ->
+        val buffer = ByteArray(1 shl 16)
+        while (true) { val n = input.read(buffer); if (n < 0) break; digest.update(buffer, 0, n) }
+    }
+    digest.digest().joinToString("") { "%02x".format(it) }
+}
 val copyRobolectricRuntimes = tasks.register("copyRobolectricRuntimes") {
-    description = "Fetches the Robolectric runtimes that android/.gradle/robolectric-runtimes does not have yet"
-    inputs.property("versions", robolectricVersions)
-    outputs.files(robolectricVersions.map(::robolectricJar))
+    description = "Puts the listed Robolectric runtimes, with their recorded hashes, in android/.gradle/robolectric-runtimes"
+    val runtimes = robolectricRuntimes
+    val directory = robolectricRuntimeDir
+    val downloads = robolectricDownloads
+    inputs.property("runtimes", runtimes.map { "${it.version} ${it.sha256}" })
+    outputs.dir(directory)
     doLast {
-        // Each version resolves on its own: together Gradle would keep only the newest.
-        for (version in robolectricVersions.filterNot { robolectricJar(it).isFile }) {
-            val jar = configurations.detachedConfiguration(dependencies.create("org.robolectric:android-all-instrumented:$version"))
-                .apply { isTransitive = false }.singleFile
-            val target = robolectricJar(version)
-            target.parentFile.mkdirs()
-            jar.copyTo(File(target.path + ".part"), overwrite = true)
-            File(target.path + ".part").renameTo(target)
+        directory.mkdirs()
+        val wanted = runtimes.associateBy { "android-all-instrumented-${it.version}.jar" }
+        directory.listFiles().orEmpty().filter { it.isFile && it.name !in wanted }.forEach { it.delete() }
+        for ((name, runtime) in wanted) {
+            val target = File(directory, name)
+            if (target.isFile && sha256(target) == runtime.sha256) continue
+            val fetched = downloads.getValue(runtime.version).singleFile
+            val hash = sha256(fetched)
+            if (hash != runtime.sha256) {
+                throw GradleException("android-all-instrumented ${runtime.version}: fetched SHA-256 $hash, robolectric-runtimes.txt records ${runtime.sha256}")
+            }
+            // A file of this run's own, moved over the target in one step: no partial or shared temporary file.
+            val part = File.createTempFile("$name.", ".part", directory)
+            try {
+                fetched.copyTo(part, overwrite = true)
+                Files.move(part.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE)
+            } finally {
+                part.delete()
+            }
         }
     }
 }
 tasks.withType<Test>().configureEach {
     dependsOn(copyRobolectricRuntimes)
     systemProperty("robolectric.offline", "true")
-    systemProperty("robolectric.dependency.dir", robolectricRuntimeDir.asFile.absolutePath)
+    systemProperty("robolectric.dependency.dir", robolectricRuntimeDir.absolutePath)
 }
 
 // A release package refuses Google's sample IDs, as client/scripts/build-release.mjs does.

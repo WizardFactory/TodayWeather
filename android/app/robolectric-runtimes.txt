@@ -1,4 +1,6 @@
-# The android-all-instrumented versions Robolectric 4.17 asks for, one per SDK level the tests name in @Config.
-# CI caches android/.gradle/robolectric-runtimes by the hash of this file (.github/workflows/android.yml).
-14-robolectric-10818077-i7 # SDK 34
-7.0.0_r1-robolectric-r1-i7 # SDK 24
+# The android-all-instrumented versions Robolectric 4.17 asks for, one per SDK level the tests name in @Config, each
+# with the SHA-256 of its jar (equal to Maven Central's published SHA-512 when recorded). A jar in
+# android/.gradle/robolectric-runtimes with another hash is fetched again. CI caches that directory by the hash of
+# this file (.github/workflows/android.yml).
+14-robolectric-10818077-i7 3fdac2d463f431c6b8d83b9d0ca739e795de75fffedee648c6761bd4bd864701 # SDK 34
+7.0.0_r1-robolectric-r1-i7 57dc8d57a5d69adacf3aa4306aefbf147bd1621da347e20f3cf1f41c88a5dd49 # SDK 24
