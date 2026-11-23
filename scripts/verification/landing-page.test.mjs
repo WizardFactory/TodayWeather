@@ -165,8 +165,20 @@ test('the desktop store QR is the WebApp QR for the store fallback link', () => 
   assert.equal(/viewBox="([^"]+)"/.exec(svg)[1], viewBox);
   assert.equal(/<path d="([^"]+)"/.exec(svg)[1], path);
   for (const page of pages) {
-    assert.match(readFileSync(page, 'utf8'), /<li class="scan">.*src="\.\.\/assets\/store-qr\.svg"/, page);
+    const html = readFileSync(page, 'utf8');
+    const items = html.slice(html.indexOf('<ul class="platforms">'), html.indexOf('</ul>', html.indexOf('<ul class="platforms">')))
+      .match(/<li[^>]*>/g);
+    assert.deepEqual(items, ['<li>', '<li>', '<li>', '<li class="scan">'], `${page}: the QR is the fourth summary item`);
+    assert.match(html, /<li class="scan">.*src="\.\.\/assets\/store-qr\.svg"/, page);
   }
+  // Shown only on wide windows with a mouse or trackpad; hidden everywhere else.
+  const css = readFileSync(join(landing, 'landing.css'), 'utf8');
+  const shows = [...css.matchAll(/\.scan \{ display: block; \}/g)];
+  assert.match(css, /^\.scan \{ display: none; \}$/m);
+  assert.equal(shows.length, 1);
+  const query = css.lastIndexOf('@media', shows[0].index);
+  assert.equal(css.slice(query, css.indexOf('{', query)).trim(), '@media (min-width: 64rem) and (hover: hover) and (pointer: fine)');
+  assert.ok(css.indexOf('\n}', query) > shows[0].index, 'the display rule sits inside that media query');
 });
 
 test('every open action uses the plain /open link', () => {
