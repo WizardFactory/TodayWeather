@@ -7,6 +7,12 @@ Air forecasts, when available: Korea Environment Corporation or Anyang Universit
 Sunrise and sunset: Korea Astronomy and Space Science Institute (KASI).
 Overseas weather: Visual Crossing — https://www.visualcrossing.com/
 
+Official sources
+Korea Meteorological Administration (KMA): https://www.kma.go.kr
+AirKorea (Korea Environment Corporation): https://www.airkorea.or.kr
+Korea Environment Corporation: https://www.keco.or.kr
+Korea Astronomy and Space Science Institute (KASI): https://astro.kasi.re.kr
+
 Weather and air information can be inaccurate, incomplete or delayed; forecasts can differ from actual conditions. TodayWeather is not an official government app and does not replace official weather warnings, emergency alerts, evacuation instructions or professional advice. Check the relevant authorities' latest guidance for safety-critical decisions.
 
 Home Screen widgets: a small widget shows the current temperature and today's high and low; a medium widget adds a daily or hourly forecast. Choose Classic Color, Morning Sky or Temperature Curve, and set a place for each widget. Turn on Hourly forecast in a medium Temperature Curve widget to compare the forecast with the previous day's temperatures at the same hours. Open the app at least once every five days to keep the widgets updated.

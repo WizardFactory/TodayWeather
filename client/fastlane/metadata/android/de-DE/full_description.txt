@@ -7,6 +7,12 @@ Luftvorhersagen, sofern verfügbar: Korea Environment Corporation oder das Insti
 Sonnenaufgang und Sonnenuntergang: Korea Astronomy and Space Science Institute (KASI).
 Wetter außerhalb Koreas: Visual Crossing — https://www.visualcrossing.com/
 
+Offizielle Quellen
+Korea Meteorological Administration (KMA): https://www.kma.go.kr
+AirKorea (Korea Environment Corporation): https://www.airkorea.or.kr
+Korea Environment Corporation: https://www.keco.or.kr
+Korea Astronomy and Space Science Institute (KASI): https://astro.kasi.re.kr
+
 Wetter- und Luftdaten können fehlerhaft, unvollständig oder verzögert sein; Vorhersagen können von den tatsächlichen Bedingungen abweichen. Diese App ist keine offizielle Behörden-App und ersetzt keine amtlichen Wetterwarnungen, Notfall- oder Evakuierungshinweise und keine fachliche Beratung. Beachte bei sicherheitsrelevanten Entscheidungen die aktuellen Hinweise der zuständigen Behörden.
 
 Startbildschirm-Widgets: Füge die Widgets Aktuelles Wetter, Vorhersage (stündlich oder täglich), Uhr und Wetter sowie Luftqualität hinzu. Vergrößere das Vorhersage- oder das Uhr-und-Wetter-Widget für mehr Vorhersagezeiträume. Wähle für jedes Widget den Stil Klassisch Schwarz, Morgenpapier oder Blaue Stunde, den Ort sowie automatische oder manuelle Aktualisierung. Öffne die App mindestens alle fünf Tage, damit die Widgets aktuell bleiben.
