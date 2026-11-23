@@ -66,6 +66,7 @@ struct AirPageView: View {
     var actions = AirPageActions()
     /// False: the blocks at the top without a scroll view (the screenshot tests render it).
     var scrolls = true
+    var trackingNotice: TrackingNotice?
     @Environment(\.shellInsets) private var shellInsets
 
     var body: some View {
@@ -88,6 +89,7 @@ struct AirPageView: View {
                 Spacer().frame(height: WeatherMetrics.gap)
                 if block == content.nativeAnchor { ForecastNativeSlot(tab: .air, theme: theme) }
             }
+            trackingNotice
         }
         Group {
             if scrolls {

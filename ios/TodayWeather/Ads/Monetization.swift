@@ -33,6 +33,7 @@ final class Monetization {
     @ObservationIgnored private var interstitial: ForecastInterstitial?
     @ObservationIgnored let analytics: UsageAnalytics
     @ObservationIgnored private let settings: AdsSettings?
+    @ObservationIgnored var readTracking: @MainActor () -> TrackingStatus = { GoogleAdsPlatform.trackingStatus }
     @ObservationIgnored private let openURL: @MainActor (URL) -> Void
     @ObservationIgnored private let clock = MainClock()
     @ObservationIgnored private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "admob")
@@ -91,6 +92,10 @@ final class Monetization {
     /// the tabs show; `connect` reads it from the app's launch (`AppLaunch.pageScreen`).
     var pageScreen: @MainActor () -> String? = { nil }
 
+    func refreshTrackingStatus() {
+        shell?.trackingStatus = readTracking()
+    }
+
     /// A new shell: the stored analytics choice applies, and the privacy rows and the screens connect.
     func attach(_ shell: ShellModel, observeInitialScreen: Bool = true) {
         self.shell = shell
@@ -113,6 +118,7 @@ final class Monetization {
         }
         analytics.start()
         shell.analyticsAllowed = analytics.choice
+        shell.onMenuOpen = { [weak self] in self?.refreshTrackingStatus() }
         analytics.onChoiceChange = { [weak shell] in shell?.analyticsAllowed = $0 }
         let previous = shell.onMenuRow
         shell.onMenuRow = { [weak self, weak shell] row in
@@ -120,6 +126,8 @@ final class Monetization {
             switch row {
             case .analytics: chooseAnalytics(shell)
             case .adPrivacy: openAdPrivacy(shell)
+            case .trackingPermission:
+                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
             case .privacyPolicy: openPolicy("privacy", shell)
             case .terms: openPolicy("terms", shell)
             default: previous(row)
@@ -133,6 +141,7 @@ final class Monetization {
     /// `$stateChangeSuccess` with the Cordova state names: S01 is `start`, the tabs `tab.<name>`, a settings page over
     /// the tabs `units` or `setting-radio` (IN-12; the Android `screenName`).
     private func observeScreens(_ shell: ShellModel) {
+        refreshTrackingStatus()
         let screen = withObservationTracking {
             (shell.screen, shell.selected, pageScreen())
         } onChange: { [weak self, weak shell] in
@@ -161,6 +170,9 @@ final class Monetization {
         let analytics = self.analytics
         let log = self.log
         let source: (any BannerConfigSource)? = AnalyticsGuard.firebaseConfigured ? FirebaseBannerConfigSource() : nil
+        platform.onTrackingRead = { [weak shell] status in
+            if shell?.trackingStatus != status { shell?.trackingStatus = status }
+        }
         let config = RemoteBannerConfig(source: source, clock: clock, log: { log.notice("\($0, privacy: .public)") })
         self.platform = platform
         self.config = config
