@@ -9,7 +9,6 @@
   <title>오늘날씨 · 어제와 비교하는 날씨</title>
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#1a2536" media="(prefers-color-scheme: dark)">
-  <meta name="apple-itunes-app" content="app-id=1041700694">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="오늘날씨">
   <meta property="og:locale" content="ko_KR">
@@ -21,7 +20,7 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="오늘날씨. 어제보다 오늘, 뭘 입을까요? 오늘과 어제 기온을 비교하는 시간별 차트.">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="icon" href="../../web/public/icon.svg">
+  <link rel="icon" type="image/png" sizes="128x128" href="../assets/app-icon.png">
   <link rel="apple-touch-icon" href="https://todayweather.ai/apple-touch-icon.png">
   <link rel="stylesheet" href="../../packages/design-tokens/generated/tokens.css">
   <link rel="stylesheet" href="../landing.css">
@@ -29,7 +28,7 @@
 <body>
   <a class="skip" href="#main">본문 바로가기</a>
   <header class="mast wrap">
-    <a class="brand" href="#main"><img alt="" width="32" height="32" src="../../web/public/icon.svg">오늘날씨</a>
+    <a class="brand" href="#main"><img alt="" width="32" height="32" src="../assets/app-icon.png">오늘날씨</a>
     <nav aria-label="페이지 메뉴"><a href="#features">차트</a><a href="#widgets">위젯</a><a href="#platforms">웹앱</a><a href="#reviews">리뷰</a></nav>
   </header>
   <main id="main">
@@ -87,8 +86,9 @@
         </figure>
         <ul class="platforms">
           <li><h3>웹앱</h3><p>설치 없이 브라우저에서 열어요. 연결이 끊겨도 마지막으로 받은 날씨를 볼 수 있어요.</p></li>
-          <li><h3><a href="https://link.todayweather.ai/open?fallback=store&amp;store=ios">iPhone 앱 <span aria-hidden="true">↗</span></a></h3><p>어제와 비교하는 홈 화면 위젯, 요일과 시각을 정해 받는 날씨 알림과 악천후 알림.</p></li>
-          <li><h3><a href="https://link.todayweather.ai/open?fallback=store&amp;store=android">Android 앱 <span aria-hidden="true">↗</span></a></h3><p>도시 시계 홈 화면 위젯, 요일과 시각을 정해 받는 날씨 알림과 악천후 알림.</p></li>
+          <li><h3><a href="https://apps.apple.com/kr/app/id1041700694">iPhone 앱 <span aria-hidden="true">↗</span></a></h3><p>어제와 비교하는 홈 화면 위젯, 요일과 시각을 정해 받는 날씨 알림과 악천후 알림.</p></li>
+          <li><h3><a href="https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather">Android 앱 <span aria-hidden="true">↗</span></a></h3><p>도시 시계 홈 화면 위젯, 요일과 시각을 정해 받는 날씨 알림과 악천후 알림.</p></li>
+          <li class="scan"><h3>휴대폰으로 받기</h3><div class="scan-row"><img src="../assets/store-qr.svg" width="96" height="96" alt="오늘날씨 앱 스토어로 이동하는 QR 코드"><p>카메라로 QR 코드를 찍으면 내 휴대폰에 맞는 스토어가 열려요.</p></div></li>
         </ul>
       </div>
     </section>

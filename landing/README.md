@@ -32,6 +32,16 @@ an image fails and then uses the fallback fonts.
 (1200 × 630, rendered from the hero copy and hourly capture). The page's
 Open Graph and icon tags point at these production URLs.
 
+## Icons and store QR
+
+The page icon, `favicon.ico` (16, 32 and 48 px) and the share image use the
+store app icon, [`icon-1024.png`](../ios/TodayWeather/Assets.xcassets/AppIcon.appiconset/icon-1024.png),
+masked to rounded corners (22.37 % radius). `apple-touch-icon.png` stays square
+because iOS applies its own mask. `assets/store-qr.svg` is the WebApp's desktop
+QR ([`AppQrCode.tsx`](../web/src/AppQrCode.tsx)) for
+`https://link.todayweather.ai/open?fallback=store`; the landing check fails if
+the two drift apart. It is shown only on wide windows with a mouse or trackpad.
+
 ## Product captures
 
 | Landing asset | Source | Visible evidence |

@@ -141,18 +141,31 @@ test('the stylesheet loads the subset font beside it', () => {
   assert.deepEqual(attribute(css, /url\("([^"]+)"\)/g), ['assets/landing-sans.woff2']);
 });
 
-test('the native summaries link to the matching store fallback', () => {
-  const expected = new Map([['iPhone 앱', 'ios'], ['Android 앱', 'android']]);
+test('the native summaries link straight to their stores', () => {
+  const expected = new Map([
+    ['iPhone 앱', 'https://apps.apple.com/kr/app/id1041700694'],
+    ['Android 앱', 'https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather'],
+  ]);
   for (const page of pages) {
     const html = readFileSync(page, 'utf8');
-    const links = [...html.matchAll(/<h3><a href="(https:\/\/link\.todayweather\.ai\/[^"]+)">([^<]+)</g)]
-      .map((match) => [match[2].trim(), new URL(match[1].replace(/&amp;/g, '&'))]);
-    assert.deepEqual(links.map(([title]) => title).sort(), [...expected.keys()].sort(), page);
-    for (const [title, url] of links) {
-      assert.equal(url.pathname, '/open', `${page}: ${title}`);
-      assert.equal(url.searchParams.get('fallback'), 'store', `${page}: ${title}`);
-      assert.equal(url.searchParams.get('store'), expected.get(title), `${page}: ${title}`);
-    }
+    const links = [...html.matchAll(/<h3><a href="([^"]+)">([^<]+)</g)]
+      .map((match) => [match[2].trim(), match[1].replace(/&amp;/g, '&')]);
+    assert.deepEqual(new Map(links), expected, page);
+    assert.doesNotMatch(html, /name="apple-itunes-app"/, `${page}: no Smart App Banner on the landing`);
+  }
+});
+
+test('the desktop store QR is the WebApp QR for the store fallback link', () => {
+  const source = readFileSync(join(root, 'web/src/AppQrCode.tsx'), 'utf8');
+  assert.match(source, /encoding https:\/\/link\.todayweather\.ai\/open\?fallback=store\n/);
+  const viewBox = /APP_QR_VIEWBOX = "([^"]+)"/.exec(source)[1];
+  const path = [...source.slice(source.indexOf('APP_QR_PATH ='), source.indexOf('export function')).matchAll(/"([^"]+)"/g)]
+    .map((match) => match[1]).join('');
+  const svg = readFileSync(join(landing, 'assets/store-qr.svg'), 'utf8');
+  assert.equal(/viewBox="([^"]+)"/.exec(svg)[1], viewBox);
+  assert.equal(/<path d="([^"]+)"/.exec(svg)[1], path);
+  for (const page of pages) {
+    assert.match(readFileSync(page, 'utf8'), /<li class="scan">.*src="\.\.\/assets\/store-qr\.svg"/, page);
   }
 });
 
