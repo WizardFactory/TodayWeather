@@ -52,11 +52,18 @@ internal class ManualWalk(val rule: AndroidComposeTestRule<*, MainActivity>) {
         if (!system) rule.waitForIdle()
         Thread.sleep(600)
         assertFalse("manual never opts into analytics", app.analytics.choice.value)
+        val ads = adsOff()
+        if (ads) {
+            assertEquals("an ad-free capture never starts the Ads SDK", 0, NoAdsPlatform.sdkStarts.get())
+            if (!system) assertTrue("an ad-free capture shows no native ad",
+                rule.onAllNodesWithTag("admob-native-card", useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+        }
         val shot = checkNotNull(automation.takeScreenshot()) { "No screenshot: $name" }
         val dir = File(rule.activity.getExternalFilesDir(null), "manual").apply { mkdirs() }
         File(dir, "$name.png").outputStream().use { check(shot.compress(Bitmap.CompressFormat.PNG, 100, it)) }
         File(dir, "$name.json").writeText(JSONObject().put("name", name).put("capturedAt", java.time.Instant.now().toString())
             .put("width", shot.width).put("height", shot.height).put("analytics", false)
+            .put("ads", if (ads) "off" else "debug-test-units")
             .put("pushTransport", "intercepted").put("recordedPushRequests", app.sent.size)
             .put("language", rule.activity.resources.configuration.locales.toLanguageTags()).toString(2))
         shot.recycle()
@@ -75,6 +82,26 @@ internal class ManualWalk(val rule: AndroidComposeTestRule<*, MainActivity>) {
         assertTrue("weather has a current observation", app.weather.weather.value.getValue(WeatherRepository.key(place)).weather.containsKey("currentWeather"))
     }
     fun tab(tab: Tab) { tap(ShellTags.tab(tab)); Thread.sleep(800) }
+    /** The launcher's confirmation of a pinned widget: its add button, found by label in the launcher's window. */
+    fun launcherAdd() {
+        automation.serviceInfo = automation.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
+        val labels = listOf("홈 화면에 추가", "추가", "Add to home screen", "Add automatically", "Add", "ホーム画面に追加", "追加")
+        val deadline = System.currentTimeMillis() + 20_000
+        var seen = emptyList<String>()
+        while (System.currentTimeMillis() < deadline) {
+            val nodes = automation.windows.mapNotNull { it.root }.filter { it.packageName?.toString()?.contains("launcher") == true }
+                .flatMap { root -> generateSequence(listOf(root)) { level -> level.flatMap { n -> (0 until n.childCount).mapNotNull { n.getChild(it) } }.ifEmpty { null } }.flatten() }
+            seen = nodes.mapNotNull { n -> n.text?.toString()?.let { "$it|${n.viewIdResourceName}|${n.isClickable}" } }
+            val button = labels.firstNotNullOfOrNull { label -> nodes.firstOrNull { it.isClickable && it.text?.toString() == label } }
+            if (button != null) {
+                check(button.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                Thread.sleep(2500)
+                return
+            }
+            Thread.sleep(400)
+        }
+        error("Launcher add button absent; visible texts: $seen")
+    }
     fun permission(id: String, name: String? = null) {
         automation.serviceInfo = automation.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
         val deadline = System.currentTimeMillis() + 20_000

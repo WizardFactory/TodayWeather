@@ -1,6 +1,6 @@
 {
  "title": "TodayWeather for iOS: native app user manual",
- "scenario": "TodayWeather 2.0.0 preview on an iPhone simulator. Korean screens with English instructions. The pull-to-refresh, saved-place search and nationwide wind examples use sample data. Other screens show live examples from 17 November 2026.",
+ "scenario": "TodayWeather 2.0 on an iPhone simulator. Korean screens with English instructions. The pull-to-refresh example uses sample data. Other screens show live examples from 22 November 2026, captured without ads.",
  "steps": [
   {
    "title": "Read the first-launch notice",
@@ -293,7 +293,7 @@
    "title": "Share the weather",
    "instruction": "On a weather page tap the share button at the top right.",
    "screenshot": "screenshots/41-share-sheet.png",
-   "caption": "iOS's share sheet with the place's weather text and the app link.",
+   "caption": "The share button is at the top right of the weather pages. In this capture the simulator did not open the share sheet within two minutes (see the reader notes).",
    "expected": "Choose an app, or close the sheet. No message was sent for this manual."
   }
  ]

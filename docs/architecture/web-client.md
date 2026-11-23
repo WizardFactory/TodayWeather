@@ -92,6 +92,15 @@ The notification route explains that browser notifications are unavailable, reco
 
 The [static recipe](../../infra/web/static/README.md) prepares hosting only. No web server, notification store, timer, queue, VAPID secret or session cookie is part of the browser deployment. Node is required only by local/CI tooling.
 
+## Advertising (not yet integrated)
+
+The web client shows no ads and loads no ad script today. When ads are added, they must follow the rule the native apps use for ad-free captures (#3122). Manual and store screenshots are taken without ads by the capture tooling, never by a switch in the shipped client:
+
+- One module owns every ad slot, ad script load and consent call; pages use only its slot component.
+- Its publisher and slot identifiers come only from build-time environment values. A build without them loads no ad script, makes no consent request and reserves no space, so the layout matches an empty slot.
+- No URL parameter, `localStorage`/IndexedDB value or other runtime setting turns ads off in a deployed build.
+- Browser captures for manuals and stores build without those values; captures that document ads use the ad network's test configuration.
+
 ## Verification and release boundaries
 
 The shell digest includes worker, manifest, icons, HTML and asset bytes. Unhashed reads use the current cache; previous caches are consulted only for old hashed assets. The CloudFront navigation function is exercised by the static browser suite. A first service-worker claim does not reload an already usable page; it preserves ongoing interaction. A later controller replacement reloads only the tab that pressed "업데이트" (marked in its `sessionStorage` key `tw.web.v1.update-requested`); other open tabs keep their state, drop their now-stale "새 버전이 준비됐습니다" offer (unless an even newer worker is waiting) and show "새 버전이 적용됐습니다. 새로고침하면 최신 화면을 볼 수 있습니다." with a "새로고침" button. "업데이트" with no waiting worker only hides the offer and sets no reload request, every page load clears a request left from before it, and a controller change consumes the request even in a page that had no controller yet (for example after a hard reload), so a later controller change cannot reload a tab whose user did not choose that update.
