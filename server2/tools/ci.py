@@ -88,7 +88,10 @@ def placement_commands(root, event):
     return [placement_command(event)]
 
 
-RUST_SHARDS = 3
+RUST_SHARDS = 6
+NEXTEST_ARCHIVE = 'reports/nextest/server2-tests.tar.zst'
+# Process-scoped: the shared archive carries no debug info (AGENTS build-artifact guidance).
+STAGE_ENV = {'rust-build': {'CARGO_PROFILE_DEV_DEBUG': '0', 'CARGO_PROFILE_TEST_DEBUG': '0'}}
 SHADOW_SIMULATION = 'tests/integration/test_shadow_simulation.py'
 # The heaviest simulation tests (local seconds, 2026-11-23: 124, 9 | 81, 37, 10 | 64, 62 |
 # 64, 57) are spread so each hosted shard stays near 130 s. Unlisted tests run in the last shard.
@@ -103,7 +106,7 @@ SHADOW_SHARDS = (
     ('test_seeded_runs_are_deterministic',
      'test_bucket_evidence_survives_an_operator_unreachable_at_the_deadline'),
 )
-HOSTED_STAGES = ('placement', 'python', 'gnu', 'musl', 'promote',
+HOSTED_STAGES = ('placement', 'python', 'gnu', 'musl', 'promote', 'rust-build',
                  *(f'rust-{k}' for k in range(1, RUST_SHARDS + 1)),
                  *(f'shadow-{k}' for k in range(1, len(SHADOW_SHARDS) + 1)))
 
@@ -131,17 +134,20 @@ def shadow_shard(path, shard):
 def stage_commands(root, event, stage):
     """Hosted stages; `all` keeps the serial local order of command_plan."""
     python = sys.executable
+    archive = str(root / NEXTEST_ARCHIVE)
+    if stage == 'rust-build':
+        # One test build for every shard; doc tests and the partition proof run here once.
+        return [[python, 'tools/test_placement.py'], [python, 'tools/test_ci.py'],
+                [python, 'tools/check_test_partitions.py', '--shards', str(RUST_SHARDS)],
+                ['cargo', 'test', '--locked', '--workspace', '--doc'],
+                ['mkdir', '-p', str(Path(archive).parent)],
+                ['cargo', 'nextest', 'archive', '--locked', '--workspace', '--archive-file', archive]]
     if stage.startswith('rust-'):
-        shard = int(stage.removeprefix('rust-'))
-        commands = []
-        if shard == 1:
-            commands += [[python, 'tools/test_placement.py'], [python, 'tools/test_ci.py'],
-                         [python, 'tools/check_test_partitions.py', '--shards', str(RUST_SHARDS)],
-                         ['cargo', 'test', '--locked', '--workspace', '--doc']]
-        # nextest partitions are disjoint and complete; doc tests run once above.
-        commands.append(['env', 'RUST_MIN_STACK=8388608', 'cargo', 'nextest', 'run', '--locked',
-                         '--workspace', '--no-fail-fast', '--partition', f'count:{shard}/{RUST_SHARDS}'])
-        return commands
+        # Extracting into this checkout recreates the build job's target path, which
+        # env!("CARGO_BIN_EXE_*") in the tests refers to.
+        return [['env', 'RUST_MIN_STACK=8388608', 'cargo-nextest', 'nextest', 'run', '--archive-file', archive,
+                 '--workspace-remap', '.', '--extract-to', '.', '--extract-overwrite', '--no-fail-fast',
+                 '--partition', f'count:{int(stage.removeprefix("rust-"))}/{RUST_SHARDS}']]
     if stage.startswith('shadow-'):
         source = Path(__file__).resolve().parents[1] / SHADOW_SIMULATION
         return [[python, SHADOW_SIMULATION, *shadow_shard(source, int(stage.removeprefix('shadow-')))]]
@@ -271,6 +277,7 @@ def main():
     if not commands:
         parser.error(f'{stage} has no commands on {sys.platform}')
     os.environ.setdefault('SERVER2_PYTHON', sys.executable)
+    os.environ.update(STAGE_ENV.get(stage, {}))
     for command in commands:
         print('+', ' '.join(command), flush=True)
         subprocess.run(command, check=True)
