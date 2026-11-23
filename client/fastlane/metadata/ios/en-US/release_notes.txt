@@ -1,1 +1,3 @@
-If you have not allowed tracking for personalized ads, the hourly, daily and air pages and the new "Tracking permission" menu row now open iOS Settings directly. Privacy items moved to the end of the menu.
+TodayWeather has Home Screen widgets. A small widget shows the current temperature and today's high and low; a medium widget adds an hourly or daily forecast. Choose the Classic Color, Morning Sky or Temperature Curve design.
+
+This version improves stability.
