@@ -27,7 +27,7 @@ A check that needs a private input, a physical device or store access belongs to
 
 ## Targets
 
-Durations are the wall time of successful pull-request runs read from GitHub Actions on 2026-11-23 (the last 12 to 20 runs of each workflow), queueing included.
+Durations are the wall time of successful pull-request runs read from GitHub Actions on 2026-11-23 (the last 12 to 20 runs of each workflow unless a row says otherwise), queueing included: from the run's creation to the completion of its successful attempt, so a rerun counts from the first attempt's creation.
 
 | Target | PR CI | Measured | Release CI | State |
 | --- | --- | --- | --- | --- |
@@ -68,14 +68,14 @@ Release CI is [Android release verification](../../.github/workflows/android-rel
 Start a run for a commit and read its result:
 
 ```sh
-gh workflow run android-release.yml --ref master -f ref=<full SHA>
+gh workflow run android-release.yml --ref <branch or tag at that commit> -f ref=<full SHA>
 gh run list --workflow android-release.yml --limit 5
 gh run view <run id> --json conclusion,jobs --jq '.conclusion, (.jobs[] | "\(.name): \(.conclusion)")'
 ```
 
 A device job can fail for a reason of the hosted runner: an emulator that does not finish booting, or a slow one on which a test's own time limit runs out. Run the failed jobs again once with `gh run rerun <run id> --failed`; a job that fails again is a finding to look into, not something to rerun until it passes.
 
-The run's title and its `Verified commit` job name the commit. `ref` is required and must be the full 40-character SHA of the commit that gets checked out: a run of a branch name would not say which commit it verified, so it fails. The nightly run starts at 02:30 Asia/Seoul and does nothing when no input of the Android PR workflow (the paths that start it: `android/`, the client sources it imports, the server routes it reads) and neither workflow changed since the last passed nightly run.
+The run's title and its `Verified commit` job name the commit. `ref` is required and must be the full 40-character SHA of the commit that gets checked out: a run of a branch name would not say which commit it verified, so it fails. `--ref` must point at that same commit, because the jobs, the called PR workflow included, are those of the commit the run starts from; a run started from another commit fails at once. For the head of `master` use `--ref master -f ref=$(git rev-parse origin/master)`. For an earlier commit, push a branch at it first (`git push origin <full SHA>:refs/heads/verify/<name>`) and start the run from that branch. The nightly run starts at 02:30 Asia/Seoul and does nothing when no input of the Android PR workflow (the paths that start it: `android/`, the client sources it imports, the server routes it reads) and neither workflow changed since the last passed nightly run.
 
 The suites that need a Cordova APK, the Firebase configuration, the production server, a Play Store image, an emulator of the reference captures' type, a physical device or the signed release APK are not in release CI. They are the manual gates of the [Android release runbook](../operations/android-release.md#manual-gates).
 
@@ -93,16 +93,15 @@ Release CI is [iOS release verification](../../.github/workflows/ios-release.yml
 | Job | What it checks |
 | --- | --- |
 | PR checks on the commit | The PR job above, on the verified commit |
-| App-hosted suites on the simulator | `xcodebuild test` of the `TodayWeather` scheme: every suite of the shared scheme, new tests included, without a selector |
+| App-hosted suites on the simulator | `xcodebuild test` of the `TodayWeather` scheme without a selector, so new tests run too. Tests that need production access or a Cordova build (`AirLiveTests`, `ProductionNationTests`, `CordovaUpgradeTests`) skip without their variables, as they did before |
 | Verified commit | Fails unless both jobs passed, and names the commit |
 
-Start it and read it as for Android: `gh workflow run ios-release.yml --ref master -f ref=<full SHA>`. The nightly run starts at 03:00 Asia/Seoul and does nothing when no input of the iOS PR workflow and neither workflow changed since the last passed nightly run.
+Start it and read it as for Android, from a branch or tag at the commit: `gh workflow run ios-release.yml --ref <branch or tag> -f ref=<full SHA>`. The nightly run starts at 03:00 Asia/Seoul and does nothing when no input of the iOS PR workflow and neither workflow changed since the last passed nightly run.
 
-**Before merging an iOS pull request that changes what the app draws** (a view, a layout, a font, an image, a screenshot reference or a tolerance), run iOS release verification on its head and link the passed run in the pull request:
+**Before merging an iOS pull request that can change what the app draws**, run iOS release verification on its head and link the passed run in the pull request. This covers a view, a layout, a font, an image, a screenshot reference or a tolerance, and also logic whose output appears on screen (formatting, units, texts, the data a page shows), even when package tests cover it:
 
 ```sh
 gh workflow run ios-release.yml --ref <branch> -f ref=<full SHA of the head>
 ```
 
-PR CI no longer runs the screenshot suites, so this run is what keeps a visual regression out of `master`. Pull requests that change only logic covered by the package tests, tools or documentation do not need it; the nightly run covers them.
-
+PR CI no longer runs the screenshot suites, so this run is what keeps a visual regression out of `master`. The branch must be in this repository and contain `ios-release.yml`. A branch made before the workflow existed merges `master` first. For a pull request from a fork, a maintainer pushes its head to a branch here (`git push origin <full SHA>:refs/heads/verify/<name>`) and runs it from there. Only a change that cannot alter what is drawn may skip it: tools, documents, CI, and tests that do not touch rendering. The nightly run catches the rest, for changes under the iOS PR workflow's paths.

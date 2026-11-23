@@ -50,12 +50,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           REQUESTED: ${{ inputs.ref }}
+          RUN_COMMIT: ${{ github.sha }}
         run: |
           sha=$(git rev-parse HEAD)
           if [ "$EVENT" = workflow_dispatch ]; then
             # A dispatch names its commit: a branch, a tag or a short SHA would not say which commit was verified.
             if ! printf '%s' "$REQUESTED" | grep -Eq '^[0-9a-f]{40}$' || [ "$REQUESTED" != "$sha" ]; then
               echo "ref must be the full 40-character SHA of the commit to verify; got '$REQUESTED', checked out $sha" >&2
+              exit 1
+            fi
+            # The jobs below, the called PR workflow included, are defined by the commit the run was started from
+            # (--ref). Only when that is the verified commit do its own checks run on it.
+            if [ "$RUN_COMMIT" != "$sha" ]; then
+              echo "start the run from a branch or tag at $sha (gh workflow run ... --ref <branch or tag>); it was started from $RUN_COMMIT" >&2
               exit 1
             fi
           fi

@@ -612,7 +612,7 @@ The build and the tests run without private inputs. They stay outside Git (ignor
 ## App Store release (IN-19)
 
 Archive only a commit for which iOS release verification has passed
-(`gh workflow run ios-release.yml --ref master -f ref=<full SHA>`, [PR CI and release CI](../docs/development/ci-tiers.md#ios)),
+(`gh workflow run ios-release.yml --ref <branch or tag at the commit> -f ref=<full SHA>`, [PR CI and release CI](../docs/development/ci-tiers.md#ios)),
 and record the run with the release; tag it as in [GitHub Releases](../docs/operations/github-releases.md).
 
 Use the existing TodayWeather App Store record (Apple ID 1041700694), bundle ID

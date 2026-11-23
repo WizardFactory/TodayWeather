@@ -86,7 +86,7 @@ The local sample ran 379.30 seconds faster (57.8%). The sample uses the same tes
 
 - [iOS](../.github/workflows/ios.yml) is one macOS job. It runs the import and generator freshness check in the full checkout, removes the legacy directories, then runs `swift test` and `build-for-testing` of the app, its app-hosted test bundle and the UI tests. No simulator boots.
 - [iOS release verification](../.github/workflows/ios-release.yml) reruns that job on the commit. It then runs the whole `TodayWeather` scheme on the simulator in the standalone checkout, the screenshot suites and the size and language matrix included, and uploads the comparison images on a failure.
-- It runs on dispatch for a full SHA and nightly when an input of the iOS PR workflow changed. A pull request that changes what the app draws runs it on its head before merge.
+- It runs on dispatch for a full SHA, started from a branch or tag at that commit, and nightly when an input of the iOS PR workflow changed. A pull request that can change what the app draws runs it on its head before merge.
 - The earlier two-job layout stays in the history as the rollback: revert the commit that introduced `ios-release.yml`.
 
 **Coverage.** Nothing is dropped. The freshness check, the standalone build, the macOS package tests and UI-test compilation stay in PR CI. The full checkout's simulator run was a subset of the standalone run: the same scheme without the matrix. Its only additional property was that the tests passed with `client/` present, and no test reads `client/`. Release CI runs the standalone superset. New tests run automatically, because the release job runs the scheme without selectors.
@@ -94,5 +94,5 @@ The local sample ran 379.30 seconds faster (57.8%). The sample uses the same tes
 **Acceptance for this step.**
 
 1. PR CI on this branch finishes in minutes: one macOS job, compared with the 43–51 min of job time and the queueing before.
-2. iOS release verification passes on the branch head, with every app-hosted suite and the matrix run.
+2. iOS release verification passes on the branch head, with every app-hosted suite and the matrix run (tests that need production access or a Cordova build skip without their variables, as before).
 3. A stale generated asset fails the PR job. A build that reads a removed directory fails it. A screenshot mismatch fails release CI and uploads the images.
