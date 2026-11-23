@@ -196,7 +196,7 @@ Use only tested GA4 endpoint origins. Verify CSP on the actual browser routes, i
   - `<html lang="{lang}">`
   - `<link rel="canonical" href="https://todayweather.ai/{lang}/">`
   - `<link rel="alternate" hreflang="{l}" href="https://todayweather.ai/{l}/">` for all 7 languages plus `<link rel="alternate" hreflang="x-default" href="https://todayweather.ai/en/">`.
-  - Localized `<title>`, `<meta name="description">`, `og:title`, `og:description`, `og:url`, `og:locale`, `og:image` (absolute `https://todayweather.ai/og/...`), and `twitter:card=summary_large_image`.
+  - Localized `<title>`, `<meta name="description">`, `og:title`, `og:description`, `og:url`, `og:locale`, `og:image` (absolute `https://todayweather.ai/og/...`, named with the first eight hex digits of the image's SHA-256 so that a changed image gets a new URL past messenger preview caches), and `twitter:card=summary_large_image`.
   - Structured data describing `SoftwareApplication` and `Organization`. Validate the markup and browser behavior under the deployed CSP.
 - `/robots.txt`: Allows crawling of `/ko/`, `/en/`, `/ja/`, `/de/`, `/fr/`, `/pt/`, `/es/`, `/mobile/`, references `Sitemap: https://todayweather.ai/sitemap.xml`.
 - `/sitemap.xml`: Lists all 7 canonical locale URLs with `xhtml:link` `hreflang` alternates (and `/mobile/*` policy pages if desired).
