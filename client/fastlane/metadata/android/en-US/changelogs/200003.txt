@@ -1,0 +1,3 @@
+Home-screen widgets are here: add Current weather, Forecast (hourly or daily), Clock and weather, and Air quality widgets to see the weather on your home screen.
+
+Hourly, Daily, Air and Saved Places reuse their ad cards when you return. Weather appears immediately when an ad is unavailable, and a late ad no longer shifts what you are reading.

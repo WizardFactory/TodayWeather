@@ -7,13 +7,25 @@ import {
 } from "@todayweather/core";
 
 export const LINK_ORIGIN = "https://link.todayweather.ai";
+export const APP_STORE_URL = "https://apps.apple.com/app/id1041700694";
+export const PLAY_STORE_URL =
+  "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather";
+export const FIXED_APP_QR_URL = `${LINK_ORIGIN}/open?fallback=store`;
+const ANDROID_PACKAGE = "net.wizardfactory.todayweather";
+
 type LinkView = "hourly" | "daily" | "air";
+export type MobilePlatform =
+  | "android"
+  | "ios"
+  | "ipados"
+  | "mobile"
+  | "desktop";
 const decimal = /^-?(?:\d+\.?\d*|\.\d+)$/;
 
 function nameHint(raw?: string | null) {
   const clean = raw
     ?.replace(/[\u0000-\u001f\u007f]/g, "")
-    .replace(/[\uD800-\uDFFF]/gu, "�")
+    .replace(/[\uD800-\uDFFF]/gu, "\uFFFD")
     .trim();
   return clean ? Array.from(clean).slice(0, 80).join("") : null;
 }
@@ -111,4 +123,170 @@ export function linkedWeatherPath(
   const path =
     view === "air" ? `/air/${segment}` : `/weather/${segment}/${view}`;
   return query.size ? path + "?" + query : path;
+}
+
+export function detectMobilePlatform(
+  userAgent: string,
+  maxTouchPoints = 0,
+): MobilePlatform {
+  if (/Android/i.test(userAgent)) return "android";
+  if (/iPhone|iPad|iPod/i.test(userAgent)) return "ios";
+  if (/Macintosh/i.test(userAgent) && maxTouchPoints > 1) return "ipados";
+  if (/Mobile/i.test(userAgent)) return "mobile";
+  return "desktop";
+}
+
+export type AppPrompt = "bar" | "qr" | "none";
+
+/**
+ * Mobile browsers get the "Open in app" bar, wide desktop windows get the
+ * fixed store QR. A narrow desktop window gets neither: its store link would
+ * resolve back to the web app. The installed PWA gets neither, so it does not
+ * prompt on every launch.
+ */
+export function appPromptFor(
+  platform: MobilePlatform,
+  { compact, standalone }: { compact: boolean; standalone: boolean },
+): AppPrompt {
+  if (standalone) return "none";
+  if (platform !== "desktop") return "bar";
+  return compact ? "none" : "qr";
+}
+
+function decodeSegment(segment: string) {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+/** The point of a coordinate place id (`p_<lat>_<lon>`, `placeId`), or undefined for another id or invalid coordinates. */
+export function coordinateIdPoint(
+  id: string | undefined,
+): { lat: number; lon: number } | undefined {
+  const match = id?.match(/^p_(-?\d+(?:\.\d+)?)_(-?\d+(?:\.\d+)?)$/);
+  if (!match) return;
+  try {
+    return coordinates(match[1], match[2]);
+  } catch {
+    return;
+  }
+}
+
+/**
+ * The place a weather or air route shows, as the screen chooses it: catalog cities only for a link arrival
+ * ([catalogOnlyRoute]); otherwise a saved place, a catalog city, or the point of a coordinate id that is not saved
+ * (`resolvePlace`), which has no name to share. Undefined when the screen shows no place.
+ */
+function routePlace(
+  places: Place[],
+  id: string,
+  catalogOnly: boolean,
+): Partial<Pick<Place, "id" | "name" | "lat" | "lon">> | undefined {
+  if (catalogOnly) return PLACES.find((p) => p.id === id);
+  return (
+    places.find((p) => p.id === id) ??
+    PLACES.find((p) => p.id === id) ??
+    coordinateIdPoint(id)
+  );
+}
+
+/** What the router knows about a link arrival's place: a catalog city, or a place the user has saved. */
+export type LinkPlaceKind = "catalog" | "saved";
+
+/**
+ * Whether a weather or air route shows catalog cities only: a link arrival (`from=link`) must never open an unrelated
+ * favorite with the same id, unless the router marked the place saved. The screen and its app link share this rule.
+ */
+export function catalogOnlyRoute(
+  search: string | URLSearchParams,
+  kind?: LinkPlaceKind,
+): boolean {
+  const params = typeof search === "string" ? new URLSearchParams(search) : search;
+  return kind === "catalog" || (params.get("from") === "link" && kind !== "saved");
+}
+
+export function canonicalLinkForRoute(
+  pathname: string,
+  search: string,
+  places: Place[],
+  /** The router state of a link arrival (`linkPlaceKind`), when there is one. */
+  kind?: LinkPlaceKind,
+): string {
+  const clean =
+    pathname.length > 1 && pathname.endsWith("/")
+      ? pathname.slice(0, -1)
+      : pathname;
+  const params = new URLSearchParams(search);
+
+  if (clean === "/nation/weather") return `${LINK_ORIGIN}/nation/weather`;
+  if (clean === "/nation/air") return `${LINK_ORIGIN}/nation/air`;
+  if (clean === "/warnings") return `${LINK_ORIGIN}/warnings`;
+
+  if (clean === "/loc") {
+    const parsed = parseCoordinateLink(params);
+    if (!parsed) return `${LINK_ORIGIN}/open`;
+    return shareLink(
+      { lat: parsed.lat, lon: parsed.lon, name: parsed.name ?? undefined },
+      parsed.view,
+      parsed.pollutant ?? undefined,
+    );
+  }
+
+  const weatherMatch = /^\/weather\/([^/]+)\/(hourly|daily|overview)$/.exec(
+    clean,
+  );
+  if (weatherMatch) {
+    const id = decodeSegment(weatherMatch[1]);
+    const view = weatherMatch[2] === "daily" ? "daily" : "hourly";
+    const place = routePlace(places, id, catalogOnlyRoute(params, kind));
+    return place ? shareLink(place, view) : `${LINK_ORIGIN}/open`;
+  }
+
+  const airMatch = /^\/air\/([^/]+)$/.exec(clean);
+  if (airMatch) {
+    const id = decodeSegment(airMatch[1]);
+    const place = routePlace(places, id, catalogOnlyRoute(params, kind));
+    return place
+      ? shareLink(place, "air", params.get("pollutant") ?? undefined)
+      : `${LINK_ORIGIN}/open`;
+  }
+
+  const placeMatch = /^\/place\/([^/]+)$/.exec(clean);
+  if (placeMatch) {
+    const id = decodeSegment(placeMatch[1]);
+    const city = PLACES.find((p) => p.id === id);
+    return city
+      ? shareLink(
+          city,
+          params.get("view") ?? undefined,
+          params.get("pollutant") ?? undefined,
+        )
+      : `${LINK_ORIGIN}/open`;
+  }
+
+  return `${LINK_ORIGIN}/open`;
+}
+
+export function appOpenHref(
+  canonicalUrl: string,
+  userAgent: string,
+  maxTouchPoints = 0,
+): string {
+  const safeUrl = canonicalUrl.startsWith(LINK_ORIGIN + "/")
+    ? canonicalUrl
+    : `${LINK_ORIGIN}/open`;
+  const platform = detectMobilePlatform(userAgent, maxTouchPoints);
+
+  if (platform === "android") {
+    const target = safeUrl.slice("https://".length);
+    return `intent://${target}#Intent;scheme=https;package=${ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(PLAY_STORE_URL)};end`;
+  }
+
+  const sep = safeUrl.includes("?") ? "&" : "?";
+  if (platform === "ipados") {
+    return `${safeUrl}${sep}fallback=store&store=ios`;
+  }
+  return `${safeUrl}${sep}fallback=store`;
 }
