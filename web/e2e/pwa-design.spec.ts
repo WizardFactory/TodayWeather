@@ -130,8 +130,14 @@ test("daily AM/PM conditions include column zero, merged icons and reading alter
   const columns = page.locator(".daily-columns .chart-column");
   await expect(columns).toHaveCount(6);
   await expect(columns.nth(0).locator("svg")).toHaveCount(2);
-  await expect(columns.nth(0)).toContainText("오전");
-  await expect(columns.nth(0)).toContainText("오후");
+  // Native: AM/PM icons stack without period words; their names stay readable.
+  await expect(
+    columns.nth(0).locator('.chart-condition[aria-label^="오전"]'),
+  ).toHaveCount(1);
+  await expect(
+    columns.nth(0).locator('.chart-condition[aria-label^="오후"]'),
+  ).toHaveCount(1);
+  await expect(columns.nth(0)).not.toContainText("오전");
   await expect(columns.nth(1).locator("svg")).toHaveCount(1);
   const daily = page.locator(".daily-chart");
   await daily.focus();
@@ -146,6 +152,113 @@ test("daily AM/PM conditions include column zero, merged icons and reading alter
   const row = page.locator(".daily-chart-panel tbody tr").last();
   await expect(row).toContainText("오전 맑음");
   await expect(row).toContainText("오후 비");
+});
+test("daily chart keeps the native cells: empty probability, two-digit day, a 10 px bar and a sized current dot without a line", async ({
+  page,
+}) => {
+  const raw = dailyFixture();
+  // 09-23 (today) has no probability; 10-01 checks the two-digit day.
+  raw.midData.dailyData = Array.from({ length: 9 }, (_, i) => ({
+    ...raw.midData.dailyData[0],
+    date: i < 8 ? `202609${23 + i}` : "20261001",
+    pop: i === 0 ? 0 : 60,
+  }));
+  await page.route(API + "/weather/**", (r) => r.fulfill({ json: raw }));
+  await page.goto("/weather/seoul/daily");
+  const daily = page.locator(".daily-chart");
+  const columns = daily.locator(".daily-columns .chart-column");
+  await expect(columns).toHaveCount(9);
+  await expect(columns.nth(8).locator(".chart-day-date")).toHaveText("01");
+  expect(
+    (await columns.nth(0).locator(".chart-probability").textContent())!.trim(),
+  ).toBe("");
+  await expect(columns.nth(1).locator(".chart-probability")).toHaveText("60%");
+  // No line runs through today's column until the user picks a day.
+  await expect(daily.locator(".now-line")).toHaveCount(0);
+  await expect(daily.locator("svg line:not(.chart-grid)")).toHaveCount(0);
+  await daily.focus();
+  await daily.press("ArrowRight");
+  await expect(daily).toHaveAttribute("data-cursor", "1");
+  await expect(daily.locator(".cursor-line")).toHaveCount(1);
+  // The pick does not follow the user to another place whose weather is
+  // already loaded (the chart stays mounted): load Busan, pick there, go back.
+  await page.evaluate(() => {
+    history.pushState({}, "", "/weather/busan/daily");
+    dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("부산");
+  await expect(columns).toHaveCount(9);
+  await expect(daily.locator(".cursor-line")).toHaveCount(0);
+  await daily.focus();
+  await daily.press("ArrowRight");
+  await expect(daily.locator(".cursor-line")).toHaveCount(1);
+  await page.goBack();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("서울");
+  await expect(daily.locator(".cursor-line")).toHaveCount(0);
+  const sizes = await daily.evaluate((el) => ({
+    bar: Number(el.querySelector("rect.range")!.getAttribute("width")),
+    dot: Number(el.querySelector("circle.now")!.getAttribute("r")),
+  }));
+  expect(sizes.bar).toBe(10);
+  expect(sizes.dot).toBe(7);
+  // The table keeps the dash for a missing probability.
+  await page.locator(".daily-chart-panel summary").click();
+  await expect(
+    page.locator(".daily-chart-panel tbody tr").first(),
+  ).toContainText("—");
+});
+test("daily chart opens with today third whenever the days do not all fit, and at the first day when they do", async ({
+  page,
+}) => {
+  const raw = dailyFixture();
+  // Today (09-23) is the sixth of 16 days.
+  raw.midData.dailyData = Array.from({ length: 16 }, (_, i) => ({
+    ...raw.midData.dailyData[0],
+    date: `2026${i < 13 ? "09" : "10"}${String(i < 13 ? 18 + i : i - 12).padStart(2, "0")}`,
+  }));
+  await page.route(API + "/weather/**", (r) => r.fulfill({ json: raw }));
+  for (const [width, fits] of [
+    [402, false],
+    [768, false],
+    [1024, false],
+    [1440, true],
+  ] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/weather/seoul/daily");
+    const daily = page.locator(".daily-chart");
+    await expect(daily.locator(".today-column")).toHaveCount(1);
+    await page.evaluate(() => document.fonts.ready);
+    const pos = await daily.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const cols = [...el.querySelectorAll(".chart-column")];
+      const today = cols.findIndex((c) => c.classList.contains("today-column"));
+      return {
+        scrollLeft: el.scrollLeft,
+        overflow: el.scrollWidth > el.clientWidth + 1,
+        // 1-based position of today among the columns from the left edge.
+        todayPosition:
+          today -
+          cols.findIndex((c) => c.getBoundingClientRect().right > box.left + 1) +
+          1,
+      };
+    });
+    expect(pos.overflow).toBe(!fits);
+    if (fits) expect(pos.scrollLeft).toBe(0);
+    else expect(pos.todayPosition).toBe(3);
+  }
+  // Today near the end of the days: the chart stops at its last scroll position.
+  raw.current = { ...raw.current, date: "20261002" };
+  await page.setViewportSize({ width: 402, height: 900 });
+  await page.goto("/weather/seoul/daily");
+  const daily = page.locator(".daily-chart");
+  await expect(daily.locator(".today-column")).toHaveCount(1);
+  await page.evaluate(() => document.fonts.ready);
+  const end = await daily.evaluate((el) => ({
+    scrollLeft: el.scrollLeft,
+    max: el.scrollWidth - el.clientWidth,
+  }));
+  expect(end.max).toBeGreaterThan(0);
+  expect(Math.abs(end.scrollLeft - end.max)).toBeLessThan(2);
 });
 test("chart route navigation scrolls and focuses on click, direct load and history", async ({
   page,
@@ -421,7 +534,7 @@ test("full mixed-day timeline, current observation, keyboard cursor and model ta
   expect(await page.locator(".chart-extras .chart-wind svg").count()).toBe(42);
   await page.locator(".chart-panel summary").click();
   expect(await page.locator(".chart-panel tbody tr").count()).toBe(42);
-  expect(await page.locator(".hourly-chart .now").count()).toBe(1);
+  expect(await page.locator(".hourly-chart .now-point").count()).toBe(1);
   expect(await page.locator(".daily-chart .now").count()).toBe(1);
   const stops = await page
     .locator(".daily-chart stop")
@@ -457,8 +570,15 @@ for (const width of [320, 402])
     await page.goto("/weather/seoul/hourly");
     await expect(page.locator(".hourly-chart")).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
+    // Native: every yesterday value is drawn and today's dot covers it when
+    // they meet, so only today's values and the legend must stay apart.
+    const yesterday = await page.locator(".hourly-chart").evaluate((el) => ({
+      points: el.querySelectorAll("svg > g:not(.current-marker) .yesterday-point").length,
+      values: el.querySelectorAll(".yesterday-value").length,
+    }));
+    expect(yesterday.values).toBe(yesterday.points);
     const collisions = await page.locator(".hourly-chart").evaluate((el) => {
-      const rects = [...el.querySelectorAll("text.chart-value")].map((e) =>
+      const rects = [...el.querySelectorAll("text.today-value")].map((e) =>
         e.getBoundingClientRect(),
       );
       const intersect = (a: DOMRect, b: DOMRect) =>
@@ -712,7 +832,47 @@ test("sidebar keeps single aria-current across routes, removes live-dot, normali
   }
 });
 
-test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible row on expand, and handles SVG clicks (#3114)", async ({
+test("an observation on a 3-hour column turns that dot red with readable text and stays distinct in forced colors", async ({
+  page,
+}) => {
+  // The fixture observation is at 09:00 with liveTime 0900: native sharp.
+  await page.route(API + "/weather/**", (r) =>
+    r.fulfill({ json: fixture.response }),
+  );
+  await page.goto("/weather/seoul/hourly");
+  const scroll = page.locator(".hourly-chart");
+  const dot = scroll.locator("svg > g:not(.current-marker) .today-point.now-point");
+  await expect(dot).toHaveCount(1);
+  await expect(scroll.locator(".current-marker")).toHaveCount(0);
+  await expect(dot).toHaveCSS("fill", "rgb(179, 38, 30)");
+  await expect(
+    dot.locator("xpath=following-sibling::*[contains(@class,'today-value')][1]"),
+  ).toHaveCSS("fill", "rgb(255, 255, 255)");
+  await page.emulateMedia({ forcedColors: "active" });
+  const fills = await scroll.evaluate((el) => {
+    const svg = el.querySelector("svg")!;
+    const probe = (color: string) => {
+      const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      t.style.fill = color;
+      svg.appendChild(t);
+      const value = getComputedStyle(t).fill;
+      t.remove();
+      return value;
+    };
+    const dot = el.querySelector(".today-point.now-point")!;
+    return {
+      now: getComputedStyle(dot).fill,
+      other: getComputedStyle(el.querySelector(".today-point:not(.now-point)")!).fill,
+      value: getComputedStyle(dot.nextElementSibling!).fill,
+      highlight: probe("Highlight"),
+      highlightText: probe("HighlightText"),
+    };
+  });
+  expect(fills.now).not.toBe(fills.other);
+  expect(fills.now).toBe(fills.highlight);
+  expect(fills.value).toBe(fills.highlightText);
+});
+test("hourly chart matches the native columns: three-hour rows from yesterday, seven per phone screen, current between columns; keeps visible row on expand and handles SVG clicks", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -725,7 +885,9 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
       ...p,
       date: `202609${String(day).padStart(2, "0")}`,
       time: String(hour * 100).padStart(4, "0"),
-      t3h: 10 + (i % 8),
+      // The day before yesterday is 20° colder, so yesterday's columns show
+      // their comparison values as text.
+      t3h: 10 + (i % 8) - (day === 21 ? 20 : 0),
       t1h: undefined,
       pop: 0,
       vec: 270,
@@ -743,8 +905,19 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
     wsd: 2.1,
     rn1: 0,
   }));
-  // Off-hour observation (00:15) with no pop should borrow 0% and not blow up chart width.
-  raw.current = { ...p, date: "20260923", time: "0015", t1h: 11, pop: undefined, vec: 290, wsd: 1.5 };
+  // Off-hour observation (00:15): a marker between columns, not a column.
+  // Yesterday's observation is missing (-50), which must not break yesterday's line.
+  raw.current = {
+    ...p,
+    date: "20260923",
+    time: "0015",
+    liveTime: "0015",
+    t1h: 11,
+    pop: undefined,
+    vec: 290,
+    wsd: 1.5,
+    yesterday: { ...p.yesterday, t1h: -50 },
+  };
   let fetchCount = 0;
   await page.route(API + "/weather/**", (r) => {
     fetchCount++;
@@ -759,35 +932,89 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
   await expect(scroll).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 
-  const metrics = await scroll.evaluate((el) => ({
-    scrollW: el.scrollWidth,
-    clientW: el.clientWidth,
-    scrollLeft: el.scrollLeft,
-  }));
-  expect(metrics.scrollW).toBeLessThan(5000);
-  expect(metrics.scrollW).toBeGreaterThan(metrics.clientW);
+  // Native: the short rows from yesterday (09-22) 00:00, none of the 1-hour rows.
+  const hours = page.locator(".hourly-columns .chart-hour");
+  await expect(hours).toHaveCount(24);
+  // Native KMA labels end a day at 24시.
+  await expect(hours.first()).toHaveText("24시");
+  expect(
+    (await hours.allTextContents()).every((h) => Number.parseInt(h) % 3 === 0),
+  ).toBe(true);
+  await expect(page.locator(".chart-y-axis")).toHaveCount(0);
 
-  // Current off-hour column borrows rain probability (0%, not —).
+  // Native: a seventh of the chart per column, the row before the current one at the left edge.
+  const metrics = await scroll.evaluate((el) => {
+    const sb = el.getBoundingClientRect();
+    const cols = [...el.querySelectorAll(".hourly-columns .chart-column")];
+    return {
+      clientW: el.clientWidth,
+      scrollLeft: el.scrollLeft,
+      column: cols[0].getBoundingClientRect().width,
+      visible: cols.filter((c) => {
+        const r = c.getBoundingClientRect();
+        return r.left >= sb.left - 1 && r.right <= sb.right + 1;
+      }).length,
+    };
+  });
+  expect(Math.abs(metrics.column - metrics.clientW / 7)).toBeLessThan(1);
+  expect(metrics.visible).toBe(7);
+  expect(Math.abs(metrics.scrollLeft - metrics.column * 7)).toBeLessThan(2);
+
+  // The current column is the 00:00 row; the observation sits halfway to 03:00.
+  await expect(page.locator(".hourly-columns .current-column .chart-hour")).toHaveText("24시");
   await expect(
     page.locator(".hourly-columns .current-column .chart-probability"),
   ).toHaveText("0%");
-
-  // Pinned Y-axis ticks stay visible inside the chart wrapper even after scrolling.
-  await scroll.evaluate((el) => {
-    el.scrollLeft += 400;
+  // Native: a filled red point (no ring or line) marks the observation.
+  // Native: a row's sky and probability sit on the boundary before its hour,
+  // which is where the between-column observation point is drawn.
+  const offsets = await scroll.evaluate((el) => {
+    const col = el.querySelectorAll(".hourly-columns .chart-column")[9];
+    const hour = col.querySelector(".chart-hour")!.getBoundingClientRect();
+    const prob = col.querySelector(".chart-probability")!.getBoundingClientRect();
+    return (hour.left + hour.width / 2) - (prob.left + prob.width / 2);
   });
-  const ticksVisible = await page.locator(".chart-plot-wrap").evaluate((wrap) => {
-    const wb = wrap.getBoundingClientRect();
-    const ticks = [...wrap.querySelectorAll(".chart-y-tick")];
-    return (
-      ticks.length === 3 &&
-      ticks.every((t) => {
-        const r = t.getBoundingClientRect();
-        return r.left >= wb.left - 1 && r.right <= wb.right + 1 && r.width > 0;
-      })
-    );
+  expect(Math.abs(offsets - metrics.column / 2)).toBeLessThan(1);
+  const marker = await scroll.evaluate((el) => {
+    const point = el.querySelector(".current-marker .now-point");
+    return point ? Number(point.getAttribute("cx")) : null;
   });
-  expect(ticksVisible).toBe(true);
+  await expect(scroll.locator(".current-marker .now-line")).toHaveCount(0);
+  // chart.now #e5484d (light), the native red current point.
+  await expect(scroll.locator(".current-marker .now-point")).toHaveCSS(
+    "fill",
+    "rgb(229, 72, 77)",
+  );
+  expect(marker).not.toBeNull();
+  expect(Math.abs(marker! - metrics.column * 9)).toBeLessThan(1);
+  // The observation is announced with the column before it and is in the table.
+  await expect(
+    page.locator('[data-weather-section="hourly"] .cursor-readout'),
+  ).toContainText("현재 오전 12:15 11°C");
+  await scroll.focus();
+  await scroll.press("ArrowRight");
+  await expect(
+    page.locator('[data-weather-section="hourly"] .cursor-readout'),
+  ).not.toContainText("현재");
+  await scroll.press("ArrowLeft");
+  await expect(
+    page.locator('[data-weather-section="hourly"] .cursor-readout'),
+  ).toContainText("현재 오전 12:15 11°C");
+  await expect(
+    scroll.locator("svg > g:not(.current-marker)").nth(8).locator("title"),
+  ).toContainText("현재 오전 12:15 11°C");
+  await page.locator('[data-weather-section="hourly"] details summary').click();
+  await expect(
+    page
+      .locator('[data-weather-section="hourly"] .data-table tbody tr')
+      .nth(8)
+      .locator("td")
+      .nth(2),
+  ).toHaveText("오전 12:15 11°");
+  await page.locator('[data-weather-section="hourly"] details summary').click();
+  expect(
+    (await scroll.locator(".yesterday-line").getAttribute("d"))!.match(/M/g),
+  ).toHaveLength(1);
 
   // Remember a column currently in viewport before expanding wind/humidity.
   const visibleBefore = await scroll.evaluate((el) => {
@@ -833,7 +1060,9 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
   const targetIdx = Math.max(0, visibleBefore);
   const hourlyHit = scroll.locator("svg g .chart-hit").nth(targetIdx);
   await hourlyHit.scrollIntoViewIfNeeded();
-  await hourlyHit.click();
+  // Keep the hit target clear of the bottom toast region.
+  await scroll.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await hourlyHit.click({ position: { x: 4, y: 8 } });
   await expect(scroll).toHaveAttribute("data-cursor", String(targetIdx));
 
   // Forced-colors (including dark high-contrast) resolves dot value fills to Canvas (PR1-R1).

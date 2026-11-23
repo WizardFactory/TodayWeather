@@ -22,8 +22,12 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: android-release-${{ github.event_name }}-${{ inputs.ref || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # As in the PR workflows (#3139): first attempts of a pull request's runs share a group and cancel older ones;
+  # re-runs, dispatches and nightly runs get their own group. The prefix is not github.workflow: android.yml, called
+  # below, takes github.workflow from this caller, and the same group for caller and callee would block or cancel
+  # the caller.
+  group: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('android-release-pr-{0}', github.event.pull_request.number) || format('android-release-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 jobs:
   scope:
     name: Commit to verify

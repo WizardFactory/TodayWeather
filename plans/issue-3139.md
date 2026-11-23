@@ -1,0 +1,64 @@
+# Server2 PR CI in minutes
+
+[Issue #3139](https://github.com/WizardFactory/TodayWeather/issues/3139) owns the outcome. #3099 and #3129 cut the median PR wait from 68.8 to 22.9 minutes. The goal is now a PR wait measured in single-digit minutes.
+
+## Measured starting point
+
+Run 45077032237 (PR #3138, 2026-11-22), with the 4-vCPU public-repository runner:
+
+| Job | Minutes | Dominant step |
+|---|---:|---|
+| `rust` | 27.3 | `cargo test --workspace`: compile about 4, `tests/domestic.rs` about 12–15 |
+| `python` | 25.5 | `test_shadow_simulation.py` 18.6, `test_shadow_supervisor.py` 5.0 |
+| `gnu` | 10.2 | release builds about 5, smoke and replays |
+| `musl` | about 11 | cold musl release build and artifact verification |
+
+Locally, `test_shadow_simulation.py` took 510 s, and seven of its 18 tests took 37–124 s each.
+
+## Decisions (AK, 2026-11-23)
+
+- Pull requests no longer build `server2-linux-musl-verified`. Pushes to `master` and manual runs build, re-check and publish it.
+- `rust` and `gnu` restore a Cargo cache that only `master` saves.
+
+## Change
+
+| Job | Event | Work |
+|---|---|---|
+| `placement` | all | Unchanged. |
+| `python` | all | Every offline Python suite except the shadow simulation. |
+| `shadow` × 4 | all | `test_shadow_simulation.py`, split by test name. `tools/ci.py` assigns the seven heavy tests to balance the shards near 130 s locally, and the last shard also takes every unlisted test. |
+| `rust` × 3 | all | `cargo nextest run --partition count:k/3`, plus `cargo test --doc`, `test_placement.py` and `test_ci.py` in shard 1. |
+| `gnu` | all | Unchanged commands, with the release Cargo cache. |
+| `musl` | push, manual | Unchanged musl commands and the candidate upload from #3129. |
+| `foundation` | all | Fails unless every required job succeeded. On pull requests it also requires `musl` to be skipped. On a push or manual run it also requires `musl` and `goldens` to succeed, then promotes and publishes the verified artifact. |
+
+Placement on a push checks every first-parent commit in the pushed range that changes a Server2 path. Each such commit is checked in its own worktree, against its own parent, with its own checker and the one declaration it adds or changes, so a push that carries several merged tasks is fully checked. A manual run accepts `base` and `declaration` inputs, so a run on `master` can name the task it checks.
+
+nextest runs each test in its own process, so an in-process lock no longer keeps tests apart. The domestic S3 test peer lock (`S3_PEERS`) becomes host-wide: it takes the in-process mutex and then an exclusive file lock in the temporary directory. Every holder, including those that reach it through an alias or `fixed_now`, is therefore serialised under both runners. The `integration` binary, whose three tests take an in-process `SERIAL`, runs in a nextest test group with one thread (`server2/.config/nextest.toml`).
+
+Shard 1 also runs `tools/check_test_partitions.py`. It proves that the nextest partitions are disjoint and together equal the tests that `cargo test --workspace` runs, excluding ignored and doc tests. A default filter, a target change or a broken partition count fails this check.
+
+The local default `tools/ci.sh` keeps the serial inventory, including `cargo test --workspace` and the whole simulation file. `tools/test_ci.py` proves that the hosted stages run every serial command exactly once, except those two. The nextest partitions replace the workspace test run, and the simulation shards cover every simulation test exactly once. nextest runs every test in its own process. It lists the same 1,428 tests that `cargo test` runs, and doc tests run separately.
+
+## Verification and adoption
+
+1. `test_ci.py`, `test_placement.py` (workflow pin and mutations) and placement pass. nextest partitions pass locally.
+2. On the PR, every hosted job passes, and `foundation` succeeds without building `musl`.
+3. Interleave at least three pairs against a control branch with the same source and the #3129 workflow. Report the PR wait, each job's duration and the summed runner minutes. Adopt only with a lower median.
+4. After merge, the first `master` push must publish a verified artifact that `promote_artifact.py` accepts.
+
+Revert the PR to restore the #3129 workflow.
+
+## Step 1 result (#3140, merged 2026-11-23)
+
+Measured with cold caches while several runs overlapped, the candidate took 16.7, 19.6, 28.0 and 25.4 minutes against 25.6, 29.7, 28.5 and 27.2 for the #3129 workflow. The first `master` push (run 45106001837) published a verified artifact whose revision and `server2` tree match the merge commit, with executable binaries, and saved the `test` and `release` Cargo caches. Three bottlenecks remained:
+
+- Each Rust shard built the tests itself, which took about 5 minutes cold.
+- The domestic S3 tests ran one at a time on each runner, which took 9–13 minutes per shard.
+- Jobs waited for runners while runs overlapped.
+
+## Step 2: one test build shared by six shards
+
+A `rust-build` job restores the `test-archive` cache and runs the placement and CI tool tests, the partition proof (now for 6 shards) and the doc tests. It then writes `cargo nextest archive` without debug info (process-scoped `CARGO_PROFILE_*_DEBUG=0`) and uploads it as a same-run artifact with one-day retention. Six `rust` shards download it and run `cargo-nextest nextest run --archive-file … --extract-to . --extract-overwrite --partition count:k/6` without compiling. Extracting into the checkout recreates the build job's `target` path, which `env!("CARGO_BIN_EXE_*")` in the tests refers to. Extracting elsewhere fails 3 of the binary-spawning tests locally, while in place they all pass. `foundation` also requires `rust-build`.
+
+`rust-build` restores and (on `master`) saves the Cargo cache under the stable `shared-key: test-archive`. Its debug-info-free build cannot reuse the earlier `rust` cache, so pull request runs before this merges build cold. Judge the shards on these runs; judge `rust-build` with the cache on the first pull requests after the merge. Adopt with lower PR waits than step 1 on comparable runs. Concurrent S3 tests per runner is a separate, later decision.

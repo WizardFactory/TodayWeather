@@ -315,10 +315,28 @@ not production. Provider API keys remain private in the hashed configuration.
 This lifecycle supports only the initial process; it does not automatically
 restart, replace a host or replenish a grant.
 
+### Private configuration and a failed start
+
+`DONGNAE_SECRET_KEYS` and `AIRKOREA_SECRET_KEYS` are JSON arrays of keys (`'["key"]'`). A bare key leaves the list empty; without a data.go.kr key the candidate with a KMA family exits at startup with `invalid gateway configuration`; the November 23 canary's first run stopped this way. Before `prepare`, check offline that each list in the private configuration parses as a JSON array and that `DONGNAE_SECRET_KEYS` holds at least one usable key: a string of at least 20 characters that is not a placeholder. An empty `AIRKOREA_SECRET_KEYS` list starts but leaves the AirKorea path disabled. Do not start the candidate against real settings for this check: a KMA candidate reaches S3 and providers as soon as it starts.
+
+When the install was recorded (`host-install` in the journal) but failed before any sample exists, `run` reports `acquisition_failed` and `finish` returns `awaiting_evidence`: it keeps the instance until paired evidence is verified or the 170-hour deadline passes. To end such a run earlier, and only for the instance named in that journal's `owned-resources` record: read the host journal and unit states over SSH and keep them with the run, terminate that instance, wait until EC2 reports it `terminated`, then repeat `finish` with the original journal and the same output directory. `finish` records the fence only after it observes the instance terminated or absent. Read its `cleanup` result: role, profile and security group removal and raw bucket deletion follow its inventory and export conditions, and without paired evidence the state bucket stays `pending` before the deadline and is retained after it. [November 23 canary](../evidence/tasks/issue-3005/canary-20261123.md)
+
 ## Operator quick start
 
-The [one-page manual](server2-shadow-supervisor/manual.pdf) and its [editable source](server2-shadow-supervisor/manual.json) show actual offline prepare/inspect/refusal output with fixture artifacts. They are not evidence of an AWS capture.
+The [three-page operator manual](server2-shadow-supervisor/manual.pdf) covers offline preparation, finish recovery and qualification of retained evidence. The final page shows the SR-7 decision from the November 21–22 rehearsal. [Editable source](server2-shadow-supervisor/manual.json)
 
 The SSH receiver starts the installer with Python bytecode writes disabled (`-B`). This keeps interpreter-generated cache directories out of the private input bundle without relaxing its ownership or permissions checks. This option does not depend on an operator environment variable surviving SSH.
 
 Evidence validation compares response metadata exactly, excluding only the nonnegative integer `elapsed_ms` added to the ledger after capture. Missing bodies, pending attempts, changed headers or hashes remain incomplete. The S3 export adapter supplies `--bucket`, `--key`, `--version-id` and `--range` as separate argv values from the frozen request. The customized AWS CLI `get-object` command does not accept `--cli-input-json`; the original version and full byte range remain pinned.
+
+## Offline qualification decision
+
+Use the final finish directory from the original journal. For the November 21–22 rehearsal, use the recovered directory and its pinned reader. Run the evaluator from the repository root with a fresh private output path.
+
+```sh
+python3.11 -IB server2/tools/shadow/qualification_evaluator.py \
+  --criteria docs/evidence/tasks/issue-3005/criteria.observation-only.json \
+  --evidence "$FINISH_DIR" --out "$PRIVATE_OUTPUT/qualification.json"
+```
+
+An exit code of zero means the evaluator wrote the report. Read its recommendation and all eight criterion rows. C1 checks evidence integrity. A local comparison can leave service criteria unassessed even when every file is retrievable. The November 23 assessment produced **hold**. Review the operational margins alongside the paired evidence, then record separate owner decisions for a cloud canary and a live week. [Decision report](../evidence/tasks/issue-3005/qualification.md) · [Scoring criteria](../../server2/tools/shadow/qualification_criteria.md) · [Operator manual](server2-shadow-supervisor/manual.pdf)

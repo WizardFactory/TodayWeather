@@ -34,7 +34,41 @@ use tokio::time::Instant;
 /// The owned S06 loopback S3 fault peer (`tests/storage/catalog_peer.py`).
 /// The domestic tests that own an S3 test peer run one at a time, so small CI runners serve one
 /// peer at a time (the peer admits 16 connections and bounds each to 2 s).
-pub static S3_PEERS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+pub static S3_PEERS: PeerLock = PeerLock::new();
+
+/// One S3 test peer at a time on this host, whether the tests share one process (`cargo test`)
+/// or each runs in its own (`cargo nextest`, #3139): an in-process mutex, then a host-wide file
+/// lock held for the guard's lifetime.
+pub struct PeerLock(tokio::sync::Mutex<()>);
+pub struct PeerGuard {
+    _host: std::fs::File,
+    _process: tokio::sync::MutexGuard<'static, ()>,
+}
+impl PeerLock {
+    pub const fn new() -> Self {
+        Self(tokio::sync::Mutex::const_new(()))
+    }
+    pub async fn lock(&'static self) -> PeerGuard {
+        let process = self.0.lock().await;
+        let host = tokio::task::spawn_blocking(|| {
+            let path = std::env::temp_dir().join("server2-domestic-s3-peers.lock");
+            let file = std::fs::OpenOptions::new()
+                .create(true)
+                .truncate(false)
+                .write(true)
+                .open(path)
+                .expect("open the S3 test peer lock");
+            file.lock().expect("take the S3 test peer lock");
+            file
+        })
+        .await
+        .expect("S3 test peer lock task");
+        PeerGuard {
+            _host: host,
+            _process: process,
+        }
+    }
+}
 /// S3 requests in flight per test transport: below the production 12, leaving peer slots for
 /// connections whose handler thread has not released its slot yet.
 pub const TEST_PERMITS: usize = 8;

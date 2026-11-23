@@ -30,8 +30,9 @@ The maintained Docker capture is a historical illustration: its bundle was built
 
 ## Linux artifact checks before EC2
 
-The existing Server2 foundation CI installs the musl build prerequisites and
-builds the locked x86_64-unknown-linux-musl release target. It executes that
+On a `master` push or manual run, the Server2 CI `musl` job installs the musl
+build prerequisites and builds the locked x86_64-unknown-linux-musl release
+target. It executes that
 artifact's real loopback health/startup smoke and the synthetic benchmark matrix.
 The regular workspace tests, GNU smoke, placement and isolated operational
 checks remain. Missing isolation fails closed; never run operational unittest
@@ -40,9 +41,14 @@ the Linux-only isolated operational or musl execution results.
 
 ## Docker preflight using the CI artifact
 
-Run the existing Linux foundation CI first, then download the successful run's
-`server2-linux-musl-verified` artifact. Check out the corresponding PR source:
-the exact `source.revision`, full tracked `server2/` Git tree, verification scripts, fixtures and binaries must match its manifest. Dirty tracked sources reject before Docker. CI records the PR head and rejects a merge checkout with different server2 inputs. The native
+Pull request runs no longer build this artifact. On a Server2 push to `master`
+or a manual run (`gh workflow run server2.yml --ref BRANCH`, for a branch that is
+not merged yet), the `musl` job builds and verifies it in parallel with the other
+checks. `foundation` publishes it only after every check, including `goldens`,
+has passed. The artifact records the commit that the run checked out. Download
+the successful run's `server2-linux-musl-verified` artifact, then check out that
+commit's source:
+the exact `source.revision`, full tracked `server2/` Git tree, verification scripts, fixtures and binaries must match its manifest. Dirty tracked sources reject before Docker. The manifest records the commit the run checked out. The native
 Linux checks and Docker use the same `tools/verify_artifact.py` entrypoint. No
 local rebuild is required when the CI bundle is available.
 

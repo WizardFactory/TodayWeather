@@ -217,7 +217,7 @@ fn town(lat: f64, lon: f64) -> Doc {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_snapshot_answers_the_stored_image_forecast_and_rejects_kaq() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -746,7 +746,7 @@ async fn image_acquisition_across_kst_boundaries() {
     }
 }
 async fn missing_image_forecast_at(at: &str) {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, at).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, at).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -851,7 +851,7 @@ async fn missing_image_forecast_at(at: &str) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_slow_image_acquisition_releases_the_request_and_serves_the_next_one() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -930,7 +930,7 @@ async fn rejected_image_paths_are_never_fetched_and_a_failed_download_stores_not
     rejected_image_paths_at(FIXED_NOW).await;
 }
 async fn rejected_image_paths_at(at: &str) {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, at).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, at).await;
     let seoul = town(37.5665, 126.978);
     let three = || Instant::now() + Duration::from_secs(3);
     for case in ["another host", "12 cycle", "no PM2.5 path", "PM10 404"] {
@@ -1099,7 +1099,7 @@ async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1219,7 +1219,7 @@ async fn a_new_station_list_decodes_everything_again_at_once() {
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1325,7 +1325,7 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1451,7 +1451,7 @@ async fn a_late_announcement_stays_until_its_rows_expire() {
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1507,7 +1507,7 @@ async fn acquisitions_completed_in_the_same_millisecond_are_both_read() {
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1582,7 +1582,7 @@ async fn a_long_animation_is_read_until_its_last_rows_expire() {
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1690,7 +1690,7 @@ async fn an_image_dated_after_its_announcement_is_not_used() {
             allowed
         );
     }
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1887,7 +1887,7 @@ impl server2::history::IndexListing for HeldObservations {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn stored_images_restore_while_observations_use_the_same_expiring_request_budget() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -2120,7 +2120,7 @@ async fn products(store: &Arc<Store>, day: &str) -> Vec<Value> {
 /// read that product, and a production with nothing new stores nothing and decodes nothing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_image_forecast_is_produced_on_a_schedule_and_requests_only_read_it() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = CountedImages::new(peer.transport());
     let image_gets = transport.image_gets.clone();
@@ -2213,7 +2213,7 @@ async fn the_image_forecast_is_produced_on_a_schedule_and_requests_only_read_it(
 /// the legacy fold.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn stored_images_are_folded_by_a_production_never_by_a_request() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = CountedImages::new(peer.transport());
     let image_gets = transport.image_gets.clone();
@@ -2328,7 +2328,7 @@ async fn stored_images_are_folded_by_a_production_never_by_a_request() {
 async fn the_newest_product_is_read_alone_and_once() {
     use server2::domestic::kma::source::air_forecast::Calibration;
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = CountedImages::new(peer.transport());
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -2374,7 +2374,7 @@ async fn the_newest_product_is_read_alone_and_once() {
 /// stores a new product, which the next process finds current.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_unreadable_newest_product_is_made_again() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -2426,7 +2426,7 @@ async fn an_unreadable_newest_product_is_made_again() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_image_production_uses_the_bulk_lane() {
     use super::observe::Counted;
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let peer_store = store_for(&peer.transport());
     let now = now_ms();

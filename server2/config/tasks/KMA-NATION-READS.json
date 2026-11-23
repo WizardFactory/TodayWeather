@@ -1,0 +1,37 @@
+{
+  "task": "KMA-NATION-READS",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2998",
+  "scope": "Catalog store operations wait for an I/O admission only until their caller's deadline; the 3-second per-operation cap starts at admission, so an operation that queued may hold its admission up to 3 s after admission. Nation city reads queued for the KMA store's admissions are then late rather than failed. The warnings API waits for another request's latest-bulletin walk only until its own deadline and answers from recent memory. Found in the SR-6 rehearsal. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-NATION-READS.json",
+    "server2/src/storage/catalog.rs",
+    "server2/src/warnings/service.rs",
+    "server2/tests/domestic/observe_product.rs",
+    "server2/tests/raw_records.rs",
+    "server2/tests/storage/admission.rs",
+    "server2/tests/storage/catalog_wire.rs",
+    "server2/tests/warnings/recovery.rs"
+  ],
+  "outside": [
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "The stored-read budget of KMA requests."
+    },
+    {
+      "path": "docs/operations/server2-nation.md",
+      "category": "documentation",
+      "reason": "Nation behavior under concurrent stored reads."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-nation.json",
+      "category": "documentation",
+      "reason": "Archify source of the nation sequence (stored-read wait)."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-nation.html",
+      "category": "documentation",
+      "reason": "Archify output regenerated from the source."
+    }
+  ]
+}

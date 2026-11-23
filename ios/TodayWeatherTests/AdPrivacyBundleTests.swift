@@ -70,6 +70,16 @@ struct AdPrivacyBundleTests {
         #expect(AdsSettings.from(info: swapped, debug: true) == nil)
     }
 
+    /// The ad-free capture build (`run-manual-capture.sh --no-ads`, #3122) has empty unit values: no ads in either
+    /// configuration, so `Monetization` starts no UMP, no SDK and no request. The app itself has no switch for it.
+    @Test func emptyUnitsMeanNoAds() {
+        for debug in [true, false] {
+            let appID = debug ? AdsSettings.testAppID : "ca-app-pub-1234567890123456~1234567890"
+            let empty = ["GADApplicationIdentifier": appID, "TWAdMobNativeUnit": "", "TWAdMobInterstitialUnit": ""]
+            #expect(AdsSettings.from(info: empty, debug: debug) == nil)
+        }
+    }
+
     @Test func releaseRequiresDistinctUnitsFromItsOwnPublisher() {
         let native = "ca-app-pub-1234567890123456/1234567890"
         let interstitial = "ca-app-pub-1234567890123456/1234567891"

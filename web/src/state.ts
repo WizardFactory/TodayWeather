@@ -549,6 +549,10 @@ export function validateSnapshot(
       !(w.yesterday === null || validPoint(w.yesterday)) ||
       !Array.isArray(w.hourly) ||
       !w.hourly.every(validPoint) ||
+      !(
+        w.chartHourly === undefined ||
+        (Array.isArray(w.chartHourly) && w.chartHourly.every(validPoint))
+      ) ||
       !Array.isArray(w.daily) ||
       !w.daily.every(validPoint) ||
       !Array.isArray(w.air) ||
@@ -579,6 +583,17 @@ export function validateSnapshot(
         !validDaySummary(w.daySummary))
     ) {
       delete snapshot.daySummary;
+    }
+    // A damaged observation time falls back to current.at for the chart.
+    if (
+      w.liveAt !== undefined &&
+      !(
+        typeof w.liveAt === "string" &&
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(w.liveAt) &&
+        Number.isFinite(Date.parse(`${w.liveAt}:00Z`))
+      )
+    ) {
+      delete snapshot.liveAt;
     }
     // Older normalization revisions use different cache keys and never reach here.
     return snapshot;

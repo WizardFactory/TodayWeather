@@ -6,10 +6,13 @@ import XCTest
 /// builds the app ad hoc signed with the private server URL and Places key (read-only weather, geocode, nationwide and
 /// warning GETs; no Firebase configuration, so no push token and no push request), grants location while in use at
 /// Seoul City Hall, answers the tracking question and passes `TEST_RUNNER_TW_MANUAL_UI=1`; without it the test skips.
+/// `TEST_RUNNER_TW_MANUAL_ADS=off` marks a build without ad units (the script's `--no-ads`).
 /// The journey edits alarms only to discard them, and returns units and theme to °C and light.
 @MainActor
 final class ManualUITests: XCTestCase {
     let enabled = ProcessInfo.processInfo.environment["TW_MANUAL_UI"] == "1"
+    /// An ad-free capture (`--no-ads`, #3122): the app was built without ad units, so no screenshot may show an ad.
+    let adsOff = ProcessInfo.processInfo.environment["TW_MANUAL_ADS"] == "off"
     var app: XCUIApplication!
 
     func element(_ identifier: String) -> XCUIElement {
@@ -30,6 +33,11 @@ final class ManualUITests: XCTestCase {
 
     func shot(_ name: String) {
         Thread.sleep(forTimeInterval: 0.8)
+        // Not over the system share sheet (querying the app's tree under it stalls the run) or on the Home Screen.
+        if adsOff && !name.contains("share") && !name.contains("widgets") {
+            let ad = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'native-ad-'"))
+            XCTAssertFalse(ad.firstMatch.exists, "\(name): an ad-free capture shows no native ad")
+        }
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
@@ -141,6 +149,118 @@ final class ManualUITests: XCTestCase {
         if shoot { shot("32-theme") }
         tap("settings-row-\(value)")
         settingsBack()
+    }
+
+    /// The App Store screens (#3122) with Seoul saved from S01's shortcut, on the run's iPhone or iPad: hourly weather
+    /// with yesterday's comparison, the expanded hourly details, daily forecasts, air quality and the Home Screen with
+    /// the app's widgets. Run by
+    /// `run-manual-capture.sh --no-ads --store`, which passes `TEST_RUNNER_TW_STORE_UI=1`; only ad-free.
+    func testCaptureTheStoreScreens() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["TW_STORE_UI"] == "1" && adsOff,
+                          "run by ios/tools/manual/run-manual-capture.sh --no-ads --store")
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(ko-KR)", "-AppleLocale", "ko_KR"]
+        app.launch()
+        wait("popup-button-0", 120)
+        closePopup(0)
+        let seoul = element("start-shortcut-0")
+        XCTAssertTrue(seoul.waitForExistence(timeout: 30))
+        XCTAssertEqual(seoul.label, "서울")
+        seoul.tap()
+        XCTAssertTrue(waitForTitle({ $0 == "서울" }, 90), "Hourly for Seoul")
+        wait("forecast-chart")
+        Thread.sleep(forTimeInterval: 3)
+        shot("store-01-compare")
+        tap("chart-expander")
+        Thread.sleep(forTimeInterval: 1.5)
+        shot("store-02-hourly")
+        tap("chart-expander")
+        tap("shell-tab-dailyforecast")
+        wait("forecast-chart")
+        shot("store-03-daily")
+        tap("shell-tab-air")
+        wait("air-header")
+        Thread.sleep(forTimeInterval: 2)
+        shot("store-04-air")
+
+        // The Home Screen with two medium widgets (Temperature Curve over Classic Color), added through SpringBoard's
+        // widget gallery as a user does after removing the simulator's default widgets from the first page; they show Seoul as the app has just loaded it. Home twice: the first press
+        // returns to the page the app was opened from, the second to the first page.
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        XCUIDevice.shared.press(.home)
+        Thread.sleep(forTimeInterval: 2)
+        XCUIDevice.shared.press(.home)
+        Thread.sleep(forTimeInterval: 2)
+        // Gallery pages: Classic Color, Morning Sky and Temperature Curve, each small then medium. A new widget goes
+        // to the top of the page, so the one added last is uppermost.
+        removeOtherWidgets(springboard)
+        for page in [1, 5] { addWidget(springboard, galleryPage: page) }
+        let done = springboard.buttons.matching(NSPredicate(format: "label == '완료' OR label == 'Done'")).firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 10), "Home Screen editing")
+        done.tap()
+        Thread.sleep(forTimeInterval: 5)
+        shot("store-05-widgets")
+    }
+
+    /// Removes the other apps' widgets (the simulator's default Maps, Calendar, News and Reminders widgets) from the
+    /// current Home Screen page through each widget's own menu, so the page shows the app's widgets and app icons.
+    func removeOtherWidgets(_ springboard: XCUIApplication) {
+        let others = springboard.icons.matching(NSPredicate(format: "value CONTAINS '위젯' OR value CONTAINS 'Widget'"))
+        for _ in 0..<8 {
+            guard let widget = others.allElementsBoundByIndex.first(where: { $0.frame.width > 0 && !$0.label.contains("TodayWeather") })
+            else { return }
+            widget.press(forDuration: 0.8)
+            let remove = springboard.buttons.matching(NSPredicate(
+                format: "label IN {'위젯 제거', '스택 제거', 'Remove Widget', 'Remove Stack'}")).firstMatch
+            guard remove.waitForExistence(timeout: 5) else {
+                let dump = XCTAttachment(string: springboard.debugDescription)
+                dump.name = "springboard-no-remove"
+                dump.lifetime = .keepAlways
+                add(dump)
+                XCTFail("no remove item for \(widget.label)")
+                return
+            }
+            remove.tap()
+            let confirm = springboard.buttons.matching(NSPredicate(format: "label == '제거' OR label == 'Remove'")).firstMatch
+            if confirm.waitForExistence(timeout: 5) { confirm.tap() }
+            Thread.sleep(forTimeInterval: 1.5)
+        }
+    }
+
+    /// Adds the TodayWeather widget shown on `galleryPage` of SpringBoard's widget gallery to the current page.
+    func addWidget(_ springboard: XCUIApplication, galleryPage: Int) {
+        let edit = springboard.buttons.matching(NSPredicate(format: "label == '편집' OR label == 'Edit'")).firstMatch
+        if !edit.exists {
+            springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72)).press(forDuration: 1.6)
+        }
+        XCTAssertTrue(edit.waitForExistence(timeout: 10), "Home Screen editing")
+        edit.tap()
+        let add = springboard.buttons.matching(NSPredicate(format: "label == '위젯 추가' OR label == 'Add Widget'")).firstMatch
+        XCTAssertTrue(add.waitForExistence(timeout: 10), "the add-widget menu item")
+        add.tap()
+        // A first keyboard use may show the slide-to-type tip over the gallery.
+        let tip = springboard.buttons.matching(NSPredicate(format: "label == '계속' OR label == 'Continue'")).firstMatch
+        if tip.waitForExistence(timeout: 3) { tip.tap() }
+        let search = springboard.searchFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 10), "the widget search field")
+        search.tap()
+        search.typeText("TodayWeather")
+        let result = springboard.cells.matching(NSPredicate(format: "label CONTAINS 'TodayWeather'")).firstMatch
+        if result.waitForExistence(timeout: 10) {
+            result.tap()
+        } else {
+            springboard.staticTexts.matching(NSPredicate(format: "label == 'TodayWeather'")).element(boundBy: 0).tap()
+        }
+        Thread.sleep(forTimeInterval: 3)
+        for _ in 0..<galleryPage {
+            springboard.swipeLeft()
+            Thread.sleep(forTimeInterval: 1.5)
+        }
+        let confirm = springboard.buttons.matching(NSPredicate(format: "label CONTAINS '위젯 추가' OR label CONTAINS 'Add Widget'")).firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10), "the gallery's add button")
+        confirm.tap()
+        Thread.sleep(forTimeInterval: 3)
     }
 
     func testCaptureTheManual() throws {

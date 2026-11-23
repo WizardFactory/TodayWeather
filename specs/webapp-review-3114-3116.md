@@ -1,5 +1,7 @@
 # Specification: Webapp Chart, Navigation, and UI Fixes (#3114, #3115, #3116)
 
+> Chart geometry in §1 (bounded `hourlyXPositions` spacing, the pinned Y axis, measured column widths and two-line relative daily headers) is superseded by the native column rules of [#3133](https://github.com/WizardFactory/TodayWeather/issues/3133); see `specs/design-system.md` §5.
+
 - **Intent**: [intent/webapp-review-3114-3116.md](../intent/webapp-review-3114-3116.md)
 - **Plan Review Disposition**: `reports/sdlc/webapp-review-3114-3116/plan-review-disposition.md`
 
