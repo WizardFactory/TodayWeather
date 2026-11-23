@@ -9,8 +9,20 @@ case "$stage" in
   musl) packages=(musl-tools binutils) ;;
   *) printf 'Unknown Server2 CI stage: %s\n' "$stage" >&2; exit 2 ;;
 esac
-sudo apt-get update
-sudo apt-get install --yes --no-install-recommends "${packages[@]}"
+# A stalled package mirror must fail or retry within minutes instead of holding the
+# job until its timeout (one update hung for 54 minutes, #3139).
+apt=(sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+for attempt in 1 2 3; do
+  if timeout 180 "${apt[@]}" update; then
+    break
+  fi
+  if [[ "$attempt" == 3 ]]; then
+    printf 'apt-get update failed %s times\n' "$attempt" >&2
+    exit 1
+  fi
+  sleep 10
+done
+timeout 600 "${apt[@]}" install --yes --no-install-recommends "${packages[@]}"
 
 # Ubuntu 24.04 restricts unprivileged user namespaces. Load the pinned upstream
 # executable-specific profile, which permits bwrap setup and denies child
