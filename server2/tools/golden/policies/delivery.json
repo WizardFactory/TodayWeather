@@ -3080,7 +3080,7 @@
     "server/utils/coordinate2xy.js"
   ],
   "static_inputs": {
-    "server2/tests/golden/records.json": "4b1ddb115b1d853eaf686f4df6a8bdeecc3d172d269409862bedeb882f8ecacb",
+    "server2/tests/golden/records.json": "2c60c7082562abb02cb0e62defbc90646311079e6b19f9accfbdec15019f82c1",
     "server2/tests/delivery/fixtures/rfc7515-a2-key.pkcs8.b64": "57ea5536a0a770d015812a7c2bb2c82d829b8a7c564bdf64d82f93629a844149",
     "server2/tools/golden/delivery/fcm-test-todayWeather.json": "ec40c523e32d205d6f56b58c75d3682790f231425cecfda611e081794131fb9d",
     "server2/tools/golden/delivery/fcm-test-todayAir.json": "01a817bb310ef7aab6f2facb4eaee7d36a5bf43e11dec57022ef9f4f24afca77"

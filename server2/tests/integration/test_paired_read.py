@@ -12,6 +12,7 @@ import tempfile
 import threading
 import time
 import unittest
+import unittest.mock
 from unittest.mock import patch
 from urllib.parse import quote
 
@@ -20,6 +21,23 @@ sys.path.insert(0, str(ROOT / 'tools' / 'shadow'))
 import paired_read as capture
 
 PATH = '/weather/v000903/coord/37.566,126.978'
+
+
+class ModuleClock:
+    """paired_read's own `time` binding with a scripted time(); the rest is the real module.
+
+    Patching the shared time module would also script time.time() for every other thread,
+    such as a delayed peer handler formatting its Date header (#3128).
+    """
+    def __init__(self, **script):
+        self.time = unittest.mock.Mock(**script)
+
+    def __getattr__(self, name):
+        return getattr(time, name)
+
+
+def scripted_clock(**script):
+    return patch.object(capture, 'time', ModuleClock(**script))
 
 
 def manifest(duration=2, cases=None):
@@ -235,13 +253,13 @@ class PairedReadTests(unittest.TestCase):
 
     def test_rollback_and_expiry(self):
         ledger = self.ledger()
-        with patch.object(capture.time, 'time', return_value=ledger.get('started') - 1):
+        with scripted_clock(return_value=ledger.get('started') - 1):
             with self.assertRaisesRegex(ValueError, 'backwards'):
                 ledger.clock()
         self.assertEqual(ledger.get('terminal'), 'clock-rollback')
         with ledger.db:
             ledger.put('terminal', None)
-        with patch.object(capture.time, 'time', return_value=ledger.end + 1):
+        with scripted_clock(return_value=ledger.end + 1):
             self.assertIsNone(ledger.clock())
         self.assertEqual(ledger.get('terminal'), 'duration-complete')
 
@@ -251,23 +269,23 @@ class PairedReadTests(unittest.TestCase):
         case = m['cases'][0]
         start = ledger.get('started')
         for slot, origin in enumerate(('candidate', 'production', 'candidate')):
-            with patch.object(capture.time, 'time', return_value=start+slot+1):
+            with scripted_clock(return_value=start+slot+1):
                 ident = ledger.reserve(case, slot, origin)
             ledger.finish(ident, {'error': 'ConnectionRefusedError'} if origin == 'candidate' else {'status': 200})
         resumed = capture.Ledger(ledger.path, self.identity(m), True)
         self.addCleanup(resumed.close)
-        with patch.object(capture.time, 'time', return_value=start+4):
+        with scripted_clock(return_value=start+4):
             ident = resumed.reserve(case, 3, 'candidate')
         resumed.finish(ident, {'error': 'ConnectionRefusedError'})
         # Three failures within seconds are counted but do not end the run.
         self.assertIsNone(resumed.get('terminal'))
         self.assertEqual(resumed.get('failures'), {'candidate': 3, 'production': 0})
         # Still failing after the outage window: the origin is gone, stop.
-        with patch.object(capture.time, 'time', return_value=start+1+capture.OUTAGE_SECONDS-1):
+        with scripted_clock(return_value=start+1+capture.OUTAGE_SECONDS-1):
             ident = resumed.reserve(case, 4, 'candidate')
             resumed.finish(ident, {'status': 503})
         self.assertIsNone(resumed.get('terminal'))
-        with patch.object(capture.time, 'time', return_value=start+1+capture.OUTAGE_SECONDS):
+        with scripted_clock(return_value=start+1+capture.OUTAGE_SECONDS):
             ident = resumed.reserve(case, 5, 'candidate')
             resumed.finish(ident, {'error': 'deadline'})
         self.assertEqual(resumed.get('terminal'), 'origin-outage')
@@ -366,7 +384,7 @@ class PairedReadTests(unittest.TestCase):
                   (capture.OUTAGE_SECONDS + 10, {'status': 500}), (capture.OUTAGE_SECONDS + 11, {'status': 500}),
                   (capture.OUTAGE_SECONDS + 12, {'error': 'oversize'})]
         for slot, (offset, outcome) in enumerate(script):
-            with patch.object(capture.time, 'time', return_value=start + offset):
+            with scripted_clock(return_value=start + offset):
                 ledger.finish(ledger.reserve(case, slot, 'production'), outcome)
         self.assertIsNone(ledger.get('terminal'))
         self.assertEqual(ledger.get('failures'), {'production': 3})
@@ -374,7 +392,13 @@ class PairedReadTests(unittest.TestCase):
     def test_execute_preserves_clock_rollback_reason(self):
         # GEM-BS-002: exercise execute's exception wrapper, not just Ledger.clock.
         state = self.path/'rollback'
-        with patch.object(capture.time, 'time', side_effect=[1000., 1000., 999.]):
+        with scripted_clock(side_effect=[1000., 1000., 999.]):
+            # #3128: another thread (e.g. a late peer handler writing its Date header)
+            # reads the clock inside the scripted window; it must not consume a value.
+            other = threading.Thread(target=time.time)
+            other.start()
+            other.join(5)
+            self.assertFalse(other.is_alive())
             with self.assertRaisesRegex(ValueError, 'backwards'):
                 capture.execute(manifest(), 'http://127.0.0.1:1', 'http://127.0.0.1:2',
                                 state, self.binary, loopback_test=True)

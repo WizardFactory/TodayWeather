@@ -12131,7 +12131,7 @@
         "server/models/town.js": "242931f3f5e624536ef63de3b596d5cb8d3bba30c7937b5ac05ef38229fb4d4c",
         "server/models/worldWeather/vc.fetch.lock.model.js": "83087cfac336709ea32e4faba41903dc60e2dd118732eebebb7dd5a11413a31d",
         "server/models/worldWeather/vc.usage.model.js": "f21ea7e4d53ab2c4c25c8cc8404f71841967c4514fd09503467e85e4783e077a",
-        "server/routes/gateway.js": "b464184861028b330b213d27661b77007d7f0047d33c786b98bb7d477f3723d5",
+        "server/routes/gateway.js": "08ff6da828436b9af64eda3a85b256a8de09b88af8e6451fc3450ef36f9490bb",
         "server/routes/v000705/routeTownForecast.js": "032be90a0d284b45bed49e807c4aafd7dc138764302922d24b0c38fdb1ed6599",
         "server/routes/v000803/routeTownForecast.js": "26e1fcdba3e3b85e64376dbcc18a7f1c718317c0e0f9b35c44f6d9cc76f890fe",
         "server/routes/v000901/route.kma.addr.js": "b1aa8e3fbe3bf9eb0ab5e70587630270a59c97c41ed5c94e235320bfaf1fabf8",

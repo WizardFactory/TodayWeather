@@ -1,0 +1,23 @@
+{
+  "task": "GoldenGateway3132",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3132",
+  "scope": "Re-record the S02 and rich domestic fixtures after the opt-in Vigilance and AEMET gateway routes changed server/routes/gateway.js, and repin their digests.",
+  "server2_paths": [
+    "server2/config/golden-provenance.json",
+    "server2/config/tasks/GoldenGateway3132.json",
+    "server2/tests/domestic/fixtures/s3-rich-response.json.gz",
+    "server2/tests/golden/records.json",
+    "server2/tests/integration/fixtures/kma-rich-replay.json",
+    "server2/tools/check_placement.py",
+    "server2/tools/golden/policies/delivery.json",
+    "server2/tools/golden/policies/domestic_http.json",
+    "server2/tools/golden/policies/rest_http.json"
+  ],
+  "outside": [
+    {
+      "path": "docs/operations/server2-golden.md",
+      "category": "documentation",
+      "reason": "Record the November 23 gateway source renewal and its comparison result."
+    }
+  ]
+}
