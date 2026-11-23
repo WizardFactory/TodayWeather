@@ -142,14 +142,16 @@ test('the stylesheet loads the subset font beside it', () => {
 });
 
 test('the native summaries link to the matching store fallback', () => {
+  const expected = new Map([['iPhone 앱', 'ios'], ['Android 앱', 'android']]);
   for (const page of pages) {
     const html = readFileSync(page, 'utf8');
-    const links = attribute(html, /<h3><a href="(https:\/\/link\.todayweather\.ai\/[^"]+)">/g)
-      .map((href) => new URL(href.replace(/&amp;/g, '&')));
-    assert.deepEqual(links.map((url) => url.searchParams.get('store')), ['ios', 'android'], page);
-    for (const url of links) {
-      assert.equal(url.pathname, '/open', url.href);
-      assert.equal(url.searchParams.get('fallback'), 'store', url.href);
+    const links = [...html.matchAll(/<h3><a href="(https:\/\/link\.todayweather\.ai\/[^"]+)">([^<]+)</g)]
+      .map((match) => [match[2].trim(), new URL(match[1].replace(/&amp;/g, '&'))]);
+    assert.deepEqual(links.map(([title]) => title).sort(), [...expected.keys()].sort(), page);
+    for (const [title, url] of links) {
+      assert.equal(url.pathname, '/open', `${page}: ${title}`);
+      assert.equal(url.searchParams.get('fallback'), 'store', `${page}: ${title}`);
+      assert.equal(url.searchParams.get('store'), expected.get(title), `${page}: ${title}`);
     }
   }
 });
