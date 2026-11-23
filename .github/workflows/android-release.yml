@@ -1,0 +1,198 @@
+name: Android release verification
+run-name: Android release verification ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
+# Release CI of the native Android app (docs/development/ci-tiers.md, docs/operations/android-release.md): the
+# PR checks, release lint and the device suites that need no private input, on emulators. It may take long and
+# is not a pull-request check. It builds no release APK, holds no secret and publishes nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Full SHA of the commit to verify (empty: the head of the selected branch or tag)"
+        required: false
+        type: string
+  schedule:
+    # 02:30 Asia/Seoul; skipped unless android/ changed since the last passed nightly run.
+    - cron: "30 17 * * *"
+  # A change of this verification is tried on its own pull request.
+  pull_request:
+    paths:
+      - ".github/workflows/android-release.yml"
+      - "android/tools/release-ci/**"
+permissions:
+  contents: read
+concurrency:
+  group: android-release-${{ github.event_name }}-${{ inputs.ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  scope:
+    name: Commit to verify
+    if: github.event_name != 'schedule' || github.repository == 'WizardFactory/TodayWeather'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      sha: ${{ steps.decide.outputs.sha }}
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REQUESTED: ${{ inputs.ref }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          if [ -n "$REQUESTED" ] && [ "$REQUESTED" != "$sha" ]; then
+            echo "ref must be the full SHA of the commit to verify; $REQUESTED is $sha" >&2
+            exit 1
+          fi
+          run=true
+          if [ "$EVENT" = schedule ]; then
+            last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow android-release.yml --event schedule \
+              --status success --limit 1 --json headSha --jq '.[0].headSha // empty')
+            if [ -n "$last" ] && git cat-file -e "$last^{commit}" 2>/dev/null \
+              && git diff --quiet "$last" "$sha" -- android .github/workflows/android.yml .github/workflows/android-release.yml; then
+              run=false
+              echo "No Android change since the last passed nightly run ($last)." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+  pr-checks:
+    name: PR checks on the commit
+    needs: scope
+    if: needs.scope.outputs.run == 'true'
+    uses: ./.github/workflows/android.yml
+    with:
+      ref: ${{ needs.scope.outputs.sha }}
+
+  lint:
+    name: Release lint
+    needs: scope
+    if: needs.scope.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.scope.outputs.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Lint of the release variant
+        working-directory: android
+        run: ./gradlew lintRelease
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-release-lint
+          path: android/*/build/reports/lint-results-release.*
+          retention-days: 14
+
+  devices:
+    name: Device suites (${{ matrix.name }})
+    needs: scope
+    if: needs.scope.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The AVD names start with tw_, as the runners require; "fold" in the name turns the fold steps on.
+          - name: phone-api36
+            api: 36
+            profile: pixel_8
+            avd: tw_api36_phone
+            suites: device-tests chart parity window-fit
+          - name: phone-api24
+            api: 24
+            profile: pixel
+            avd: tw_api24
+            suites: device-tests
+          - name: tablet-api36
+            api: 36
+            profile: pixel_tablet
+            avd: tw_api36_tablet
+            suites: shell-fit window-fit
+          - name: fold-api36
+            api: 36
+            profile: pixel_fold
+            avd: tw_api36_fold
+            suites: shell-fit window-fit
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.scope.outputs.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Debug and test APKs
+        working-directory: android
+        run: ./gradlew assembleDebug assembleDebugAndroidTest
+      - name: Allow the emulator to use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Device suites
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          ANDROID_SERIAL: emulator-5554
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: ${{ matrix.profile }}
+          avd-name: ${{ matrix.avd }}
+          cores: 4
+          ram-size: 4096M
+          disk-size: 6G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: sh android/tools/release-ci/run-suites.sh "$RUNNER_TEMP/device-suites" ${{ matrix.suites }}
+      - name: Results
+        if: always()
+        run: |
+          {
+            echo "### ${{ matrix.name }}"
+            echo '```'
+            cat "$RUNNER_TEMP/device-suites/summary.txt" 2>/dev/null || echo "no suite ran"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-release-devices-${{ matrix.name }}
+          path: ${{ runner.temp }}/device-suites
+          retention-days: 14
+
+  verified:
+    name: Verified commit
+    needs: [scope, pr-checks, lint, devices]
+    if: always() && needs.scope.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every verification job to pass
+        env:
+          RESULTS: ${{ needs.pr-checks.result }} ${{ needs.lint.result }} ${{ needs.devices.result }}
+          SHA: ${{ needs.scope.outputs.sha }}
+        run: |
+          for result in $RESULTS; do
+            if [ "$result" != success ]; then
+              echo "Android release verification FAILED for $SHA ($RESULTS)" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          done
+          echo "Android release verification passed for $SHA" | tee -a "$GITHUB_STEP_SUMMARY"

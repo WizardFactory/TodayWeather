@@ -111,6 +111,13 @@ on:
       - "server/routes/**"
       - "server/package-lock.json"
       - ".github/workflows/android.yml"
+  # Android release verification (android-release.yml) runs these jobs on the commit it verifies.
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit to check out (empty: the commit of the calling event)"
+        required: false
+        type: string
 permissions:
   contents: read
 jobs:
@@ -122,6 +129,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -156,6 +164,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - name: Remove client/
         run: rm -rf client && test ! -e client
       - uses: actions/setup-java@v4

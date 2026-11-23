@@ -1,0 +1,35 @@
+# Spec: Android release runbook, target tags and notes, PR CI and release CI
+
+Consumes [intent/android-release.md](../intent/android-release.md). The maintained documents are the specification of the procedures; this file states what each must contain and how the tools behave.
+
+## Release convention (AC1)
+
+- `docs/operations/github-releases.md` names one tag form per delivery scope: `android/`, `ios/`, `webapp/`, `backend/tw-svc/`, `backend/tw-gather/`, `backend/server2/`, each followed by `vMAJOR.MINOR.PATCH`. The Cordova forms remain as historical rows.
+- Store apps have candidates `-rc.N` (GitHub pre-release) for binaries on test tracks and a final tag at the same commit when the binary goes to production. Other scopes have none.
+- Tags are annotated, at an exact commit, never reused. Releases are created from an existing tag, never as "Latest".
+- `scripts/release-notes.mjs --scope <scope> --version <version> [--commit <ref>] [--from <ref>]` prints a draft: source commit (40 characters), scope, tag, previous release, the changes merged under the scope's paths on the first-parent history since the previous final tag contained in the commit, the scope's identity lines and the status fields. It reads Git only.
+  - A merged pull request appears with its title and number; a squash commit with its own subject; any other commit with its subject and short hash. No change: one line saying so.
+  - Status 2 with a message and no output for: an unknown scope, a version that is not `MAJOR.MINOR.PATCH` or `-rc.N`, a candidate for a scope without candidates, an existing tag, an unresolvable commit, no previous final tag and no `--from`.
+- `scripts/release-notes.mjs --check <file>` passes when no `<fill in>` remains, the source commit is a full SHA and the notes' tag exists at that commit; otherwise status 1 naming each problem.
+- Neither mode writes a tag, a Release or a file.
+
+## Android release runbook (AC2)
+
+`docs/operations/android-release.md` orders: version freeze; release CI on the full SHA; the manual emulator gates with their commands and prerequisites; local build and signing with `check-apk.sh`; the physical-device gate; candidate tag and notes; store declarations and test tracks; production tag, staged rollout and halt criteria; close; halt and rollback. Each step states who acts and what completes it. Steps needing private inputs, the signing key or store access are the operator's.
+
+`android/tools/release/check-apk.sh <signed.apk> <installed-store-release.apk>` reports one line per check and fails (status 1) on: an invalid signature; a signing certificate or package different from the store release's; a `versionCode` not above it; a `versionName`, `versionCode`, `minSdk` or `targetSdk` different from the checkout's `app/build.gradle.kts`; a debuggable APK; Google's sample AdMob app ID or none; no Firebase configuration. It prints the identity lines for the notes and changes nothing. Status 2: usage, a missing file or missing SDK tools.
+
+## CI tiers (AC3, AC4)
+
+- `docs/development/ci-tiers.md` defines PR CI and release CI, the rules for placing a check, the measured state of each target and the Android split.
+- `.github/workflows/android-release.yml` runs on `workflow_dispatch` (input `ref`: the full SHA), nightly, and on pull requests that change the workflow or `android/tools/release-ci/`. Jobs: the commit to verify; the PR workflow's jobs on that commit (`android.yml` as a reusable workflow); `lintRelease`; device suites on hosted emulators (phone API 36, phone API 24, tablet API 36, foldable API 36); a final job that fails unless all passed and names the commit.
+  - A dispatch whose `ref` is not the full SHA of the checked-out commit fails.
+  - The nightly run skips every job when `android/` and the two workflows are unchanged since the last passed nightly run.
+  - No secret, no environment, `contents: read` (plus `actions: read` for the nightly comparison). The emulator action is pinned to a commit SHA.
+- `android/tools/release-ci/run-device-tests.sh <out> [Class[:name=value] …]` installs the debug and test APKs anew per class on an offline emulator and fails when a class's passed tests differ from its declared `@Test` count, or any test failed, was ignored or skipped by an assumption, or the instrumentation did not finish.
+- `android/tools/release-ci/run-suites.sh <out> <suite> …` runs the named suites in turn, continues after a failure, writes `summary.txt`, exits 1 when any failed and 2 for an unknown suite.
+- `android.yml` keeps its pull-request and push behavior; its measured time stays within 2–10 minutes.
+
+## Not specified here
+
+Signing configuration in Gradle, Play upload automation, GitHub environments and secrets, the iOS and server2 CI splits, and fixes of product or test defects that release CI reveals beyond the two lint annotations needed for `lintRelease` to pass.

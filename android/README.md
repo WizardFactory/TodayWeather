@@ -355,13 +355,22 @@ Private inputs stay out of Git, docs and logs, as in the Cordova build (`npm run
 - `TW_MAIL_TO` (environment or `android/private.properties`): the feedback address of 의견보내기, `mailTo` of the Cordova build's `client.config.js`. Without it the mail opens without a recipient.
 - `TW_PLACES_API_KEY_ANDROID` (environment or `android/private.properties`): the Places API (New) key of S01's search, restricted to this app's package and signing certificates. Without it S01 searches the bundled towns.
 - `TW_ADMOB_APP_ID_ANDROID`, `TW_ADMOB_NATIVE_ANDROID` and `TW_ADMOB_INTERSTITIAL_ANDROID` (environment or android/private.properties) identify the release app and its format-specific ad units. Debug builds use Google test units. Release packaging rejects missing or sample values.
-- Release signing inputs (AN-19).
+- Release signing: the existing release keystore and key alias, named to `apksigner` on the operator's machine ([runbook, step 4](../docs/operations/android-release.md#4-build-and-sign)). The Gradle build reads none of them.
 
 The build and the unit tests run without them.
 
 ## Version
 
-`versionCode` 200000 and `versionName` 2.0.0 keep the native debug build installable over the Cordova 1.1.1 build (100091). AN-19 sets the release value above every active Play track.
+`versionCode` 200000 and `versionName` 2.0.0 keep the native debug build installable over the Cordova 1.1.1 build (100091). A release sets both in a pull request, with a `versionCode` above every active Play track ([runbook, step 1](../docs/operations/android-release.md#1-freeze-the-version)).
+
+## Release
+
+The [Android release runbook](../docs/operations/android-release.md) is the procedure: version freeze, release CI, the manual emulator gates, the operator's build and signing, the device gate, the tag and its notes, the test tracks, the staged rollout and its halt and rollback. The release itself is [#2898](https://github.com/WizardFactory/TodayWeather/issues/2898).
+
+- **Release CI:** [Android release verification](../.github/workflows/android-release.yml) runs the pull-request checks, `lintRelease` and the device suites that need no private input on hosted API 36 and API 24 emulators, a tablet and a foldable, for a named commit and nightly ([PR CI and release CI](../docs/development/ci-tiers.md#android)).
+- **`tools/release-ci/run-suites.sh <out-dir> <suite> …`** runs those suites on one emulator and reports each. `tools/release-ci/run-device-tests.sh <out-dir> [Class[:name=value] …]` runs the instrumented classes without a runner of their own (`CoreOnDeviceTest`, `PullRefreshDeviceTest`, `ForecastInterstitialDeviceTest`, `EntryIntentTest` with the migration held), each in a new install, and fails on a failed or skipped test.
+- **`tools/release/check-apk.sh <signed.apk> <installed-store-release.apk>`** checks a signed release APK against the release users have (signature, certificate, package, a higher `versionCode`, the checkout's version and SDK levels, not debuggable, a real AdMob app ID, the Firebase configuration) and prints its identity for the release notes.
+- The build has no signing configuration: `./gradlew assembleRelease` writes `app-release-unsigned.apk`, and the operator signs it with `apksigner` and the existing release key. Signing inputs are never in the checkout.
 
 ### AN-18 large-window verification
 

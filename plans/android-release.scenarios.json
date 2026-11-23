@@ -1,0 +1,67 @@
+{
+  "scenarios": [
+    {
+      "id": "S1",
+      "user": "Operator preparing a release of one target",
+      "goal": "Get the notes of the next Release of a scope and know they are complete",
+      "prerequisites": "A checkout with the scope's history; for --check, the tag pushed or created locally",
+      "steps": [
+        "node scripts/release-notes.mjs --scope android --version 2.0.0-rc.1 --commit <sha> --from <commit>",
+        "Replace every <fill in> and trim the change list",
+        "git tag -a android/v2.0.0-rc.1 <sha>",
+        "node scripts/release-notes.mjs --check notes.md"
+      ],
+      "expected": "The draft names the full SHA, the tag, the previous release and the merged pull requests under android/; --check prints 'notes complete'",
+      "failure": "An unknown scope, a bad version, a used tag or a missing previous release ends with status 2 and a message; unfilled fields or a tag at another commit make --check fail with status 1",
+      "criteria": ["AC1"]
+    },
+    {
+      "id": "S2",
+      "user": "Operator releasing the Android app",
+      "goal": "Take a commit to a signed, checked APK and a tagged candidate by following the runbook",
+      "prerequisites": "Private inputs, the release keystore, the installed store release's APK, Android SDK build tools",
+      "steps": [
+        "Merge the version change",
+        "Run release CI for the full SHA and the manual gates",
+        "./gradlew clean assembleRelease; apksigner sign; tools/release/check-apk.sh <signed> <store>",
+        "Device gate, then tag, notes and pre-release"
+      ],
+      "expected": "Every step states who acts and what completes it; check-apk prints ok for each check and the identity lines",
+      "failure": "A wrong key, a versionCode that is not higher, a debuggable APK, the sample AdMob ID or a build without Firebase makes check-apk fail; the candidate ends and the next one starts at step 1",
+      "criteria": ["AC2"]
+    },
+    {
+      "id": "S3",
+      "user": "Operator or agent verifying a release commit",
+      "goal": "Know that a named commit passed the slow, exact checks",
+      "prerequisites": "The workflow on master; gh authenticated",
+      "steps": [
+        "gh workflow run android-release.yml --ref master -f ref=<full SHA>",
+        "gh run view <id>"
+      ],
+      "expected": "PR checks, release lint and the device suites on API 36, API 24, tablet and foldable emulators pass; 'Verified commit' names the SHA",
+      "failure": "A failed or skipped device test, a lint error or a ref that is not the full SHA fails the run; the suite summary shows every failed suite",
+      "criteria": ["AC3"]
+    },
+    {
+      "id": "S4",
+      "user": "Contributor opening an Android pull request",
+      "goal": "Get the merge checks within minutes",
+      "prerequisites": "A pull request touching android/",
+      "steps": ["Open the pull request", "Read the Android workflow's result"],
+      "expected": "The two existing jobs run and finish within the measured 2-10 minutes; no emulator job is part of the pull request",
+      "failure": "A failing JVM test or a stale snapshot fails the pull request as before",
+      "criteria": ["AC4"]
+    },
+    {
+      "id": "S5",
+      "user": "Maintainer adding a CI check to any target",
+      "goal": "Decide whether the check belongs to PR CI or release CI",
+      "prerequisites": "docs/development/ci-tiers.md",
+      "steps": ["Read 'Placing a check'", "Find the target's row"],
+      "expected": "The rules decide the tier, and the row names the workflows and whether the target is within the PR time",
+      "failure": "A check needing a private input, a phone or store access is a manual gate of the runbook, in neither tier",
+      "criteria": ["AC4"]
+    }
+  ]
+}
