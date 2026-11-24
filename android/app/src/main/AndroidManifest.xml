@@ -28,6 +28,9 @@
         <meta-data android:name="google_analytics_default_allow_ad_storage" android:value="false" />
         <meta-data android:name="google_analytics_default_allow_ad_user_data" android:value="false" />
         <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false" />
+        <!-- No TCF intake: a UMP/TCF ad consent must not overwrite the app's denied ad storage, ad user data and ad
+             personalization (play-services-measurement 24.0.0 reads IABTCF_* by default; CODEX-3178-22). -->
+        <meta-data android:name="google_analytics_tcf_data_enabled" android:value="false" />
         <!-- Screen views are the app's own (Analytics.screen), as Ionic's routes were (config.xml). -->
         <meta-data android:name="google_analytics_automatic_screen_reporting_enabled" android:value="false" />
         <!-- Crash reports are collected regardless of the analytics choice, as in the Cordova build. -->

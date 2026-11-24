@@ -40,7 +40,7 @@ object ShellFit {
             MenuRow.STARTUP_PAGE to activity.getString(R.string.LOC_HOURLY_FORECAST),
             MenuRow.REFRESH_INTERVAL to activity.getString(R.string.LOC_12_HOURS),
             MenuRow.THEME to activity.getString(R.string.LOC_WEATHER_PHOTO_THEME),
-            MenuRow.ANALYTICS to activity.getString(R.string.LOC_ANALYTICS_DISABLED),
+            MenuRow.ANALYTICS to activity.getString(R.string.analytics_off),
         ))
         rule.setContent { TodayWeatherShell(state, onRefresh = {}, onMenuRow = {}, onExit = {}) }
         rule.waitForIdle()

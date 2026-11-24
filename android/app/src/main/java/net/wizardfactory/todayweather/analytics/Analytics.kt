@@ -8,6 +8,7 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import net.wizardfactory.todayweather.core.domain.analytics.AnalyticsDefault
 import net.wizardfactory.todayweather.core.domain.analytics.AnalyticsSchema
 
 /** The Firebase Analytics calls the app makes (the Cordova plugin's bridge). */
@@ -44,9 +45,11 @@ class FirebaseAnalyticsSdk(private val context: Context) : AnalyticsSdk {
 
 /**
  * The usage analytics choice (`twAnalyticsConsentV1`) and the SDK's collection state, in two private preference files
- * written with `commit()`. The Cordova app kept the choice in WebView storage and the plugin persisted the collection
- * flag on its own: a grant restores at the start only when both still hold it, so a withdrawal whose choice could not
- * be written still holds after a restart when the collection state was written.
+ * written with `commit()` and read only through SharedPreferences. The Cordova app kept the choice in WebView storage and
+ * the plugin persisted the collection flag on its own: a grant restores at the start only when both still hold it, so a
+ * withdrawal whose choice could not be written still holds after a restart when the collection state was written.
+ * Failure or corruption of these private files is outside the guarantee (specs/analytics-default-on.md): Android loads a
+ * damaged file as empty, which reads as "no choice", so the region default may apply.
  */
 class ConsentStore(private val choices: SharedPreferences, private val collection: SharedPreferences) {
     constructor(context: Context) : this(
@@ -54,18 +57,26 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
         context.getSharedPreferences(COLLECTION_FILE, Context.MODE_PRIVATE),
     )
 
-    /** The choice at the start (`init`); a grant the collection state does not confirm is withdrawn and written so. */
-    fun startChoice(): Boolean {
-        if (runCatching { choices.getString(KEY, null) }.getOrNull() != "true") return false
-        if (runCatching { collection.getBoolean(ENABLED, false) }.getOrDefault(false)) return true
+    /**
+     * The stored choice at the start (`init`): `"true"`, `"false"`, none, or another value ([UNREADABLE] when a record
+     * cannot be read), which does not collect. A grant the collection state does not confirm is withdrawn and written so.
+     */
+    fun startChoice(): String? {
+        val stored = runCatching { choices.getString(KEY, null) }.getOrElse { return UNREADABLE }
+        val enabled = runCatching { collection.getBoolean(ENABLED, false) }.getOrElse { return UNREADABLE }
+        if (stored != "true") return stored
+        if (enabled) return stored
         write(false)
-        return false
+        return "false"
     }
 
-    /** Writes the choice (`persistChoice`); when that fails it removes the choice, so an old grant cannot survive. */
+    /**
+     * Writes the choice (`persistChoice`). When that fails the stored value stays as it was: a failed grant keeps a
+     * decline, and an old grant after a failed withdrawal is withdrawn at the next start, because the collection state
+     * recorded for this session says off.
+     */
     fun write(value: Boolean): Boolean {
         if (choices.edit().putString(KEY, value.toString()).commit()) return true
-        choices.edit().remove(KEY).commit()
         Log.w(TAG, "collection storage_write_failed")
         return false
     }
@@ -79,6 +90,9 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
     companion object {
         const val KEY = "twAnalyticsConsentV1"
         const val ENABLED = "collectionEnabled"
+
+        /** [startChoice] when a record cannot be read. */
+        const val UNREADABLE = "unreadable"
         const val CHOICE_FILE = "tw_analytics_consent"
         const val COLLECTION_FILE = "tw_analytics_collection"
     }
@@ -86,39 +100,62 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
 
 /**
  * `Monetization` (service.monetization.js) without the bridge's callbacks: the SDK calls are synchronous here.
- * Collection runs only after an explicit opt-in on the menu's 선택적 이용 통계, with analytics storage granted and
- * advertising denied; events follow [AnalyticsSchema] and carry `measurement_version` and [trafficType].
+ * Collection follows [AnalyticsDefault] (AK 2026-11-24): a stored choice from the menu's 이용 통계 wins; without one it is
+ * on by default for the device [region] outside the opt-in regions and off there until the user allows it. Collecting
+ * grants analytics storage with advertising denied; events follow [AnalyticsSchema] and carry `measurement_version` and
+ * [trafficType]. Applying the default writes no choice.
  */
-class Analytics(private val sdk: AnalyticsSdk, private val store: ConsentStore, private val trafficType: String) {
+class Analytics(
+    private val sdk: AnalyticsSdk,
+    private val store: ConsentStore,
+    private val trafficType: String,
+    /** The device region at the start (`TodayWeatherApp.deviceRegion`); null or empty when unknown. */
+    private val region: () -> String?,
+) {
     private val choiceFlow = MutableStateFlow(false)
     private var enabled = false
     private var started = false
     private var lastScreen: String? = null
     private var pendingScreen: String? = null
 
-    /** The choice the menu row shows (동의함 or 꺼짐). */
+    /** Whether it collects, as the menu row shows it (켜짐 or 꺼짐). */
     val choice: StateFlow<Boolean> = choiceFlow.asStateFlow()
 
-    /** `init` at `platformReady`: applies the stored choice before Firebase starts collecting (EarlyStartProvider). */
+    /** The start's region keeps the opt-in (the popup asks for consent); false where usage analytics is on by default. */
+    @Volatile
+    var optInRegion: Boolean = true
+        private set
+
+    /**
+     * `init` at `platformReady`, before Firebase starts collecting (EarlyStartProvider): the stored choice, else the
+     * region's default. A failure while applying the default leaves everything off and stores nothing, so the next
+     * start applies it again.
+     */
     @Synchronized
     fun start() {
         if (started) return
         started = true
-        choiceFlow.value = store.startChoice()
-        applyCollection(choiceFlow.value)
+        val stored = store.startChoice()
+        val region = runCatching { region() }.getOrNull()
+        optInRegion = !AnalyticsDefault.onByDefault(region)
+        choiceFlow.value = AnalyticsDefault.collects(stored, region)
+        applyCollection(choiceFlow.value, storeOnFailure = stored != null)
     }
 
     /**
-     * The choice of the dialog (`setCollectionEnabled`): collection stops at once, the choice is written, then applied.
-     * False when it could not be fully applied (`LOC_PRIVACY_SAVE_FAILED`); the choice is then off.
+     * The choice of the dialog (`setCollectionEnabled`): collection stops at once (a withdrawal also turns the SDK off
+     * and denies every consent type before any file is written), the choice is written, then applied. False when it
+     * could not be fully applied (`LOC_PRIVACY_SAVE_FAILED`); the choice is then off.
      */
     @Synchronized
     fun setCollectionEnabled(value: Boolean): Boolean {
         enabled = false
         pendingScreen = null
+        if (!value) stopSdk()
         val saved = store.write(value)
         choiceFlow.value = saved && value
-        return applyCollection(choiceFlow.value) && saved
+        // A grant that was not written keeps the stored choice, also when the SDK then fails (CODEX-3178-23).
+        return applyCollection(choiceFlow.value, storeOnFailure = saved || !value) && saved
     }
 
     /** An event of the schema with its own fields only; false when it is dropped or not sent. */
@@ -129,7 +166,7 @@ class Analytics(private val sdk: AnalyticsSdk, private val store: ConsentStore, 
     }
 
     /**
-     * A route shown (`$stateChangeSuccess`): only after an opt-in, only the fixed names, not the same one twice in a row.
+     * A route shown (`$stateChangeSuccess`): only while collecting, only the fixed names, not the same one twice in a row.
      * The latest one before collection is enabled is sent once it is.
      */
     @Synchronized
@@ -163,30 +200,39 @@ class Analytics(private val sdk: AnalyticsSdk, private val store: ConsentStore, 
         }
     }
 
-    /** Collection off, the consent mode, then collection on for a grant; any failure leaves everything off. */
-    private fun applyCollection(value: Boolean): Boolean {
+    /**
+     * Collection off and the consent mode first, then the collection state; when collecting, the state is recorded before
+     * the SDK collects. Any failure turns the SDK off and denies every consent type before it writes anything, and, for a
+     * stored or chosen value ([storeOnFailure]), then writes a withdrawal.
+     */
+    private fun applyCollection(value: Boolean, storeOnFailure: Boolean = true): Boolean {
         enabled = false
         lastScreen = null
         try {
             sdk.setCollectionEnabled(false)
-            store.recordCollection(false)
             sdk.setConsent(value)
+            store.recordCollection(false)
             if (!value) return true
-            sdk.setCollectionEnabled(true)
             check(store.recordCollection(true)) { "collection state not written" }
+            sdk.setCollectionEnabled(true)
             enabled = true
             pendingScreen?.let(::screen)
             return true
         } catch (e: Exception) {
+            stopSdk()
             choiceFlow.value = false
             pendingScreen = null
-            store.write(false)
             Log.w(TAG, "collection write_failed")
-            runCatching { sdk.setCollectionEnabled(false) }
             store.recordCollection(false)
-            runCatching { sdk.setConsent(false) }.onFailure { Log.w(TAG, "collection rollback_failed") }
+            if (storeOnFailure) store.write(false)
             return false
         }
+    }
+
+    /** The SDK off with every consent type denied, each call on its own so one failure does not skip the other. */
+    private fun stopSdk() {
+        runCatching { sdk.setCollectionEnabled(false) }.onFailure { Log.w(TAG, "collection rollback_failed") }
+        runCatching { sdk.setConsent(false) }.onFailure { Log.w(TAG, "collection rollback_failed") }
     }
 
     companion object {

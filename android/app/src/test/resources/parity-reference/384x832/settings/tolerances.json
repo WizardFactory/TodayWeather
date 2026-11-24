@@ -11,7 +11,7 @@
   "heightDifference": 0
  },
  "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
- "why": "Four-size Korean/English KR-unit settings, menus and hourly/daily dark/photo/old blocks. Historical margins retained. Inspected narrow old-theme chart and header, wide English unit list, and photo-header overlays. The chart now uses the old theme artwork, independently checked by ChartArtworkTest. Remaining differences follow glyph/icon rasterization and fractional line metrics; no block differs by more than one physical pixel in height. Geometry and all-state fit remain separate checks.",
+ "why": "Four-size Korean/English KR-unit settings, menus and hourly/daily dark/photo/old blocks. Historical margins retained. Inspected narrow old-theme chart and header, wide English unit list, and photo-header overlays. The chart now uses the old theme artwork, independently checked by ChartArtworkTest. Remaining differences follow glyph/icon rasterization and fractional line metrics; no block differs by more than one physical pixel in height. Geometry and all-state fit remain separate checks. 2026-11-24 (analytics default-on, B34): failing cases re-measured after the native menu row became 이용 통계 · 꺼짐 / 켜짐 (Usage analytics · Off / On) and the popup title 이용 통계, native texts the Cordova captures (선택적 이용 통계 · 꺼짐 / 동의함) cannot show; the added residual is that row's and title's text.",
  "sensitivity": "Measured 2026-11-09 by changing the pages one way at a time and rerunning (reports/sdlc/android-an-12/checks/mutations-1.log, mutations-2.log): rows 2 dp taller fail 19 comparisons, choices 4 dp to the right 19, the popup 10 dp wider 2, a lighter backdrop 2, the photo centered as AN-08 had it 1 (hourly-photo-0), the tab page's colors instead of the menu's 4 (photo and old themes). A check mark 4 dp higher and the popup's body on Compose's own line height change too few pixels to fail; SettingsGeometryTest compares the rows, the check mark and the popup's parts with the captured rects within 0.5 dp and fails for both.",
  "cases": {
   "en-US/hourly-photo-0": {
@@ -216,13 +216,13 @@
   },
   "ko-KR/about": {
    "heightDifference": 0,
-   "strong": 0.005694,
-   "mean": 2.498
+   "strong": 0.007527,
+   "mean": 2.906
   },
   "en-US/about": {
    "heightDifference": 0,
-   "strong": 0.002732,
-   "mean": 1.308
+   "strong": 0.005138,
+   "mean": 1.762
   },
   "ko-KR/units": {
    "heightDifference": 0,

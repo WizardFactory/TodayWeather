@@ -33,10 +33,11 @@ import org.junit.runner.RunWith
 
 /**
  * The debug build's ads and analytics on an emulator (#2894 AC2), run by tools/emulator/run-ads-check.sh, which reads
- * the Analytics debug log around each run:
+ * the Analytics debug log around each run. The script passes `analyticsRegion` `DE`, an opt-in region (analytics
+ * default-on, 2026-11-24), so usage analytics starts off on any emulator:
  * - `ads` `online`: the consent flow starts the Ads SDK and a Google native test ad loads below the forecast, favorites and air pages in scrollable
  *   content; usage analytics stays off (the script finds no logged event);
- * - `ads` `optin`, offline: 선택적 이용 통계, 동의, then two tabs, so the log shows events and the check above cannot pass
+ * - `ads` `optin`, offline: 이용 통계, 동의, then two tabs, so the log shows events and the check above cannot pass
  *   vacuously (nothing is uploaded; the app is removed before the network returns).
  * Each state is captured to the app's files (ads/).
  */
@@ -121,7 +122,7 @@ class AdsDeviceTest {
         rule.onNodeWithTag(ShellTags.row(MenuRow.ANALYTICS)).performScrollTo().performClick()
         rule.waitForIdle()
         capture("analytics-popup")
-        rule.onNode(hasText(rule.activity.getString(R.string.LOC_ANALYTICS_ALLOW)) and hasAnyAncestor(hasTestTag(PopupTags.POPUP)), useUnmergedTree = true)
+        rule.onNode(hasText(rule.activity.getString(R.string.analytics_consent_allow)) and hasAnyAncestor(hasTestTag(PopupTags.POPUP)), useUnmergedTree = true)
             .performClick()
         rule.waitForIdle()
         assertTrue(app.analytics.choice.value)

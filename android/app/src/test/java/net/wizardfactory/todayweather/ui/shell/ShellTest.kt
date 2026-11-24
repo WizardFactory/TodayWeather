@@ -155,7 +155,7 @@ class ShellTest {
             rule.onNode(hasText(Glyphs.CHEVRON_RIGHT) and hasAnyAncestor(hasTestTag(ShellTags.row(row))), useUnmergedTree = true).assertExists()
         }
         rule.onNode(hasText("밝은 테마") and hasAnyAncestor(hasTestTag(ShellTags.row(MenuRow.THEME))), useUnmergedTree = true).assertExists()
-        rule.onNode(hasText("선택적 이용 통계 · 꺼짐") and hasAnyAncestor(hasTestTag(ShellTags.row(MenuRow.ANALYTICS))), useUnmergedTree = true).assertExists()
+        rule.onNode(hasText("이용 통계 · 꺼짐") and hasAnyAncestor(hasTestTag(ShellTags.row(MenuRow.ANALYTICS))), useUnmergedTree = true).assertExists()
         rule.onNode(hasText("2.0.0") and hasAnyAncestor(hasTestTag(ShellTags.row(MenuRow.VERSION))), useUnmergedTree = true).assertExists()
     }
 

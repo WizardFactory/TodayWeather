@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import net.wizardfactory.todayweather.core.storage.startShows
 import net.wizardfactory.todayweather.widget.WidgetOptions
 import android.app.Application
+import android.content.res.Resources
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import java.io.File
@@ -66,10 +67,26 @@ open class TodayWeatherApp : Application() {
         if (FirebaseApp.getApps(this).isEmpty()) null else FirebaseRemoteConfigSource(FirebaseRemoteConfig.getInstance())
 
     /**
-     * Usage analytics after an opt-in (#2894), started by EarlyStartProvider before Firebase. Test-unit builds report
-     * `development` traffic, release builds `production`, as the Cordova builds did.
+     * The device region for the usage analytics default: the system locale's region, not the app's language (AppLocale
+     * applies only a language; a per-app language does not change the system configuration). Empty when the system
+     * locale has none.
      */
-    val analytics: Analytics by lazy { Analytics(analyticsSdk(), ConsentStore(this), if (BuildConfig.RELEASE_ADS) "production" else "development") }
+    open fun deviceRegion(): String? = Resources.getSystem().configuration.locales[0].country
+
+    /**
+     * Usage analytics (#2894), on by default outside the opt-in regions (AK 2026-11-24), started by EarlyStartProvider
+     * before Firebase. Test-unit builds report `development` traffic, release builds `production`, as the Cordova builds did.
+     */
+    val analytics: Analytics by lazy {
+        Analytics(analyticsSdk(), ConsentStore(this), if (BuildConfig.RELEASE_ADS) "production" else "development", ::deviceRegion)
+    }
+
+    /**
+     * Applies the usage analytics decision; EarlyStartProvider calls it before Firebase starts, after the guard. The
+     * device tests' application starts it once their instrumentation arguments are known (they arrive after the
+     * content providers); collection stays off until then.
+     */
+    open fun startAnalytics() = analytics.start()
 
     /** The Cordova data migration, started on every process start; it does nothing after the first one. */
     val migration: Deferred<AppState> by lazy { appScope.async(Dispatchers.IO) { migrate() } }

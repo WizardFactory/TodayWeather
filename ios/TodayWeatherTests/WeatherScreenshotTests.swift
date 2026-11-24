@@ -28,6 +28,62 @@ struct WeatherScreenshotTests {
         Attachment.record(png, named: "ios-fractional-header.png")
     }
 
+    @Test(arguments: ["kma-seoul-hourly", "kma-seoul-daily"], ["375x667", "393x852", "440x956"])
+    func rankedForecastHeader(page: String, size: String) throws {
+        let midnight = try #require(ISO8601DateFormatter().date(from: "2026-02-04T15:00:00Z"))
+        let daylight = midnight.addingTimeInterval(-1)
+        let display = try MatrixScreenshotTests.display(size)
+
+        func header(_ text: String, at now: Date = daylight, name: String) throws -> Bitmap {
+            let content = try Self.content(page, rankedSummary: text, now: now, metrics: display.metrics)
+            let hero = try #require(content.page.hero)
+            if now < midnight {
+                #expect(hero.rankedSummary)
+                #expect(hero.summary == text)
+                #expect(hero.summaryAir == nil)
+            } else {
+                #expect(!hero.rankedSummary)
+                #expect(hero.summary == "흐림")
+            }
+            let view = Self.blockView(.header, content: content, page: page, headerTop: display.top)
+            let bitmap = try render(view, width: display.width, scale: display.scale)
+            let png = try #require(UIImage(cgImage: bitmap.image).pngData())
+            Attachment.record(png, named: "\(page)-\(size)-\(name).png")
+            return bitmap
+        }
+
+        let term = try header("입춘", name: "solar-term")
+        let hazards = try header("한파주의보, 초미세먼지 매우 나쁨", name: "hazards")
+        let expired = try header("입춘", at: midnight, name: "expired")
+        #expect(term.pixels != hazards.pixels, "The displayed header must react to distinct ranked text")
+        #expect(term.pixels != expired.pixels, "The dated text must disappear after Seoul midnight")
+
+        // Measure the actual summary box outside the header's fixed frame, where wrapping cannot be hidden by clipping.
+        func box(_ text: String) throws -> Bitmap {
+            let content = try Self.content(page, rankedSummary: text, now: daylight, metrics: display.metrics)
+            let width = display.width * 0.8
+            let colors = WeatherColors.of(.light, daily: content.type == .mid)
+            let view = MainBox(page: content.page, metrics: display.metrics, theme: .light,
+                               colors: colors, s: TextScale(.large), width: width, perform: { _ in })
+                .background(colors.header.color)
+            return try render(AnyView(view), width: width, scale: display.scale)
+        }
+        let one = try box("입춘")
+        let two = try box("입춘\n오늘 최저 영하 12도")
+        let long = try box("입춘\n오늘 최저 영하 12도\n최고 영하 3도\n한파주의보")
+        #expect(two.height > one.height)
+        #expect(long.height == two.height, "The forecast summary must occupy at most two lines")
+
+        let referenceName = "ranked-summary-\(page)-\(size)"
+        let reference = try References.image(referenceName + ".png")
+        let diff = ImageDiff(native: long, reference: reference)
+        try diff.write(referenceName)
+        #expect(long.width == reference.width)
+        #expect(abs(diff.heightDifference) <= 1)
+        #expect(diff.strong <= 0.005, "\(referenceName) strong \(diff.strong)")
+        #expect(diff.mean <= 0.4, "\(referenceName) mean \(diff.mean)")
+    }
+
     @Test(arguments: pages)
     func pageBlocksMatchTheCordovaPages(page: String) throws {
         let manifest = try References.json("forecast-captures.json")
@@ -69,7 +125,8 @@ struct WeatherScreenshotTests {
 
     /// The page model of a captured page: the served response converted, with the place's own fields, applied as the
     /// Cordova visit did (London as the second of two places).
-    static func content(_ page: String, exampleTemperature: Double? = nil) throws -> WeatherPageContent {
+    static func content(_ page: String, exampleTemperature: Double? = nil, rankedSummary: String? = nil,
+                        now: Date = Date(), metrics: ChartMetrics = ChartMetrics(bodyWidth: 393, bodyHeight: 852)) throws -> WeatherPageContent {
         let manifest = try References.json("forecast-captures.json")
         let fixture = page.hasPrefix("vc-london") ? "vc-london" : "kma-seoul"
         let place = try #require(manifest["places"]?[fixture]?.objectValue)
@@ -82,12 +139,18 @@ struct WeatherScreenshotTests {
             current["t1h"] = .number(exampleTemperature)
             record["currentWeather"] = .object(current)
         }
-        var scope = ForecastScope(type: page.contains("daily") ? .mid : .short, metrics: ChartMetrics(bodyWidth: 393, bodyHeight: 852),
+        if let rankedSummary {
+            let current = try #require(record["currentWeather"]?.objectValue)
+            record["currentWeather"] = .object(current.setting("summary", .string(rankedSummary))
+                .setting("summaryForDate", "2026-02-04").setting("summaryWeather", "흐림"))
+        }
+        var scope = ForecastScope(type: page.contains("daily") ? .mid : .short, metrics: metrics,
                                   fahrenheit: false, photoTheme: false,
                                   yesterday: YesterdayText(same: Catalog(code: "ko")("LOC_SAME_AS_YESTERDAY"),
                                                            than: Catalog(code: "ko")("LOC_THAN_YESTERDAY")),
                                   expandShortChart: page.hasSuffix("expanded"))
         scope.open(record, enabledCount: Int(place["cityCount"]?.numberValue?.double ?? 1), hasPush: false)
+        if rankedSummary != nil { scope.apply(record, hasPush: false, now: now) }
         let units = PageUnits(temperature: "C", windSpeed: "m/s", pressure: "hPa", distance: "km", precipitation: "mm", air: "airkorea")
         return WeatherPageContent(scope: scope, units: units, texts: WeatherScreens.texts(Catalog(code: "ko")))
     }

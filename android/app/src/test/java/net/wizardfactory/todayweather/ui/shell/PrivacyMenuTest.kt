@@ -52,8 +52,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The menu's privacy rows and the screens reported (#2894, manual page 37): 선택적 이용 통계 shows the choice and opens
- * its popup over the open menu (거부 / 철회, 동의; back changes nothing); a failed save shows the TodayWeather alert;
+ * The menu's privacy rows and the screens reported (#2894, manual page 37): 이용 통계 shows 켜짐 or 꺼짐 and opens its
+ * popup over the open menu (analytics default-on, 2026-11-24: 끄기 and 켜기 where it is on by default; the consent
+ * question with 거부 / 철회 and 동의 in the opt-in regions; back changes nothing); a failed save shows the TodayWeather alert;
  * 광고 개인정보 선택 shows the form or the cannot-open message; the policy and terms open the page of the app's
  * language; `screen_view` gets the Cordova state names; with a banner, the menu and popups end at its top edge.
  */
@@ -83,11 +84,11 @@ class PrivacyMenuTest {
     private val opened = mutableListOf<String>()
     private val screens = mutableListOf<String>()
 
-    private fun show(banner: Boolean = false) {
+    private fun show(banner: Boolean = false, optIn: Boolean = false) {
         val memory = Memory(AppState(places = listOf(seoul), placeIndex = 0, units = UnitSettings.defaults("KR")))
         val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { _, _ -> seoulBody }, io = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
-        val privacy = PrivacyActions(choice, { value -> chosen += value; if (saves) choice.value = value; saves }) { onUnavailable ->
+        val privacy = PrivacyActions(choice, { value -> chosen += value; if (saves) choice.value = value; saves }, optIn) { onUnavailable ->
             if (!formShows) onUnavailable()
         }
         rule.setContent {
@@ -124,22 +125,96 @@ class PrivacyMenuTest {
     fun theAnalyticsRowShowsTheChoiceAndItsPopupChangesIt() {
         show()
         openMenu()
-        inRow(MenuRow.ANALYTICS, "선택적 이용 통계 · 꺼짐").assertExists()
+        inRow(MenuRow.ANALYTICS, "이용 통계 · 꺼짐").assertExists()
         tapRow(MenuRow.ANALYTICS)
         assertTrue(menuOpen(), "the popup opens over the open menu")
-        rule.onNodeWithText("앱 개선을 위해 Google Firebase Analytics로", substring = true).assertExists()
-        inPopup("거부 / 철회").assertExists()
-        inPopup("동의").performClick()
+        inPopup("이용 통계").assertExists()
+        rule.onNodeWithText("이용 통계는 이 메뉴에서 끄지 않는 한 켜져 있으며", substring = true).assertExists()
+        inPopup("끄기").assertExists()
+        inPopup("켜기").performClick()
         rule.waitForIdle()
         assertEquals(listOf(true), chosen)
         assertFalse(popupShown())
         assertTrue(menuOpen())
-        inRow(MenuRow.ANALYTICS, "선택적 이용 통계 · 동의함").assertExists()
+        inRow(MenuRow.ANALYTICS, "이용 통계 · 켜짐").assertExists()
+        tapRow(MenuRow.ANALYTICS)
+        inPopup("끄기").performClick()
+        rule.waitForIdle()
+        assertEquals(listOf(true, false), chosen)
+        inRow(MenuRow.ANALYTICS, "이용 통계 · 꺼짐").assertExists()
+    }
+
+    @Test
+    fun inAnOptInRegionThePopupAsksForConsent() {
+        show(optIn = true)
+        openMenu()
+        inRow(MenuRow.ANALYTICS, "이용 통계 · 꺼짐").assertExists()
+        tapRow(MenuRow.ANALYTICS)
+        inPopup("이용 통계").assertExists()
+        rule.onNodeWithText("앱 개선을 위해 Google Firebase Analytics로", substring = true).assertExists()
+        rule.onNodeWithText("동의하시겠습니까?", substring = true).assertExists()
+        inPopup("거부 / 철회").assertExists()
+        inPopup("동의").performClick()
+        rule.waitForIdle()
+        assertEquals(listOf(true), chosen)
+        inRow(MenuRow.ANALYTICS, "이용 통계 · 켜짐").assertExists()
         tapRow(MenuRow.ANALYTICS)
         inPopup("거부 / 철회").performClick()
         rule.waitForIdle()
         assertEquals(listOf(true, false), chosen)
-        inRow(MenuRow.ANALYTICS, "선택적 이용 통계 · 꺼짐").assertExists()
+        inRow(MenuRow.ANALYTICS, "이용 통계 · 꺼짐").assertExists()
+    }
+
+    /** The consent popup in German and Chinese has no English text (AK 2026-11-24). */
+    @Config(qualifiers = "de-rDE-w384dp-h832dp-xhdpi")
+    @Test
+    fun theConsentPopupInGerman() {
+        show(optIn = true)
+        openMenu()
+        inRow(MenuRow.ANALYTICS, "Nutzungsanalyse · Aus").assertExists()
+        tapRow(MenuRow.ANALYTICS)
+        rule.onNodeWithText("Dürfen wir zur Verbesserung der App", substring = true).assertExists()
+        inPopup("Ablehnen / Widerrufen").assertExists()
+        inPopup("Zustimmen").performClick()
+        rule.waitForIdle()
+        assertEquals(listOf(true), chosen)
+        inRow(MenuRow.ANALYTICS, "Nutzungsanalyse · An").assertExists()
+    }
+
+    @Config(qualifiers = "zh-rCN-w384dp-h832dp-xhdpi")
+    @Test
+    fun theConsentPopupInSimplifiedChinese() {
+        show(optIn = true)
+        openMenu()
+        tapRow(MenuRow.ANALYTICS)
+        rule.onNodeWithText("是否允许 Google Firebase Analytics", substring = true).assertExists()
+        inPopup("拒绝 / 撤回").assertExists()
+        inPopup("同意").assertExists()
+    }
+
+    @Config(qualifiers = "zh-rTW-w384dp-h832dp-xhdpi")
+    @Test
+    fun theConsentPopupInTraditionalChinese() {
+        show(optIn = true)
+        openMenu()
+        tapRow(MenuRow.ANALYTICS)
+        rule.onNodeWithText("是否允許 Google Firebase Analytics", substring = true).assertExists()
+        inPopup("拒絕 / 撤回").assertExists()
+        inPopup("同意").assertExists()
+    }
+
+    @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
+    @Test
+    fun theRowAndPopupInEnglish() {
+        show()
+        openMenu()
+        inRow(MenuRow.ANALYTICS, "Usage analytics · Off").assertExists()
+        tapRow(MenuRow.ANALYTICS)
+        rule.onNodeWithText("Usage analytics is on unless you turn it off in this menu", substring = true).assertExists()
+        inPopup("Turn off").assertExists()
+        inPopup("Turn on").performClick()
+        rule.waitForIdle()
+        inRow(MenuRow.ANALYTICS, "Usage analytics · On").assertExists()
     }
 
     @Test
@@ -159,11 +234,11 @@ class PrivacyMenuTest {
         show()
         openMenu()
         tapRow(MenuRow.ANALYTICS)
-        inPopup("동의").performClick()
+        inPopup("켜기").performClick()
         rule.waitForIdle()
         rule.onNodeWithText("개인정보 설정을 완전히 적용하지 못했습니다. 다시 시도해 주세요.").assertExists()
         inPopup("TodayWeather").assertExists()
-        inRow(MenuRow.ANALYTICS, "선택적 이용 통계 · 꺼짐").assertExists()
+        inRow(MenuRow.ANALYTICS, "이용 통계 · 꺼짐").assertExists()
         inPopup("확인").performClick()
         rule.waitForIdle()
         assertFalse(popupShown())
