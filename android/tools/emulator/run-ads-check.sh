@@ -2,9 +2,11 @@
 # The debug build's ads and analytics on an emulator (#2894 AC2), with the Analytics debug log (FA and FA-SVC verbose):
 # 1. online: AdsDeviceTest waits until a Google native test ad loads on each of the four eligible pages; the log must show no analytics
 #    event, while it shows that Analytics ran (its own lines);
-# 2. offline: AdsDeviceTest opts in through 선택적 이용 통계 and changes tabs; the log must now show logged events, so
+# 2. offline: AdsDeviceTest opts in through 이용 통계 and changes tabs; the log must now show logged events, so
 #    the first check cannot pass vacuously. Nothing is uploaded: the device has no network, and the app is removed before
 #    the network returns.
+# Both runs pass the opt-in region DE (`analyticsRegion`): outside the opt-in regions usage analytics is on by default
+# (analytics default-on, 2026-11-24), so the emulator's own region must not decide this check.
 #   ANDROID_SERIAL=emulator-5554 android/tools/emulator/run-ads-check.sh [out-dir]
 # Requires the debug and androidTest APKs with the Firebase configuration (app/google-services.json). Push requests are
 # recorded by the test app; the test app sends no weather request. On every exit both packages are uninstalled; when that
@@ -35,7 +37,7 @@ adb shell setprop log.tag.FA-SVC VERBOSE
 
 install
 adb logcat -c
-adb shell am instrument -w -e ads online -e class $PKG.AdsDeviceTest#aTestNativeCardLoadsOnAllFourPagesWhileAnalyticsStaysOff $RUNNER | tee "$OUT/online.txt"
+adb shell am instrument -w -e ads online -e analyticsRegion DE -e class $PKG.AdsDeviceTest#aTestNativeCardLoadsOnAllFourPagesWhileAnalyticsStaysOff $RUNNER | tee "$OUT/online.txt"
 adb logcat -d > "$OUT/logcat-online.txt"
 adb pull "/sdcard/Android/data/$PKG/files/ads/." "$OUT/" >/dev/null
 adb uninstall $PKG.test >/dev/null
@@ -46,7 +48,7 @@ trap offline_cleanup EXIT
 go_offline
 install
 adb logcat -c
-adb shell am instrument -w -e ads optin -e class $PKG.AdsDeviceTest#anOptInStartsCollection $RUNNER | tee "$OUT/optin.txt"
+adb shell am instrument -w -e ads optin -e analyticsRegion DE -e class $PKG.AdsDeviceTest#anOptInStartsCollection $RUNNER | tee "$OUT/optin.txt"
 adb logcat -d > "$OUT/logcat-optin.txt"
 adb pull "/sdcard/Android/data/$PKG/files/ads/." "$OUT/" >/dev/null
 

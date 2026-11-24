@@ -7,7 +7,8 @@ import android.database.Cursor
 import android.net.Uri
 
 /**
- * Keeps Firebase Analytics off until the user opts in on the menu's 선택적 이용 통계 (AN-15, `Analytics`).
+ * Keeps Firebase Analytics off until the app has decided whether it collects (AN-15, `Analytics`): the stored choice
+ * of the menu's 이용 통계, else the region's default (analytics default-on, AK 2026-11-24).
  *
  * The Cordova app records the opt-in `twAnalyticsConsentV1` only in WebView storage, and the Firebase SDK
  * keeps a collection flag that the Cordova build may have enabled; that persisted flag overrides the
@@ -34,8 +35,8 @@ object AnalyticsGuard {
 
 /**
  * Runs before the other content providers of the app, so before Firebase initializes: collection off, a withdrawal made in
- * a fallback Cordova build that claimed the state ([HandBackConsent]), then the native choice (`platformReady`:
- * `Monetization.init`), so an opt-in made in this app collects again from the start.
+ * a fallback Cordova build ([HandBackConsent]), then the native decision (`platformReady`: `Monetization.init`): a stored
+ * choice made in this app, else the region's default, so collection starts only once that decision is applied.
  */
 class EarlyStartProvider : ContentProvider() {
     override fun onCreate(): Boolean {

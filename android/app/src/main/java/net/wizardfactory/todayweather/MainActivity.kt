@@ -97,6 +97,7 @@ import net.wizardfactory.todayweather.ui.nation.NationRoutes
 import net.wizardfactory.todayweather.ui.nation.NationScreen
 import net.wizardfactory.todayweather.ui.settings.SettingsRoutes
 import net.wizardfactory.todayweather.ui.settings.SettingsScreen
+import net.wizardfactory.todayweather.ui.shell.AnalyticsPopup
 import net.wizardfactory.todayweather.ui.shell.IonicAlert
 import net.wizardfactory.todayweather.ui.shell.IonicPopup
 import net.wizardfactory.todayweather.ui.shell.MenuRow
@@ -167,7 +168,7 @@ class MainActivity : ComponentActivity() {
             app.appState.state.first { it != null && !it.startShows }
             opened.consent.start(this@MainActivity)
         }
-        val privacy = PrivacyActions(app.analytics.choice, app.analytics::setCollectionEnabled) { onUnavailable ->
+        val privacy = PrivacyActions(app.analytics.choice, app.analytics::setCollectionEnabled, app.analytics.optInRegion) { onUnavailable ->
             opened.consent.openPrivacyOptions(this, ::refreshNativeEligibility, onUnavailable)
         }
         setContent {
@@ -339,7 +340,7 @@ fun AppContent(
     }
     val nationPages by (nation?.pages ?: remember { MutableStateFlow(emptyMap()) }).collectAsState()
     var about by rememberSaveable { mutableStateOf(false) }
-    // 선택적 이용 통계's popup and the privacy alerts (`showAlert('TodayWeather', …)`), by their message.
+    // 이용 통계's popup and the privacy alerts (`showAlert('TodayWeather', …)`), by their message.
     var analyticsPopup by rememberSaveable { mutableStateOf(false) }
     var privacyAlert by rememberSaveable { mutableStateOf<Int?>(null) }
     val analyticsChoice by (privacy?.choice ?: remember { MutableStateFlow(false) }).collectAsState()
@@ -420,7 +421,7 @@ fun AppContent(
                 MenuRow.STARTUP_PAGE to texts[SettingLists.startupPageLabel(state.settings.startupPage)],
                 MenuRow.REFRESH_INTERVAL to texts[SettingLists.refreshIntervalLabel(state.settings.refreshInterval)],
                 MenuRow.THEME to texts[SettingLists.themeLabel(state.settings.theme)],
-                MenuRow.ANALYTICS to stringResource(if (analyticsChoice) R.string.LOC_ANALYTICS_ALLOWED else R.string.LOC_ANALYTICS_DISABLED),
+                MenuRow.ANALYTICS to stringResource(if (analyticsChoice) R.string.analytics_on else R.string.analytics_off),
             ),
         ),
         // A pull bypasses the freshness gate for the selected place.
@@ -517,10 +518,7 @@ fun AppContent(
                     analyticsPopup = false
                     if (privacy?.setAnalytics?.invoke(value) == false) privacyAlert = R.string.LOC_PRIVACY_SAVE_FAILED
                 }
-                IonicPopup(stringResource(R.string.LOC_ANALYTICS_CHOICE), listOf(stringResource(R.string.LOC_ANALYTICS_DETAIL)),
-                    listOf(PopupButton(stringResource(R.string.LOC_ANALYTICS_DENY)) { choose(false) },
-                        PopupButton(stringResource(R.string.LOC_ANALYTICS_ALLOW)) { choose(true) }),
-                    onBack = { analyticsPopup = false })
+                AnalyticsPopup(privacy?.optIn ?: true, ::choose, onBack = { analyticsPopup = false })
             }
             privacyAlert?.let { message -> IonicAlert("TodayWeather", listOf(stringResource(message)), stringResource(R.string.LOC_OK), onClose = { privacyAlert = null }) }
             if (startPopup) {

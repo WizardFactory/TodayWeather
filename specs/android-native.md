@@ -21,7 +21,7 @@ The native app reproduces the Cordova 1.1.1 app (`client/`, Android build) for u
 | R4 | No production writes in tests; push writes go to test doubles. | Test code review; request recording in tests. |
 | R5 | No test, mock or dry-run modes in the app; doubles are injected by test code. | Review. |
 | R6 | Parity is shown per screen against the manual and Cordova captures within recorded tolerances. | Screenshot tests (AN-05 onward) and the AN-18 checklist. |
-| R7 | An update from the Cordova build keeps places, settings, alarms, push registration and `Device-Id`, and analytics stays off without opt-in. | Emulator upgrade test (AN-03, AN-04), extended by later issues. |
+| R7 | An update from the Cordova build keeps places, settings, alarms, push registration and `Device-Id`, and analytics stays off without opt-in. *Amended 2026-11-24 (AK, analytics default-on): a Cordova opt-in still does not carry over; without a stored native choice, usage analytics follows the [region rule](analytics-default-on.md) (on by default outside the EEA, the United Kingdom and Switzerland; off there and for an unknown region until the user allows it).* | Emulator upgrade test (AN-03, AN-04), extended by later issues; since 2026-11-24 run in the opt-in region DE (`analyticsRegion`), with the region rule covered by `AnalyticsDefaultTest` and `AnalyticsTest`. |
 | R8 | Every request the native client makes uses a path the legacy server serves under `v000903`, or a documented exception. | The AN-18 request-path test against a route table generated from `server/`. |
 
 ## Exclusions

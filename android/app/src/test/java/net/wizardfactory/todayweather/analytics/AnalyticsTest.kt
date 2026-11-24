@@ -12,9 +12,11 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The usage analytics opt-in of the Cordova build (`Monetization`, #2894 AC1, V22): collection only after an explicit
- * grant, with analytics storage granted and advertising denied; a withdrawal that stops collection at once; failed
- * writes that never leave a grant behind; the start's corroboration of a stored grant; the event schema and the screens.
+ * The usage analytics choice (`Monetization`, #2894 AC1, V22), on by default outside the opt-in regions (AK 2026-11-24,
+ * specs/analytics-default-on.md): in an opt-in region (here DE) collection only after an explicit grant, with analytics
+ * storage granted and advertising denied; elsewhere (here KR) collection from the start without a stored choice; a stored
+ * choice wins over the region; a withdrawal that stops collection at once; failed writes that never leave a grant behind;
+ * the start's corroboration of a stored grant; the event schema and the screens.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -39,7 +41,11 @@ class AnalyticsTest {
         }
     }
 
-    private fun analytics(sdk: Sdk) = Analytics(sdk, ConsentStore(choices, collection), "development").also { it.start() }
+    private fun analytics(sdk: Sdk, region: String? = "DE") =
+        Analytics(sdk, ConsentStore(choices, collection), "development") { region }.also { it.start() }
+
+    private val collectionOn = listOf("collection false", "analytics storage granted", "collection true")
+    private val collectionOff = listOf("collection false", "analytics storage denied")
 
     private val fetch = mapOf("outcome" to "success", "duration_ms" to 120)
 
@@ -52,6 +58,89 @@ class AnalyticsTest {
         assertFalse(a.track("weather_fetch", fetch))
         a.screen("tab.forecast")
         assertTrue(sdk.events.isEmpty())
+    }
+
+    @Test
+    fun aFreshInstallOutsideTheOptInRegionsCollectsWithoutStoringAChoice() {
+        for (region in listOf("KR", "US", "JP")) {
+            val sdk = Sdk()
+            val a = analytics(sdk, region)
+            assertEquals(collectionOn, sdk.calls, region)
+            assertTrue(a.choice.value, region)
+            assertTrue(a.track("weather_fetch", fetch), region)
+            a.screen("tab.forecast")
+            assertEquals(listOf("weather_fetch", "screen_view"), sdk.events.map { it.first }, region)
+            assertEquals(null, choices.getString(ConsentStore.KEY, null), "the default writes no choice")
+            assertTrue(collection.getBoolean(ConsentStore.ENABLED, false), "the collection state is recorded")
+        }
+    }
+
+    @Test
+    fun aFreshInstallInAnOptInOrUnknownRegionCollectsNothing() {
+        for (region in listOf("DE", "FR", "NO", "GB", "CH", "", "150", null)) {
+            val sdk = Sdk()
+            val a = analytics(sdk, region)
+            assertEquals(collectionOff, sdk.calls, "$region")
+            assertFalse(a.choice.value, "$region")
+            assertFalse(a.track("weather_fetch", fetch), "$region")
+            assertEquals(null, choices.getString(ConsentStore.KEY, null))
+        }
+    }
+
+    @Test
+    fun theStoredChoiceWinsOverTheRegion() {
+        choices.edit().putString(ConsentStore.KEY, "false").commit()
+        val declined = Sdk()
+        assertFalse(analytics(declined, "KR").choice.value, "a stored decline stays off where the default is on")
+        assertEquals(collectionOff, declined.calls)
+        assertEquals("false", choices.getString(ConsentStore.KEY, null))
+
+        choices.edit().putString(ConsentStore.KEY, "true").commit()
+        collection.edit().putBoolean(ConsentStore.ENABLED, true).commit()
+        val granted = Sdk()
+        assertTrue(analytics(granted, "DE").choice.value, "a stored grant collects in an opt-in region")
+        assertEquals(collectionOn, granted.calls)
+    }
+
+    @Test
+    fun theRegionDecidesAgainAtEachStartWhileNothingIsStored() {
+        assertTrue(analytics(Sdk(), "KR").choice.value)
+        val moved = Sdk()
+        assertFalse(analytics(moved, "DE").choice.value)
+        assertEquals(collectionOff, moved.calls)
+        assertEquals(null, choices.getString(ConsentStore.KEY, null))
+    }
+
+    @Test
+    fun turningItOffWhereTheDefaultIsOnHoldsAfterARestart() {
+        val sdk = Sdk()
+        val a = analytics(sdk, "KR")
+        sdk.calls.clear()
+        assertTrue(a.setCollectionEnabled(false))
+        assertEquals(collectionOff, sdk.calls)
+        assertFalse(a.choice.value)
+        assertFalse(a.track("weather_fetch", fetch))
+        assertEquals("false", choices.getString(ConsentStore.KEY, null))
+        val restarted = Sdk()
+        assertFalse(analytics(restarted, "KR").choice.value)
+        assertEquals(collectionOff, restarted.calls)
+
+        assertTrue(analytics(Sdk(), "KR").setCollectionEnabled(true))
+        assertEquals("true", choices.getString(ConsentStore.KEY, null), "turning it on again writes a grant")
+    }
+
+    @Test
+    fun aFailureWhileApplyingTheDefaultLeavesEverythingOffAndStoresNoChoice() {
+        val sdk = Sdk(failOn = "collection true")
+        val a = analytics(sdk, "KR")
+        assertEquals(collectionOn + collectionOff, sdk.calls)
+        assertFalse(a.choice.value)
+        assertFalse(a.track("weather_fetch", fetch))
+        assertFalse(collection.getBoolean(ConsentStore.ENABLED, true))
+        assertEquals(null, choices.getString(ConsentStore.KEY, null), "a failure is not the user's choice")
+        val next = Sdk()
+        assertTrue(analytics(next, "KR").choice.value, "the next start applies the default again")
+        assertEquals(collectionOn, next.calls)
     }
 
     @Test
@@ -147,14 +236,17 @@ class AnalyticsTest {
 
     @Test
     fun onlyTheExactStoredGrantCounts() {
-        for (stored in listOf("TRUE", "1", "yes", "")) {
-            choices.edit().putString(ConsentStore.KEY, stored).commit()
-            collection.edit().putBoolean(ConsentStore.ENABLED, true).commit()
-            assertFalse(analytics(Sdk()).choice.value, stored)
+        for (region in listOf("DE", "KR")) {
+            for (stored in listOf("TRUE", "1", "yes", "")) {
+                choices.edit().putString(ConsentStore.KEY, stored).commit()
+                collection.edit().putBoolean(ConsentStore.ENABLED, true).commit()
+                assertFalse(analytics(Sdk(), region).choice.value, "$stored $region")
+            }
+            choices.edit().putString(ConsentStore.KEY, "true").commit()
+            collection.edit().remove(ConsentStore.ENABLED).commit()
+            assertFalse(analytics(Sdk(), region).choice.value, "a grant without the collection state ($region)")
+            assertEquals("false", choices.getString(ConsentStore.KEY, null), "is withdrawn ($region)")
         }
-        choices.edit().putString(ConsentStore.KEY, "true").commit()
-        collection.edit().remove(ConsentStore.ENABLED).commit()
-        assertFalse(analytics(Sdk()).choice.value, "a grant without the collection state")
     }
 
     @Test

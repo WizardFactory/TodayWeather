@@ -23,6 +23,8 @@ class PrivacyActions(
     val choice: StateFlow<Boolean>,
     /** The popup's choice; false when it could not be fully applied (`LOC_PRIVACY_SAVE_FAILED`). */
     val setAnalytics: (Boolean) -> Boolean,
+    /** The popup asks for consent (an opt-in region at the start, `Analytics.optInRegion`); else it offers 끄기 and 켜기. */
+    val optIn: Boolean,
     /** 광고 개인정보 선택; the argument runs when no form can open (`LOC_AD_PRIVACY_UNAVAILABLE`). */
     val openAdPrivacy: (onUnavailable: () -> Unit) -> Unit,
 )

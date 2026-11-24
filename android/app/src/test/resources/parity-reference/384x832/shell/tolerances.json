@@ -11,7 +11,7 @@
   "heightDifference": 0
  },
  "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
- "why": "Four-size Korean/English header, tabs, menu and partial/full photo scroll gradient. Inspected narrow Korean dark menu, wide English old tabs and photo scroll overlays. Text, rows, hairlines and artwork align; residuals are glyph rasterization/advances and fractional outline edges. The gradient independently matches glyph-free edge colors within 3 channel levels after reproducing active/cached surfaces; captured backdrop is explicitly component input. Historical margins retained; dimensions match. 2026-11-13 recapture from the #2945 Cordova build: en-US-light-menu re-measured (was strong 0.005004, mean 1.628); the capture shows the same menu, and 1.5% of its pixels changed at Latin glyph edges. 2026-11-15 (#2990): menu cases re-measured after the privacy rows moved to the end of the side menu; native and Cordova show the same rows, the residuals are glyph rasterization.",
+ "why": "Four-size Korean/English header, tabs, menu and partial/full photo scroll gradient. Inspected narrow Korean dark menu, wide English old tabs and photo scroll overlays. Text, rows, hairlines and artwork align; residuals are glyph rasterization/advances and fractional outline edges. The gradient independently matches glyph-free edge colors within 3 channel levels after reproducing active/cached surfaces; captured backdrop is explicitly component input. Historical margins retained; dimensions match. 2026-11-13 recapture from the #2945 Cordova build: en-US-light-menu re-measured (was strong 0.005004, mean 1.628); the capture shows the same menu, and 1.5% of its pixels changed at Latin glyph edges. 2026-11-15 (#2990): menu cases re-measured after the privacy rows moved to the end of the side menu; native and Cordova show the same rows, the residuals are glyph rasterization. 2026-11-24 (analytics default-on, B34): failing cases re-measured after the native menu row became 이용 통계 · 꺼짐 / 켜짐 (Usage analytics · Off / On) and the popup title 이용 통계, native texts the Cordova captures (선택적 이용 통계 · 꺼짐 / 동의함) cannot show; the added residual is that row's and title's text.",
  "cases": {
   "en-US-dark-tabs": {
    "heightDifference": 0,
@@ -25,8 +25,8 @@
   },
   "en-US-dark-menu": {
    "heightDifference": 0,
-   "strong": 0.010069,
-   "mean": 2.15
+   "strong": 0.012492,
+   "mean": 2.533
   },
   "en-US-photo-scroll-176": {
    "heightDifference": 0,
@@ -60,8 +60,8 @@
   },
   "en-US-photo-menu": {
    "heightDifference": 0,
-   "strong": 0.004965,
-   "mean": 1.677
+   "strong": 0.008766,
+   "mean": 2.141
   },
   "en-US-photo-scroll-88": {
    "heightDifference": 0,
@@ -80,8 +80,8 @@
   },
   "en-US-old-menu": {
    "heightDifference": 0,
-   "strong": 0.005999,
-   "mean": 1.723
+   "strong": 0.008408,
+   "mean": 2.019
   },
   "ko-KR-dark-tabs": {
    "heightDifference": 0,
@@ -130,8 +130,8 @@
   },
   "ko-KR-photo-menu": {
    "heightDifference": 0,
-   "strong": 0.009418,
-   "mean": 2.396
+   "strong": 0.011376,
+   "mean": 2.489
   },
   "ko-KR-photo-scroll-88": {
    "heightDifference": 0,

@@ -11,7 +11,7 @@
   "heightDifference": 0
  },
  "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
- "why": "Four-size Korean/English header, tabs, menu and partial/full photo scroll gradient. Inspected narrow Korean dark menu, wide English old tabs and photo scroll overlays. Text, rows, hairlines and artwork align; residuals are glyph rasterization/advances and fractional outline edges. The gradient independently matches glyph-free edge colors within 3 channel levels after reproducing active/cached surfaces; captured backdrop is explicitly component input. Historical margins retained; dimensions match. 2026-11-15 (#2990): menu cases re-measured after the privacy rows moved to the end of the side menu; native and Cordova show the same rows, the residuals are glyph rasterization.",
+ "why": "Four-size Korean/English header, tabs, menu and partial/full photo scroll gradient. Inspected narrow Korean dark menu, wide English old tabs and photo scroll overlays. Text, rows, hairlines and artwork align; residuals are glyph rasterization/advances and fractional outline edges. The gradient independently matches glyph-free edge colors within 3 channel levels after reproducing active/cached surfaces; captured backdrop is explicitly component input. Historical margins retained; dimensions match. 2026-11-15 (#2990): menu cases re-measured after the privacy rows moved to the end of the side menu; native and Cordova show the same rows, the residuals are glyph rasterization. 2026-11-24 (analytics default-on, B34): failing cases re-measured after the native menu row became 이용 통계 · 꺼짐 / 켜짐 (Usage analytics · Off / On) and the popup title 이용 통계, native texts the Cordova captures (선택적 이용 통계 · 꺼짐 / 동의함) cannot show; the added residual is that row's and title's text.",
  "cases": {
   "en-US-dark-tabs": {
    "heightDifference": 0,
@@ -25,8 +25,8 @@
   },
   "en-US-dark-menu": {
    "heightDifference": 0,
-   "strong": 0.011379,
-   "mean": 2.621
+   "strong": 0.015182,
+   "mean": 3.141
   },
   "en-US-light-tabs": {
    "heightDifference": 0,
@@ -40,8 +40,8 @@
   },
   "en-US-light-menu": {
    "heightDifference": 0,
-   "strong": 0.007938,
-   "mean": 2.448
+   "strong": 0.012455,
+   "mean": 2.894
   },
   "en-US-photo-tabs": {
    "heightDifference": 0,
@@ -55,8 +55,8 @@
   },
   "en-US-photo-menu": {
    "heightDifference": 0,
-   "strong": 0.008315,
-   "mean": 2.442
+   "strong": 0.012628,
+   "mean": 2.952
   },
   "en-US-photo-scroll-176": {
    "heightDifference": 0,
@@ -75,8 +75,8 @@
   },
   "en-US-old-menu": {
    "heightDifference": 0,
-   "strong": 0.007143,
-   "mean": 2.332
+   "strong": 0.01166,
+   "mean": 2.778
   },
   "en-US-photo-scroll-88": {
    "heightDifference": 0,

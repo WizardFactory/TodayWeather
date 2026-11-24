@@ -49,7 +49,8 @@ import org.robolectric.annotation.GraphicsMode
  * The menu's privacy rows against the Cordova build (#2894, manual page 37), captured by
  * tools/privacy-reference/capture.sh at 384×762 dp (the WebView) and density 2 in privacy-reference/<lang>: the menu
  * scrolled to its end with 선택적 이용 통계 · 꺼짐 and · 동의함, and the usage analytics popup over it, in Korean and
- * English. Each comparison passes within the tolerance recorded in privacy-reference/tolerances.json. Renders and
+ * English. Since analytics default-on (2026-11-24) the native row reads 이용 통계 · 꺼짐 and · 켜짐 and the popup's title
+ * 이용 통계 (the consent popup the opt-in regions keep); the Cordova captures keep the Cordova texts. Each comparison passes within the tolerance recorded in privacy-reference/tolerances.json. Renders and
  * overlays go to build/privacy-compare/.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -129,12 +130,9 @@ class PrivacyScreenshotTest {
             Box(Modifier.size(bodySize(lang).first.dp, bodySize(lang).second.dp).testTag(ROOT)) {
                 SideMenu(ShellState(Theme.LIGHT, region, Tab.HOURLY, "1.1.2", mapOf(MenuRow.STARTUP_PAGE to texts["LOC_HOURLY_FORECAST"],
                     MenuRow.REFRESH_INTERVAL to texts["LOC_MANUAL"], MenuRow.THEME to texts["LOC_LIGHT_THEME"],
-                    MenuRow.ANALYTICS to stringResource(if (allowed) R.string.LOC_ANALYTICS_ALLOWED else R.string.LOC_ANALYTICS_DISABLED)))) {}
-                if (popup) {
-                    IonicPopup(stringResource(R.string.LOC_ANALYTICS_CHOICE), listOf(stringResource(R.string.LOC_ANALYTICS_DETAIL)),
-                        listOf(PopupButton(stringResource(R.string.LOC_ANALYTICS_DENY)) {}, PopupButton(stringResource(R.string.LOC_ANALYTICS_ALLOW)) {}),
-                        onBack = {})
-                }
+                    MenuRow.ANALYTICS to stringResource(if (allowed) R.string.analytics_on else R.string.analytics_off)))) {}
+                // The Cordova capture is the consent popup the opt-in regions keep (analytics default-on, 2026-11-24).
+                if (popup) AnalyticsPopup(optIn = true, onChoose = {}, onBack = {})
             }
         }
         rule.onNodeWithTag(ShellTags.row(MenuRow.entries.last())).performScrollTo().performTouchInput { swipeUp() } // the end of the menu, as captured

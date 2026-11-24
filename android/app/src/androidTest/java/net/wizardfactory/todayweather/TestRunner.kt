@@ -26,7 +26,9 @@ import org.junit.runners.model.Statement
  * `production`, weather requests go to the build's server (TW_SERVER_URL). With `transport`
  * `hold`, a recorded request never gets an answer (it stays in flight). With `migration` `hold`, the data
  * migration of the process waits until a test releases it. With `ads` `off`, the app gets [NoAdsPlatform]: it shows
- * no ads (ad-free manual and store captures).
+ * no ads (ad-free manual and store captures). `analyticsRegion` replaces the device region of the usage analytics
+ * default (analytics default-on, 2026-11-24), so a check written for the opt-in (`DE`) holds on any emulator. With
+ * `manual` `true` the app gets [SilentAnalyticsSdk]: it decides and shows its usage analytics state, and sends nothing.
  */
 class TestRunner : AndroidJUnitRunner() {
     override fun onCreate(arguments: Bundle?) {
@@ -81,6 +83,9 @@ class TestTodayWeatherApp : TodayWeatherApp() {
     override fun weatherPhotosUrl() = if (TestRunner.args.getString("manual") == "true" &&
         TestRunner.args.getString("weather") == "production" && TestRunner.args.getString("photos") == "feed")
         BuildConfig.WEATHER_PHOTOS_URL else ""
+    override fun deviceRegion() = TestRunner.args.getString("analyticsRegion") ?: super.deviceRegion()
+    // Manual and store captures read live data but never send analytics.
+    override fun analyticsSdk() = if (TestRunner.args.getString("manual") == "true") SilentAnalyticsSdk else super.analyticsSdk()
     // An ad-free capture (manual and store screenshots, #3122): no consent request, no SDK start, no ads.
     override fun adsPlatform() = if (adsOff()) NoAdsPlatform else super.adsPlatform()
     override fun tokenSource() = TokenSource { TestRunner.args.getString("token") }
@@ -89,6 +94,13 @@ class TestTodayWeatherApp : TodayWeatherApp() {
         if (TestRunner.args.getString("transport") == "hold") kotlinx.coroutines.awaitCancellation()
         200
     }
+}
+
+/** An analytics SDK that sends nothing: Firebase's collection is never enabled, so the manual walk reports no usage. */
+object SilentAnalyticsSdk : net.wizardfactory.todayweather.analytics.AnalyticsSdk {
+    override fun setCollectionEnabled(enabled: Boolean) {}
+    override fun setConsent(analytics: Boolean) {}
+    override fun logEvent(name: String, params: Map<String, Any>) {}
 }
 
 /** Past the start page (AN-10): `startVersion` stored, as on an install that has added a place. */

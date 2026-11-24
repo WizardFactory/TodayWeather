@@ -71,14 +71,24 @@ class HandBackWriter(private val suite: SharedPreferences, private val consent: 
  * mirror there (which removes the choice) withdraws. Before anything was handed over, the grant stands; a grant made
  * there is not carried over, as the first migration carries none. Runs before the choice applies ([EarlyStartProvider]);
  * each write of the choice is handed back at once ([HandBackWriter.watchConsent]), so a grant here is in the suite first.
+ *
+ * Without a choice here the region default applies (analytics default-on, 2026-11-24), so a withdrawal made there is
+ * kept as this app's choice: a native hand-back removes the suite's choice when this app has none, so once anything
+ * was handed over a `"false"` there came from the fallback build.
  */
 object HandBackConsent {
     fun beforeStart(context: Context) {
         val store = ConsentStore(context)
-        if (store.storedChoice() != "true") return
+        val stored = store.storedChoice()
+        if (stored != "true" && stored != null) return
         val suite = context.getSharedPreferences(CordovaMigration.SUITE, Context.MODE_PRIVATE)
         if (CordovaHandBack.parse(runCatching { suite.getString(CordovaHandBack.MARKER, null) }.getOrNull()) == null) return
-        if (runCatching { suite.getString(CordovaHandBack.CONSENT, null) }.getOrNull() == "true") return
+        val there = runCatching { suite.getString(CordovaHandBack.CONSENT, null) }.getOrNull()
+        if (stored == null) {
+            if (there == "false") store.write(false)
+            return
+        }
+        if (there == "true") return
         store.write(false)
     }
 }

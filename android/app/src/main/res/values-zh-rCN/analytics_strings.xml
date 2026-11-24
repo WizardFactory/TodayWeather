@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Native-only usage analytics texts (analytics default-on, AK 2026-11-24). Not generated: import_client_assets.py writes
+     only client_strings.xml. The opt-in regions' consent text and buttons stay the imported LOC_ANALYTICS_DETAIL,
+     LOC_ANALYTICS_DENY and LOC_ANALYTICS_ALLOW. See android/README.md, "Imported client assets". -->
+<resources>
+    <string name="analytics_label">使用情况分析</string>
+    <string name="analytics_on">已开启</string>
+    <string name="analytics_off">已关闭</string>
+    <string name="analytics_detail">为改进应用，Google Firebase Analytics 会收集页面使用情况、天气查询结果以及应用、设备和安装信息。自定义事件不包含实际位置、地址、推送令牌和设备 UUID。除非您在此菜单中关闭，否则使用情况分析保持开启；关闭后仍可查询天气。分析数据不得用于广告。广告、崩溃诊断和通知另行处理。</string>
+    <string name="analytics_turn_off">关闭</string>
+    <string name="analytics_turn_on">开启</string>
+</resources>

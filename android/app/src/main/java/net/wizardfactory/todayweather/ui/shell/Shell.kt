@@ -106,7 +106,7 @@ enum class MenuRow(val textKey: Int, val krOnly: Boolean = false, val chevron: B
     VERSION(R.string.LOC_VERSION),
     ABOUT(R.string.LOC_ABOUT),
     // Privacy rows sit at the end of the menu, as in Cordova since #2990.
-    ANALYTICS(R.string.LOC_ANALYTICS_CHOICE, button = true),
+    ANALYTICS(R.string.analytics_label, button = true),
     AD_PRIVACY(R.string.LOC_AD_PRIVACY_CHOICES, button = true),
     PRIVACY_POLICY(R.string.LOC_PRIVACY_POLICY, button = true),
     TERMS(R.string.LOC_TERMS, button = true),

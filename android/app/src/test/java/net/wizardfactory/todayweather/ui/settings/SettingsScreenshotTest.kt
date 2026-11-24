@@ -362,7 +362,7 @@ class SettingsScreenshotTest {
             Box(Modifier.size(bodySize(lang).first.dp, bodySize(lang).second.dp).testTag(ROOT)) {
                 SideMenu(ShellState(Theme.LIGHT, region, Tab.HOURLY, "1.1.2", mapOf(MenuRow.STARTUP_PAGE to texts["LOC_HOURLY_FORECAST"],
                     MenuRow.REFRESH_INTERVAL to texts["LOC_MANUAL"], MenuRow.THEME to texts["LOC_LIGHT_THEME"],
-                    MenuRow.ANALYTICS to LocalContext.current.getString(R.string.LOC_ANALYTICS_DISABLED)))) {}
+                    MenuRow.ANALYTICS to LocalContext.current.getString(R.string.analytics_off)))) {}
                 if (open) About { texts[it] }.let { a -> IonicAlert(a.title, a.lines, a.ok, onClose = {}) }
             }
         }

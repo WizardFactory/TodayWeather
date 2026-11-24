@@ -1,0 +1,75 @@
+# Spec: usage analytics on by default outside the opt-in regions
+
+Consumes the [intent](../intent/analytics-default-on.md) (AK, 2026-11-24; Refs #2660). This is the cross-platform contract for the native apps; each platform records its implementation in its own README. Android: [`android/README.md`](../android/README.md#ads-usage-analytics-and-crash-reports-an-15). iOS mirrors the same rule, lists and tests in its own pull request.
+
+## Terms
+
+- **Stored choice**: the value the app keeps under `twAnalyticsConsentV1`: `"true"`, `"false"` or none. Only the user's choice in the menu and the existing failure fallbacks write it. `"false"` therefore means a decline or a failure fallback; both stay off.
+- **Device region**: the region of the device's system locale (the first system locale), as an ISO 3166-1 alpha-2 code. It is not the app's own language choice. Android reads `Resources.getSystem().configuration.locales[0].country`.
+- **Opt-in regions**: the EEA, the United Kingdom and Switzerland, as the region codes in [Region list](#region-list).
+- **Decision**: whether the app collects in this process, made once at the start before the analytics SDK may collect.
+
+## Rule
+
+1. A stored `"true"` collects. Any other stored value (`"false"`, or a value the app never writes) does not collect.
+2. Without a stored choice, the device region decides: collect when the region is a known region outside the opt-in regions; otherwise do not collect.
+3. A region is known when, after trimming, it is two ASCII letters (in any case) that form one of the 249 officially assigned ISO 3166-1 alpha-2 codes. An empty or missing region, a UN M.49 number (`150`, `419`), and reserved or user-assigned codes (`EU`, `UK`, `EL`, `IC`, `EA`, `XK`, `XA`, `ZZ` …) are unknown and keep the opt-in.
+4. Applying the region default writes nothing to the stored choice, so the stored values keep meaning "the user chose". The region is evaluated again at each start while no choice is stored.
+
+The same check as a function, in the order the apps apply it:
+
+```
+collects(stored, region) = stored == "true"                      if stored is present
+                         = known(region) and region ∉ OPT_IN     otherwise
+```
+
+### Region list
+
+The opt-in regions (39 codes):
+
+| Group | Codes |
+| --- | --- |
+| EU member states (27) | AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE |
+| EU territories with their own ISO code | GF (French Guiana), GP (Guadeloupe), MQ (Martinique), RE (Réunion), YT (Mayotte), MF (Saint-Martin), AX (Åland Islands) |
+| Other EEA states | IS LI NO |
+| United Kingdom, Switzerland | GB CH |
+
+The EU territories are part of the EU and so of the EEA; listing their codes keeps a device set to, for example, `fr-RE` in the opt-in. Territories outside the EU with their own code (for example GL, FO, SJ, BL, PM, NC, PF), the Crown dependencies (GG, JE, IM) and Gibraltar (GI) are known regions outside the list and are on by default.
+
+## Consent signals and order
+
+- **Collecting**: analytics storage granted; ad storage, ad user data and ad personalization denied.
+- **Not collecting**: all four denied; collection disabled.
+- **Nothing before the decision**: the SDK's own collection stays disabled (manifest or plist default off, persisted SDK flags cleared before the SDK starts) and every consent type denied until the decision is applied. The app then disables collection, sets the consent signals and, when collecting, enables collection.
+- **Failure**: a failure while enabling leaves collection disabled and every type denied. When the value came from a stored or chosen value the app stores `"false"` (as before); when it came from the region default it stores nothing, so the next start applies the default again.
+
+## Menu and popup
+
+- Row label: "Usage analytics" (en), "이용 통계" (ko), "利用状況分析" (ja), "Nutzungsanalyse" (de), "使用情况分析" (zh-CN), "使用情況分析" (zh-TW), with the state On/Off (켜짐/꺼짐, オン/オフ, An/Aus, 已开启/已关闭, 已開啟/已關閉) of the current decision.
+- Popup where the device region is on by default: it says what is collected, that usage analytics stays on unless the user turns it off in this menu, and that weather works either way; buttons Turn off / Turn on. Turning it off stores `"false"`, turning it on stores `"true"`.
+- Popup in the opt-in regions (and for an unknown region): the existing consent question with Decline / withdraw and Allow; the title is the row label. Allow stores `"true"`, Decline / withdraw stores `"false"`.
+- Back closes the popup without a choice. A failed save shows the existing "could not fully apply" alert and leaves collection off.
+
+## Backup, migration, rollback and upgrade
+
+- The stored choice and the SDK state stay excluded from backup and device transfer; after a restore no choice is stored, so the region default applies.
+- An update from the Cordova app carries no choice (the Cordova choice was only in WebView storage), so the region default applies.
+- Rollback hand-back (Android AN-17): the handed-back text is the stored value (`"true"`, `"false"` or none), as before; an absent choice means "region default" in the native app and "off" in the fallback Cordova build. A native grant stands at the start only while the suite's choice says `"true"` once anything was handed over (unchanged). New: when the native app has no stored choice and the suite holds `"false"` after a hand-over, that withdrawal made in the fallback build becomes the native stored `"false"`, so the default does not turn it back on.
+
+## User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| ADO-US1 | Korean user installs the app | System region KR, no stored choice | Open the app; open the menu | Collection on from the first start; row "이용 통계 · 켜짐"; nothing stored | SDK failure while enabling: everything off, nothing stored, next start tries again | ADO1, ADO4 |
+| ADO-US2 | German user installs the app | System region DE | Open the app; open 이용 통계 / Nutzungsanalyse | Nothing collected; row shows Off; the popup asks for consent | – | ADO2, ADO5 |
+| ADO-US3 | Korean user turns usage analytics off | ADO-US1 | Menu → 이용 통계 → 끄기; restart the app | Collection stops at once; `"false"` stored; still off after the restart | Save fails: alert, collection off | ADO3, ADO5 |
+| ADO-US4 | German user allows usage analytics | ADO-US2 | Menu → popup → Allow; restart | Collection on; `"true"` stored; on after the restart | Save fails: alert, collection off | ADO3 |
+| ADO-US5 | User with an unknown region | System locale without a region (for example `en`) or `es-419` | Open the app | Nothing collected; consent popup | – | ADO2 |
+| ADO-US6 | User restores a backup on a new phone | Backup from a device with a stored choice | Restore; open the app | No stored choice; the region default applies | – | ADO6 |
+| ADO-US7 | User returns from a rollback build | Fallback Cordova build withdrew analytics after a hand-over; no native choice | Install the native app again; open it | Off; `"false"` stored natively | – | ADO6 |
+
+## Verification
+
+- Pure-function tests of the rule: the exact opt-in list, the known-region list equal to the platform's ISO country list, all 676 two-letter combinations in both cases, unknown forms, and the stored-choice table (Android: `AnalyticsDefaultTest` in core-domain).
+- Start, choice, failure and consent-signal tests with an SDK double (Android: `AnalyticsTest`), menu and popup tests in both regimes, and hand-back tests.
+- A device check: a fresh install with a KR system region enables collection; a DE region does not until allowed; turning it off holds after a restart.

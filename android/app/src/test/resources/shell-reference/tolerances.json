@@ -11,7 +11,7 @@
   "heightDifference": 0
  },
  "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the screen captures in shell-reference/<lang>",
- "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts (Korean glyphs up to 1 px narrower) and centered text on whole device pixels. The photo theme's header is white with a grey outline over the white page, so only the mean sees it.",
+ "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts (Korean glyphs up to 1 px narrower) and centered text on whole device pixels. The photo theme's header is white with a grey outline over the white page, so only the mean sees it. 2026-11-24 (analytics default-on, B34): failing cases re-measured after the native menu row became 이용 통계 · 꺼짐 / 켜짐 (Usage analytics · Off / On) and the popup title 이용 통계, native texts the Cordova captures (선택적 이용 통계 · 꺼짐 / 동의함) cannot show; the added residual is that row's and title's text.",
  "sensitivity": "Measured 2026-11-08 by changing the shell one way at a time and rerunning: tab items 1 dp lower, no hairlines and a missing analytics value each fail all 8 screenshot tests; no photo outline fails both photo tests (header mean); menu blocks without the 0.87 opacity fail both dark tests. Missing chevrons and a regular title weight pass the screenshots, so ShellTest checks the menu's rows, values and chevrons; ShellFit catches cut text such as a Japanese or German tab label kept on one line, or a value that does not move under its label, at font scale 1.3.",
  "cases": {
   "en-US-dark-header": {
@@ -35,8 +35,8 @@
    "heightDifference": 0
   },
   "en-US-light-menu": {
-   "strong": 0.00508,
-   "mean": 1.629,
+   "strong": 0.008966,
+   "mean": 2.115,
    "heightDifference": 0
   },
   "en-US-light-tabs": {
@@ -50,8 +50,8 @@
    "heightDifference": 0
   },
   "en-US-old-menu": {
-   "strong": 0.006,
-   "mean": 1.717,
+   "strong": 0.008408,
+   "mean": 2.019,
    "heightDifference": 0
   },
   "en-US-old-tabs": {
@@ -65,8 +65,8 @@
    "heightDifference": 0
   },
   "en-US-photo-menu": {
-   "strong": 0.00636,
-   "mean": 1.839,
+   "strong": 0.008766,
+   "mean": 2.141,
    "heightDifference": 0
   },
   "en-US-photo-tabs": {
@@ -80,8 +80,8 @@
    "heightDifference": 0
   },
   "ko-KR-dark-menu": {
-   "strong": 0.01489,
-   "mean": 2.901,
+   "strong": 0.016517,
+   "mean": 3.022,
    "heightDifference": 0
   },
   "ko-KR-dark-tabs": {

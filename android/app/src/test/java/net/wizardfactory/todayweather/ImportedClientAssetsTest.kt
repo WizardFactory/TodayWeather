@@ -62,6 +62,26 @@ class ImportedClientAssetsTest {
         assertEquals(imported.size, recorded.size)
     }
 
+    /**
+     * The native-only usage analytics texts (analytics default-on, 2026-11-24) beside the imported catalogs: the same
+     * names in every app locale, none of them an imported key, and no file the import tool writes.
+     */
+    @Test
+    fun nativeAnalyticsStringsStayOutsideTheImport() {
+        val res = File(appDir, "src/main/res")
+        val names = setOf("analytics_label", "analytics_on", "analytics_off", "analytics_detail", "analytics_turn_off", "analytics_turn_on")
+        val imported = stringNames(File(res, "values/client_strings.xml"))
+        for (dir in listOf("values", "values-ko", "values-ja", "values-de", "values-zh-rCN", "values-zh-rTW")) {
+            assertEquals(dir, names, stringNames(File(res, "$dir/analytics_strings.xml")))
+        }
+        assertTrue(names.none { it in imported })
+        val files = JSONObject(provenance.readText()).getJSONArray("files")
+        for (i in 0 until files.length()) {
+            val output = files.getJSONObject(i).getString("output")
+            assertTrue(output, !output.endsWith("analytics_strings.xml"))
+        }
+    }
+
     /** The Ionicons font copied from the Cordova build (tools/import_cordova_fonts.py). */
     @Test
     fun cordovaFontsMatchTheirProvenance() {
