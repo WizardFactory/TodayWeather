@@ -198,8 +198,11 @@ const pt: Catalog = {
   "public.body":
     "Salve nos seus locais para ver o tempo por hora e a qualidade do ar.",
   "public.open": "Ver o tempo neste local",
-  "link.appOption": "Abrir ou instalar o app",
+  "link.appOption": "Abrir no app",
   "link.dismiss": "Fechar",
+  "link.qrTitle": "App móvel",
+  "link.qrBody": "Escaneie com a câmera para abrir o app ou a loja.",
+  "link.qrAlt": "Código QR para abrir o app TodayWeather ou visitar a loja",
   "link.addFavorite": "Adicionar aos favoritos",
   "link.invalidLocation": "Este local compartilhado é inválido.",
   "public.notFound": "Local compartilhado não encontrado",

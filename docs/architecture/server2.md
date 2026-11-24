@@ -364,8 +364,18 @@ remains durable-before-visible. The public gateway stays 9 s; ASOS-primary KMA g
 an 8 s budget for stored reads, and everything it waits for ends 2.5 s after the gateway
 accepted the request (2.7 s for air and life, 2.9 s for the narrative). Geocode retains its own
 3 s cap and, since the [accept clock](#restart-allocator-and-the-accept-clock-2026-11-10), counts
-toward those waits. Other handlers keep their existing budgets. These are limits, not latency
-measurements. See the [current implementation record](../evidence/research/kma-full-response-implementation-2026-10-25.md)
+toward those waits. Other handlers keep their existing budgets. Every catalog store operation
+(lookups, publications and repairs) waits for one of its store's I/O admissions only until its
+caller's deadline; the 3 s per-operation cap then starts at admission, and each S3 HTTP request
+keeps its own 3 s limit (KMA-NATION-READS). A caller whose deadline passes while queued gets a
+timeout before any S3 work, and a publication that times out while queued wrote nothing. Because
+queueing no longer shortens the cap, an operation that waited can hold its admission for up to
+3 s after admission, longer than before, and later callers can wait longer. The warnings API
+waits for another request's latest-bulletin walk only until its own deadline and then answers
+from memory younger than five minutes. Before
+this rule the cap also counted the queue: in 23 of 24 SR-6 samples a nation city read queued
+past 3 s and timed out, and the nation answer was the legacy 500 page after 3.3–4.6 s. These are
+limits, not latency measurements. See the [current implementation record](../evidence/research/kma-full-response-implementation-2026-10-25.md)
 and [selected protocol](server2-kma-data-design.md#response-first-durability-and-recovery).
 
 Current defaults account for 128 MiB retained cache and four owners reserving

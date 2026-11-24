@@ -11,6 +11,28 @@
 # run that needs the network: when the removal cannot be confirmed it takes the device offline and exits 5.
 PKG=net.wizardfactory.todayweather
 
+# Runs `adb shell am instrument -w -r` with the arguments after $1, writes its output to file $1 and shows it.
+# adb's status goes to INSTRUMENT_STATUS for instrumentation_passed; the function itself succeeds, so a runner can
+# still collect what a failed test left on the device before it decides.
+instrument() {
+    instrument_file=$1
+    shift
+    INSTRUMENT_STATUS=0
+    adb shell am instrument -w -r "$@" > "$instrument_file" || INSTRUMENT_STATUS=$?
+    cat "$instrument_file"
+}
+
+# Whether an instrumentation passed: adb's status $3 is 0, and the `am instrument -w -r` output in file $1 shows
+# $2 passed tests and nothing else: no failed, crashed, ignored or assumption-skipped test (the plain
+# `OK (N tests)` line counts a skipped test as run), and an instrumentation that finished. Raw status per test:
+# 1 started, 0 passed, -1 error, -2 failure, -3 ignored, -4 assumption not met.
+instrumentation_passed() {
+    [ "${3:?pass the status of adb}" = 0 ] || return 1
+    [ "$(tr -d '\r' < "$1" | grep -c '^INSTRUMENTATION_STATUS_CODE: 0$')" = "$2" ] || return 1
+    if tr -d '\r' < "$1" | grep -q '^INSTRUMENTATION_STATUS_CODE: -'; then return 1; fi
+    tr -d '\r' < "$1" | grep -q '^INSTRUMENTATION_CODE: -1$'
+}
+
 emulator_guard() {
     case "${ANDROID_SERIAL:-}" in emulator-[0-9]*) ;; *) echo "Set ANDROID_SERIAL to an emulator" >&2; exit 2 ;; esac
     [ "$(adb get-state 2>/dev/null)" = device ] || { echo "No device $ANDROID_SERIAL" >&2; exit 2; }
@@ -27,15 +49,20 @@ airplane() {
     fi
 }
 
-# Airplane mode plus Wi-Fi and data off; exits 3 if a default network is still active.
+# Airplane mode plus Wi-Fi and data off; exits 3 if a default network is still active after half a minute.
 go_offline() {
     airplane 1
     adb shell svc wifi disable || true
     adb shell svc data disable || true
     sleep 3
-    if ! adb shell dumpsys connectivity | grep -q "Active default network: none"; then
-        echo "The emulator still has a network; refusing to install the apps" >&2; exit 3
-    fi
+    # A device that just booted can take longer to drop its network (a hosted tablet emulator did): look again
+    # for half a minute before refusing.
+    waited=0
+    until adb shell dumpsys connectivity | grep -q "Active default network: none"; do
+        waited=$((waited + 1))
+        [ "$waited" -lt 10 ] || { echo "The emulator still has a network; refusing to install the apps" >&2; exit 3; }
+        sleep 3
+    done
 }
 
 # Whether both packages are gone: the package query succeeds, its whole answer is a package list with the

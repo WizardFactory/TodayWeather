@@ -1217,3 +1217,97 @@ async fn an_offer_before_a_refresh_task_runs_answers_this_request_and_the_next()
         "the next"
     );
 }
+
+/// Holds every S3 call for a minute while `hang` is set.
+struct Hanging {
+    inner: HttpS3Transport,
+    hang: Arc<std::sync::atomic::AtomicBool>,
+}
+impl Hanging {
+    async fn run<F: std::future::Future>(&self, f: F) -> F::Output {
+        if self.hang.load(SeqCst) {
+            tokio::time::sleep(Duration::from_secs(60)).await;
+        }
+        f.await
+    }
+}
+impl ObjectTransport for Hanging {
+    async fn put(&self, r: &PreparedRecord) -> Result<u16, StorageError> {
+        self.run(self.inner.put(r)).await
+    }
+    async fn head(&self, k: &str) -> Result<Object, StorageError> {
+        self.run(self.inner.head(k)).await
+    }
+    async fn get(&self, k: &str, m: usize) -> Result<Object, StorageError> {
+        self.run(self.inner.get(k, m)).await
+    }
+}
+impl CatalogTransport for Hanging {
+    async fn get_control(&self, k: &str, m: usize) -> Result<ControlObject, StorageError> {
+        self.run(self.inner.get_control(k, m)).await
+    }
+    async fn put_control(
+        &self,
+        k: &str,
+        b: &[u8],
+        c: &WriteCondition,
+    ) -> Result<u16, StorageError> {
+        self.run(self.inner.put_control(k, b, c)).await
+    }
+    async fn list_raw_document(
+        &self,
+        p: &str,
+        t: Option<&str>,
+        k: usize,
+        b: usize,
+    ) -> Result<Vec<u8>, StorageError> {
+        self.run(self.inner.list_raw_document(p, t, k, b)).await
+    }
+}
+/// KMA-NATION-READS review NR-1: `latest` takes the refresh lock once per bulletin type. A request
+/// that answered one type from memory must not then wait past its own deadline for a later
+/// request's walk of the next type; both answer from memory within their deadlines.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn overlapping_latest_walks_keep_each_request_within_its_deadline() {
+    let peer = Peer::new();
+    publish_recorded(&peer.store()).await;
+    let hang = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let transport = Hanging {
+        inner: peer.transport(),
+        hang: hang.clone(),
+    };
+    let limits = CatalogLimits {
+        deadline: Duration::from_secs(9),
+        ..CatalogLimits::default()
+    };
+    let store = Arc::new(WarningStore::new(transport, limits, StoreConfig::default()).unwrap());
+    let budget = Duration::from_secs(2);
+    let service = Arc::new(WarningService::new(
+        store,
+        FixedClock::at("2026-10-04T00:10:00.000Z"),
+        ServiceConfig {
+            refresh: Duration::ZERO,
+            deadline: budget,
+            ..ServiceConfig::default()
+        },
+    ));
+    let warm = service.latest().await.unwrap();
+    hang.store(true, SeqCst);
+    let timed = |service: Arc<WarningService<Hanging>>| async move {
+        let start = std::time::Instant::now();
+        let answer = service.latest().await;
+        (answer, start.elapsed())
+    };
+    let first = tokio::spawn(timed(service.clone()));
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    let second = tokio::spawn(timed(service.clone()));
+    for (answer, elapsed) in [first.await.unwrap(), second.await.unwrap()] {
+        // Bulletin has no equality; its debug form shows every field.
+        assert_eq!(
+            format!("{:?}", answer.unwrap()),
+            format!("{warm:?}"),
+            "answered from memory"
+        );
+        assert!(elapsed < budget + Duration::from_millis(300), "{elapsed:?}");
+    }
+}

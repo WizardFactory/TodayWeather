@@ -84,6 +84,8 @@ This specification records the settled cross-platform locale direction (AK, 2026
 
 ### 4.1 Page Structure (All 7 Languages)
 
+> **Korean page before the locale release.** The Korean page is published at `https://todayweather.ai/` ahead of the locale routes in §2. Until they ship, its canonical link, `og:url` and the sitemap entry use the root URL, its header links are Charts (`#features`), Widgets (`#widgets`), WebApp (`#platforms`) and Reviews (`#reviews`), and the language switcher, the quick-open header button, the air-quality and worldwide showcases, structured data and the consent controls wait for the locale release. Everything else below applies to it now.
+
 Each `/{lang}/index.html` is a single semantic, accessible document with clear landmark regions (`<header>`, `<main>`, `<footer>`):
 
 1. **Top Navigation (`<header>`)**:
@@ -93,7 +95,7 @@ Each `/{lang}/index.html` is a single semantic, accessible document with clear l
    - Primary quick-open button to `https://app.todayweather.ai`.
 2. **Hero Section**:
    - Core product promise ("어제보다 오늘은" / "Understand today's weather at a glance compared to yesterday").
-   - Use one primary action, **Open TodayWeather**, linking to `https://link.todayweather.ai/open` on every platform. The OS can open an associated app. Browser visitors can choose the WebApp or a store on the link host's fallback page, as specified in [#3092](https://github.com/WizardFactory/TodayWeather/issues/3092).
+   - Use one primary action, **Open TodayWeather**, linking to `https://link.todayweather.ai/open` on every platform. On installed mobile devices the OS can open the native app directly; browser visitors redirect straight to the WebApp (`https://app.todayweather.ai/`), where mobile visitors see an "Open in app" action (native app or OS store) and desktop visitors see a fixed QR code to open the store on their phone, as specified in [#3092](https://github.com/WizardFactory/TodayWeather/issues/3092).
    - Link the hourly chart caption to `https://link.todayweather.ai/place/seoul` so visitors can open the Seoul forecast in the app or via the web fallback. Use a responsive native hourly chart capture in the hero. Offer direct browser entry in the WebApp section.
 3. **Core Feature Showcase (`#features`)**:
    - **Hourly Yesterday Comparison**: Visual showcase of today vs. yesterday temperature curve, precipitation amounts, and wind/humidity details.
@@ -102,10 +104,16 @@ Each `/{lang}/index.html` is a single semantic, accessible document with clear l
    - **Worldwide Coverage & Regional Fit**: 21 priority markets & worldwide cities, regional units, official warnings, and Korean nationwide weather and air maps and solar-term summaries. Verify feature availability by client and market before publishing the claims.
    - **Home-screen widget**: Show a released native widget on the phone’s home screen with a localized caption about checking the weather at a glance. The [Korean store review summary](../docs/evidence/research/landing-store-voice-2026-11-21.md) documents the use case.
 4. **Cross-Platform Availability (`#platforms`)**:
-   - Side-by-side summary of **WebApp (PWA & Desktop)**, **iOS Native App**, and **Android Native App** (explicitly noting offline snapshot support on WebApp and scheduled/alert notifications on native mobile apps; no claims of web push or retired TodayAir/Cordova).
-5. **Weather & Air Data Attribution (`#sources`)**:
+   - Show the released WebApp with a current desktop capture in which the hourly comparison and the daily range chart appear together. Below 640 px, show a phone capture. Link directly to `https://app.todayweather.ai`.
+   - Link the iPhone summary title to `https://apps.apple.com/kr/app/id1041700694` and the Android title to `https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather`, on every device. Do not add the Smart App Banner meta tag: the page header already shows the app icon and name. The hero keeps its single action.
+   - On wide windows with a mouse or trackpad (`min-width: 64rem`, `hover: hover`, `pointer: fine`), add a fourth summary item with a QR code for `https://link.todayweather.ai/open?fallback=store`, the same code as the WebApp's desktop QR ([deep-link store fallback](deeplink.md)). Scanning it with a phone opens the installed app when the OS handles the link; otherwise a supported phone goes to its own store, even with the app installed. The caption says the code opens or installs the app. Phones and touch tablets do not show it.
+   - Below the capture, a side-by-side summary of **WebApp (PWA & Desktop)**, **iOS Native App**, and **Android Native App** (explicitly noting offline snapshot support on WebApp and scheduled/alert notifications on native mobile apps; no claims of web push or retired TodayAir/Cordova).
+5. **What reviewers praise (`#reviews`)**:
+   - Present the most praised points from App Store and Google Play reviews: the comparison with yesterday, deciding what to wear, the clear screen and the hourly forecast. Quote excerpts verbatim, labelled with the store only, without dates or reviewer names. The [store review summary](../docs/evidence/research/landing-store-voice-2026-11-21.md) lists each excerpt and the theme counts.
+   - Close with a second **Open TodayWeather** action to `https://link.todayweather.ai/open`.
+6. **Weather & Air Data Attribution (`#sources`)**:
    - Transparent source credits matching [cordova-store-release.md](../docs/operations/cordova-store-release.md#L143-L155): KMA (Korea Meteorological Administration), AirKorea (Ministry of Environment / Korea Environment Corporation), Visual Crossing, Google Air Quality / Pollen, OpenWeather (and provisional-data / official-warning caution).
-6. **Footer (`<footer>`)**:
+7. **Footer (`<footer>`)**:
    - Official Developer / Operator identification matching [support.html](../client/fastlane/privacy/support.html): Flying Inc. (주식회사 플라잉) · Product Team · `mailto:todayweather@wizardfactory.net`.
    - Language-matched legal & support links to `/mobile/{privacy,terms,support}{suffix}.html`.
    - Persistent **"Analytics & Cookie Settings"** button (opens the consent preference modal in every region, allowing opt-in/opt-out at any time).
@@ -188,7 +196,7 @@ Use only tested GA4 endpoint origins. Verify CSP on the actual browser routes, i
   - `<html lang="{lang}">`
   - `<link rel="canonical" href="https://todayweather.ai/{lang}/">`
   - `<link rel="alternate" hreflang="{l}" href="https://todayweather.ai/{l}/">` for all 7 languages plus `<link rel="alternate" hreflang="x-default" href="https://todayweather.ai/en/">`.
-  - Localized `<title>`, `<meta name="description">`, `og:title`, `og:description`, `og:url`, `og:locale`, `og:image` (absolute `https://todayweather.ai/og/...`), and `twitter:card=summary_large_image`.
+  - Localized `<title>`, `<meta name="description">`, `og:title`, `og:description`, `og:url`, `og:locale`, `og:image` (absolute `https://todayweather.ai/og/...`, named with the first eight hex digits of the image's SHA-256 so that a changed image gets a new URL past messenger preview caches), and `twitter:card=summary_large_image`.
   - Structured data describing `SoftwareApplication` and `Organization`. Validate the markup and browser behavior under the deployed CSP.
 - `/robots.txt`: Allows crawling of `/ko/`, `/en/`, `/ja/`, `/de/`, `/fr/`, `/pt/`, `/es/`, `/mobile/`, references `Sitemap: https://todayweather.ai/sitemap.xml`.
 - `/sitemap.xml`: Lists all 7 canonical locale URLs with `xhtml:link` `hreflang` alternates (and `/mobile/*` policy pages if desired).

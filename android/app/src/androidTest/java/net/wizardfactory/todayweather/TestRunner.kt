@@ -115,10 +115,15 @@ class StateRule(private val seed: (AppState) -> AppState = { it }) : TestRule {
  * Without an enabled place the weather pages ask how to start (O02, AN-10): waits for it, then Android back answers
  * "search" and the Locations tab shows, so a test of the shell goes on without a place. S02 then focuses its search
  * field (AN-11); the keyboard is closed.
+ *
+ * Back goes to this test's activity through its back dispatcher, where the popup's BackHandler is registered.
+ * Espresso.pressBack() sends a key to whichever window has the focus, and in the second test of a process that was
+ * not always this activity: the popup stayed open and covered the menu (SettingsHandoffTest failed every other test).
  */
 fun AndroidComposeTestRule<*, *>.closeStartChoice() {
     waitUntil(30_000) { onAllNodes(hasTestTag(LocationPopupTags.START_CHOICE)).fetchSemanticsNodes().isNotEmpty() }
-    Espresso.pressBack()
+    runOnIdle { activity.onBackPressedDispatcher.onBackPressed() }
+    waitUntil(10_000) { onAllNodes(hasTestTag(LocationPopupTags.START_CHOICE)).fetchSemanticsNodes().isEmpty() }
     waitForIdle()
     Thread.sleep(500)
     Espresso.closeSoftKeyboard()

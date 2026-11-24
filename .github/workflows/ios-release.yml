@@ -1,0 +1,155 @@
+name: iOS release verification
+run-name: iOS release verification ${{ inputs.ref || github.sha }}
+# Release CI of the native iOS app (docs/development/ci-tiers.md): the PR checks on the named commit, then every
+# app-hosted suite on the simulator, the screenshot comparisons and the IN-18 size and language matrix included, in
+# a checkout without client/, android/ and the legacy iOS directories. It may take long and is not a pull-request
+# check. It signs nothing, holds no secret and publishes nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Full 40-character SHA of the commit to verify"
+        required: true
+        type: string
+  schedule:
+    # 03:00 Asia/Seoul; skipped unless an input of the iOS PR workflow or this workflow changed since the last
+    # passed nightly run.
+    - cron: "0 18 * * *"
+  # A change of this verification is tried on its own pull request.
+  pull_request:
+    paths:
+      - ".github/workflows/ios-release.yml"
+permissions:
+  contents: read
+concurrency:
+  # As in the PR workflows (#3139). The prefix is not github.workflow: ios.yml, called below, takes github.workflow
+  # from this caller, and the same group for caller and callee would block or cancel the caller.
+  group: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('ios-release-pr-{0}', github.event.pull_request.number) || format('ios-release-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
+# Xcode 26.6 is the default of the macos-26 image; the iOS 26.5 simulator ships with it (ios.yml).
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+  SIMULATOR: "platform=iOS Simulator,name=iPhone 17,OS=26.5"
+jobs:
+  scope:
+    name: Commit to verify
+    if: github.event_name != 'schedule' || github.repository == 'WizardFactory/TodayWeather'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      sha: ${{ steps.decide.outputs.sha }}
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # A pull request run (a change of this workflow) checks the merge commit its definitions come from; the
+          # head of a pull request is verified by a dispatch from its branch (docs/development/ci-tiers.md).
+          ref: ${{ inputs.ref || github.sha }}
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REQUESTED: ${{ inputs.ref }}
+          RUN_COMMIT: ${{ github.sha }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          if [ "$EVENT" = workflow_dispatch ]; then
+            # A dispatch names its commit: a branch, a tag or a short SHA would not say which commit was verified.
+            if ! printf '%s' "$REQUESTED" | grep -Eq '^[0-9a-f]{40}$' || [ "$REQUESTED" != "$sha" ]; then
+              echo "ref must be the full 40-character SHA of the commit to verify; got '$REQUESTED', checked out $sha" >&2
+              exit 1
+            fi
+            # The jobs below, the called PR workflow included, are defined by the commit the run was started from
+            # (--ref). Only when that is the verified commit do its own checks run on it.
+            if [ "$RUN_COMMIT" != "$sha" ]; then
+              echo "start the run from a branch or tag at $sha (gh workflow run ... --ref <branch or tag>); it was started from $RUN_COMMIT" >&2
+              exit 1
+            fi
+          fi
+          run=true
+          if [ "$EVENT" = schedule ]; then
+            last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ios-release.yml --event schedule \
+              --status success --limit 1 --json headSha --jq '.[0].headSha // empty')
+            # The paths that start the iOS PR workflow are the inputs of its checks (ios/, the client and Android
+            # sources it imports, the server routes it reads); git reads them as glob pathspecs.
+            ruby -ryaml -e 'w = YAML.load_file(".github/workflows/ios.yml"); paths = (w["on"] || w[true])["pull_request"]["paths"]; abort "no paths" if paths.nil? || paths.empty?; puts paths.map { |p| ":(glob)#{p}" }' > "$RUNNER_TEMP/ios-paths"
+            echo ":(glob).github/workflows/ios-release.yml" >> "$RUNNER_TEMP/ios-paths"
+            set --
+            while IFS= read -r spec; do set -- "$@" "$spec"; done < "$RUNNER_TEMP/ios-paths"
+            # Skip only on a clean comparison: an unknown commit or a git error runs the verification.
+            if [ -n "$last" ] && git cat-file -e "$last^{commit}" 2>/dev/null \
+              && git diff --quiet "$last" "$sha" -- "$@"; then
+              run=false
+              echo "No change of the iOS inputs since the last passed nightly run ($last)." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+  pr-checks:
+    name: PR checks on the commit
+    needs: scope
+    if: needs.scope.outputs.run == 'true'
+    uses: ./.github/workflows/ios.yml
+    with:
+      ref: ${{ needs.scope.outputs.sha }}
+
+  simulator:
+    name: App-hosted suites on the simulator (without client/, android/ and the legacy iOS directories)
+    needs: scope
+    if: needs.scope.outputs.run == 'true'
+    runs-on: macos-26
+    # Every app-hosted suite, the IN-18 size and language matrix included; about an hour on the runner.
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.scope.outputs.sha }}
+      - name: Remove the directories the iOS build must not read
+        run: |
+          rm -rf client android tw.ios ta.ios applewatch
+          for d in client android tw.ios ta.ios applewatch; do test ! -e "$d"; done
+      - name: App build and tests (iOS Simulator)
+        working-directory: ios
+        run: >
+          xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -destination "$SIMULATOR"
+          -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test
+      # The screenshot tests write their renders and difference images to the test host's tmp/chart-compare; keep
+      # them when a comparison fails, so a difference of the CI toolchain can be looked at.
+      - name: Collect the screenshot comparisons
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/screenshot-compare"
+          find "$HOME/Library/Developer/CoreSimulator/Devices" -path '*/tmp/chart-compare/*' -name '*.png' \
+            -exec cp {} "$RUNNER_TEMP/screenshot-compare/" \; || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screenshot-compare-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/screenshot-compare
+          if-no-files-found: ignore
+          retention-days: 14
+
+  verified:
+    name: Verified commit
+    needs: [scope, pr-checks, simulator]
+    if: always() && needs.scope.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every verification job to pass
+        env:
+          RESULTS: ${{ needs.pr-checks.result }} ${{ needs.simulator.result }}
+          SHA: ${{ needs.scope.outputs.sha }}
+        run: |
+          for result in $RESULTS; do
+            if [ "$result" != success ]; then
+              echo "iOS release verification FAILED for $SHA ($RESULTS)" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          done
+          echo "iOS release verification passed for $SHA" | tee -a "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,418 @@
+{
+ "cases": {
+  "conditional-current-0": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-current-0"
+  },
+  "conditional-geocode-addr-v000901": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-geocode-addr-v000901"
+  },
+  "conditional-geocode-addr-v000903": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-geocode-addr-v000903"
+  },
+  "conditional-geocode-coord": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-geocode-coord"
+  },
+  "conditional-kma-v000901": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-kma-v000901"
+  },
+  "conditional-kma-v000903": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-kma-v000903"
+  },
+  "conditional-nation-v000901": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-nation-v000901"
+  },
+  "conditional-nation-v000903": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-nation-v000903"
+  },
+  "conditional-notice": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-notice"
+  },
+  "conditional-town-v000705": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-town-v000705"
+  },
+  "conditional-town-v000803": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-town-v000803"
+  },
+  "conditional-warning": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-warning"
+  },
+  "conditional-weather-default-seoul": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-weather-default-seoul"
+  },
+  "conditional-weather-v000901-seoul": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-weather-v000901-seoul"
+  },
+  "conditional-weather-v000902-seoul": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-weather-v000902-seoul"
+  },
+  "conditional-ww": {
+   "expected_statuses": [
+    200,
+    304
+   ],
+   "family": "conditional-ww"
+  },
+  "current-0": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "current-0"
+  },
+  "current-1": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "current-1"
+  },
+  "current-2": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "current-2"
+  },
+  "current-3": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "current-3"
+  },
+  "current-4": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "current-4"
+  },
+  "current-5": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "current-5"
+  },
+  "geocode-addr-v000901": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "geocode-addr-v000901"
+  },
+  "geocode-addr-v000903": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "geocode-addr-v000903"
+  },
+  "geocode-coord": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "geocode-coord"
+  },
+  "head-current-0": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-current-0"
+  },
+  "head-geocode-addr-v000901": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-geocode-addr-v000901"
+  },
+  "head-geocode-addr-v000903": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-geocode-addr-v000903"
+  },
+  "head-geocode-coord": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-geocode-coord"
+  },
+  "head-kma-v000901": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-kma-v000901"
+  },
+  "head-kma-v000903": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-kma-v000903"
+  },
+  "head-nation-v000901": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-nation-v000901"
+  },
+  "head-nation-v000903": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-nation-v000903"
+  },
+  "head-notice": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-notice"
+  },
+  "head-town-v000705": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-town-v000705"
+  },
+  "head-town-v000803": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-town-v000803"
+  },
+  "head-warning": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-warning"
+  },
+  "head-weather-default-seoul": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-weather-default-seoul"
+  },
+  "head-weather-v000901-seoul": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-weather-v000901-seoul"
+  },
+  "head-weather-v000902-seoul": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-weather-v000902-seoul"
+  },
+  "head-ww": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "head-ww"
+  },
+  "kma-v000901": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "kma-v000901"
+  },
+  "kma-v000903": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "kma-v000903"
+  },
+  "nation-v000901": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "nation-v000901"
+  },
+  "nation-v000903": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "nation-v000903"
+  },
+  "notice": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "notice"
+  },
+  "town-v000705": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "town-v000705"
+  },
+  "town-v000803": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "town-v000803"
+  },
+  "warning": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "warning"
+  },
+  "weather-default-ny": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "weather-default-ny"
+  },
+  "weather-default-seoul": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "weather-default-seoul"
+  },
+  "weather-v000901-ny": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "weather-v000901-ny"
+  },
+  "weather-v000901-seoul": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "weather-v000901-seoul"
+  },
+  "weather-v000902-ny": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "weather-v000902-ny"
+  },
+  "weather-v000902-seoul": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "weather-v000902-seoul"
+  },
+  "ww": {
+   "expected_statuses": [
+    200
+   ],
+   "family": "ww"
+  }
+ },
+ "launch_sha256": "8be010cd0ef9c50f5172189cef5f0d7d4da5a871026adac6b9bf08fafa5e3b0f",
+ "minimum_usable_pairs": {
+  "conditional-current-0": 1,
+  "conditional-geocode-addr-v000901": 1,
+  "conditional-geocode-addr-v000903": 1,
+  "conditional-geocode-coord": 1,
+  "conditional-kma-v000901": 1,
+  "conditional-kma-v000903": 1,
+  "conditional-nation-v000901": 1,
+  "conditional-nation-v000903": 1,
+  "conditional-notice": 1,
+  "conditional-town-v000705": 1,
+  "conditional-town-v000803": 1,
+  "conditional-warning": 1,
+  "conditional-weather-default-seoul": 1,
+  "conditional-weather-v000901-seoul": 1,
+  "conditional-weather-v000902-seoul": 1,
+  "conditional-ww": 1,
+  "current-0": 20,
+  "current-1": 20,
+  "current-2": 20,
+  "current-3": 20,
+  "current-4": 5,
+  "current-5": 5,
+  "geocode-addr-v000901": 1,
+  "geocode-addr-v000903": 1,
+  "geocode-coord": 1,
+  "head-current-0": 1,
+  "head-geocode-addr-v000901": 1,
+  "head-geocode-addr-v000903": 1,
+  "head-geocode-coord": 1,
+  "head-kma-v000901": 1,
+  "head-kma-v000903": 1,
+  "head-nation-v000901": 1,
+  "head-nation-v000903": 1,
+  "head-notice": 1,
+  "head-town-v000705": 1,
+  "head-town-v000803": 1,
+  "head-warning": 1,
+  "head-weather-default-seoul": 1,
+  "head-weather-v000901-seoul": 1,
+  "head-weather-v000902-seoul": 1,
+  "head-ww": 1,
+  "kma-v000901": 5,
+  "kma-v000903": 20,
+  "nation-v000901": 5,
+  "nation-v000903": 5,
+  "notice": 5,
+  "town-v000705": 5,
+  "town-v000803": 5,
+  "warning": 5,
+  "weather-default-ny": 5,
+  "weather-default-seoul": 5,
+  "weather-v000901-ny": 5,
+  "weather-v000901-seoul": 5,
+  "weather-v000902-ny": 5,
+  "weather-v000902-seoul": 5,
+  "ww": 5
+ },
+ "profile": "production_shadow",
+ "run_id": "canary-20261123b",
+ "schema": 1
+}

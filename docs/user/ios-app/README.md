@@ -21,6 +21,8 @@ the capture time. Images are reduced to 720 pixels wide and a 256-color palette 
 The [iPad supplement](ipad/manual.pdf) shows the main screens on an iPad Pro 13-inch simulator from the same
 ad-free capture; its [editable source](ipad/manual.json) lists the steps.
 
+The [tracking settings guide](tracking-settings/manual.pdf) shows where to read the tracking choice and open iOS Settings from the menu or the weather pages. Its [editable source](tracking-settings/manual.json) uses Korean controls on an iPhone 12 Pro Max.
+
 The [four main tabs](main-tabs/manual.pdf) supplement shows each tab with Seoul saved. Look for the short line above the selected tab. The line, outline icon and label share the theme’s accent color. The [editable source](main-tabs/manual.json) includes full-screen captures from an iPhone 16 simulator.
 
 The pull-to-refresh page uses a Korean hourly forecast from an offline test fixture (18 November 2026). Its screenshot predates the tab accent line.

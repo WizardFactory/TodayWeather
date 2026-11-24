@@ -513,6 +513,9 @@ struct MenuRows: View {
     /// The analytics row shows its choice after a middle dot (`LOC_ANALYTICS_CHOICE · LOC_ANALYTICS_DISABLED` until
     /// IN-15 records a choice; analytics is off until the user opts in).
     private func blockText(_ row: MenuRow) -> String {
+        if row == .trackingPermission {
+            return "\(catalog(row.textKey)) · \(catalog(model.trackingStatus == .authorized ? "LOC_TRACKING_ALLOWED" : "LOC_TRACKING_NOT_ALLOWED"))"
+        }
         guard row == .analytics else { return catalog(row.textKey) }
         return "\(catalog(row.textKey)) · \(catalog(model.analyticsAllowed ? "LOC_ANALYTICS_ALLOWED" : "LOC_ANALYTICS_DISABLED"))"
     }

@@ -328,23 +328,42 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
         self.assertTrue(self.errors())
 
     def test_parallel_ci_requires_every_job_and_a_failure_gate(self):
-        body = (placement.PARALLEL_WORKFLOW_PREFIX + placement.VERIFIED_UPLOAD
-                + placement.GOLDEN_JOB)
-        self.assertIn('needs: [placement, python, rust, gnu, musl]', body)
+        body = placement.PARALLEL_WORKFLOW_PREFIX + placement.GOLDEN_JOB
+        self.assertIn('needs: [placement, python, shadow, rust-build, rust, gnu, musl, goldens]', body)
         self.assertEqual([], placement.audit_workflow(body))
         for bad in (
-            body.replace('needs: [placement, python, rust, gnu, musl]', 'needs: [placement, python, rust, gnu]'),
-            body.replace('needs: [placement, python, rust, gnu, musl]', 'needs: [placement, rust, gnu, musl]'),
+            body.replace('needs: [placement, python, shadow, rust-build, rust, gnu, musl, goldens]',
+                         'needs: [placement, python, rust-build, rust, gnu, musl, goldens]'),
+            body.replace('needs: [placement, python, shadow, rust-build, rust, gnu, musl, goldens]',
+                         'needs: [placement, python, shadow, rust-build, rust, gnu, musl]'),
+            body.replace("              needs.rust-build.result != 'success' ||\n", ''),
+            body.replace('    needs: rust-build\n', '    needs: placement\n'),
+            body.replace('shard: [1, 2, 3, 4, 5, 6]', 'shard: [1, 2, 3, 4, 5]'),
+            body.replace('name: server2-nextest-archive\n          path: reports/nextest/\n          if-no-files-found',
+                         'name: server2-nextest-archive\n          path: reports/\n          if-no-files-found'),
+            body.replace(" ||\n              (github.event_name != 'pull_request' && needs.goldens.result != 'success')", ''),
+            body.replace('          SERVER2_DECLARATION: ${{ inputs.declaration }}\n', ''),
             body.replace('if: ${{ always() }}', 'if: ${{ success() }}'),
-            body.replace('needs.python.result', 'needs.placement.result'),
-            body.replace("needs.musl.result != 'success'", "needs.musl.result == 'failure'"),
-            body.replace('tools/ci.sh python', 'tools/ci.sh rust'),
+            body.replace('needs.shadow.result', 'needs.placement.result'),
+            body.replace("needs.musl.result != 'skipped'", "needs.musl.result == 'failure'"),
+            body.replace("(github.event_name != 'pull_request' && needs.musl.result != 'success') ", ''),
+            body.replace("    if: ${{ github.event_name != 'pull_request' }}\n    runs-on", '    runs-on'),
+            body.replace('shard: [1, 2, 3, 4]', 'shard: [1, 2, 3]'),
             body.replace('tools/ci.sh promote', 'tools/ci.sh musl'),
+            body.replace("save-if: ${{ github.ref == 'refs/heads/master' }}", 'save-if: true', 1),
+            body.replace('cargo-nextest@0.9.152', 'cargo-nextest'),
+            # Only pull request runs may cancel superseded runs; a master push must never be lost.
+            body.replace("cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}",
+                         'cancel-in-progress: true'),
+            # A re-run of an older commit must not join the pull request's group.
+            body.replace("github.event_name == 'pull_request' && github.run_attempt == '1' && format(",
+                         "github.event_name == 'pull_request' && format("),
+            body.replace("format('{0}-run-{1}', github.workflow, github.run_id)", "format('{0}-run-{1}', github.workflow, github.ref)"),
+            body.replace('rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0', 'rust-cache@v2', 1),
             body.replace('name: server2-linux-musl-candidate\n          path', 'name: server2-linux-musl-verified\n          path', 1),
             body.replace('retention-days: 1', 'retention-days: 7'),
-            body.replace('          SERVER2_CANDIDATE_DIGEST: ${{ needs.musl.outputs.digest }}\n', ''),
-            body.replace('digest: ${{ steps.musl.outputs.digest }}', 'digest: ${{ steps.musl.outputs.sha }}'),
             body.replace('retention-days: 7', 'retention-days: 90'),
+            body.replace('          SERVER2_CANDIDATE_DIGEST: ${{ needs.musl.outputs.digest }}\n', ''),
         ):
             self.assertNotEqual(body, bad)
             self.assertTrue(placement.audit_workflow(bad))

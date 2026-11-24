@@ -1,0 +1,234 @@
+name: Android release verification
+run-name: Android release verification ${{ inputs.ref || github.sha }}
+# Release CI of the native Android app (docs/development/ci-tiers.md, docs/operations/android-release.md): the
+# PR checks, release lint and the device suites that need no private input, on emulators. It may take long and
+# is not a pull-request check. It builds no release APK, holds no secret and publishes nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Full 40-character SHA of the commit to verify"
+        required: true
+        type: string
+  schedule:
+    # 02:30 Asia/Seoul; skipped unless an input of the Android PR workflow or this workflow changed since the
+    # last passed nightly run.
+    - cron: "30 17 * * *"
+  # A change of this verification is tried on its own pull request.
+  pull_request:
+    paths:
+      - ".github/workflows/android-release.yml"
+      - "android/tools/release-ci/**"
+permissions:
+  contents: read
+concurrency:
+  # As in the PR workflows (#3139): first attempts of a pull request's runs share a group and cancel older ones;
+  # re-runs, dispatches and nightly runs get their own group. The prefix is not github.workflow: android.yml, called
+  # below, takes github.workflow from this caller, and the same group for caller and callee would block or cancel
+  # the caller.
+  group: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('android-release-pr-{0}', github.event.pull_request.number) || format('android-release-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
+jobs:
+  scope:
+    name: Commit to verify
+    if: github.event_name != 'schedule' || github.repository == 'WizardFactory/TodayWeather'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      sha: ${{ steps.decide.outputs.sha }}
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # A pull request run (a change of this workflow) checks the merge commit its definitions come from; the
+          # head of a pull request is verified by a dispatch from its branch (docs/development/ci-tiers.md).
+          ref: ${{ inputs.ref || github.sha }}
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REQUESTED: ${{ inputs.ref }}
+          RUN_COMMIT: ${{ github.sha }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          if [ "$EVENT" = workflow_dispatch ]; then
+            # A dispatch names its commit: a branch, a tag or a short SHA would not say which commit was verified.
+            if ! printf '%s' "$REQUESTED" | grep -Eq '^[0-9a-f]{40}$' || [ "$REQUESTED" != "$sha" ]; then
+              echo "ref must be the full 40-character SHA of the commit to verify; got '$REQUESTED', checked out $sha" >&2
+              exit 1
+            fi
+            # The jobs below, the called PR workflow included, are defined by the commit the run was started from
+            # (--ref). Only when that is the verified commit do its own checks run on it.
+            if [ "$RUN_COMMIT" != "$sha" ]; then
+              echo "start the run from a branch or tag at $sha (gh workflow run ... --ref <branch or tag>); it was started from $RUN_COMMIT" >&2
+              exit 1
+            fi
+          fi
+          run=true
+          if [ "$EVENT" = schedule ]; then
+            last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow android-release.yml --event schedule \
+              --status success --limit 1 --json headSha --jq '.[0].headSha // empty')
+            # The paths that start the Android PR workflow are the inputs of its checks (android/, the client
+            # sources it imports, the server routes it reads); git reads them as glob pathspecs.
+            ruby -ryaml -e 'w = YAML.load_file(".github/workflows/android.yml"); paths = (w["on"] || w[true])["pull_request"]["paths"]; abort "no paths" if paths.nil? || paths.empty?; puts paths.map { |p| ":(glob)#{p}" }' > "$RUNNER_TEMP/android-paths"
+            echo ":(glob).github/workflows/android-release.yml" >> "$RUNNER_TEMP/android-paths"
+            set --
+            while IFS= read -r spec; do set -- "$@" "$spec"; done < "$RUNNER_TEMP/android-paths"
+            # Skip only on a clean comparison: an unknown commit or a git error runs the verification.
+            if [ -n "$last" ] && git cat-file -e "$last^{commit}" 2>/dev/null \
+              && git diff --quiet "$last" "$sha" -- "$@"; then
+              run=false
+              echo "No change of the Android inputs since the last passed nightly run ($last)." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+  pr-checks:
+    name: PR checks on the commit
+    needs: scope
+    if: needs.scope.outputs.run == 'true'
+    uses: ./.github/workflows/android.yml
+    with:
+      ref: ${{ needs.scope.outputs.sha }}
+
+  lint:
+    name: Release lint
+    needs: scope
+    if: needs.scope.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.scope.outputs.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Lint of the release variant
+        working-directory: android
+        run: ./gradlew lintRelease
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-release-lint
+          path: android/*/build/reports/lint-results-release.*
+          retention-days: 14
+
+  devices:
+    name: Device suites (${{ matrix.name }})
+    needs: scope
+    if: needs.scope.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The AVD names start with tw_, as the runners require; "fold" in the name turns the fold steps on.
+          - name: phone-api36
+            api: 36
+            profile: pixel_8
+            avd: tw_api36_phone
+            suites: device-tests parity window-fit
+          # API 24: the 32-bit image. The x86_64 images (google_apis and default) stopped answering adb during
+          # boot on the hosted runner, with 4 and with 2 cores (runs of 2026-11-23). With 2 cores the 32-bit image
+          # once ran so slowly that a test's 10 s wait ran out; it gets the 4 cores of the other jobs.
+          - name: phone-api24
+            api: 24
+            arch: x86
+            profile: pixel
+            avd: tw_api24
+            suites: device-tests
+          - name: tablet-api36
+            api: 36
+            profile: pixel_tablet
+            avd: tw_api36_tablet
+            suites: shell-fit window-fit
+          - name: fold-api36
+            api: 36
+            profile: pixel_fold
+            avd: tw_api36_fold
+            suites: shell-fit window-fit
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.scope.outputs.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Debug and test APKs
+        working-directory: android
+        run: ./gradlew assembleDebug assembleDebugAndroidTest
+      - name: Allow the emulator to use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Device suites
+        # A guest that stops answering adb would otherwise hold the job until its own limit.
+        timeout-minutes: 45
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          ANDROID_SERIAL: emulator-5554
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: ${{ matrix.arch || 'x86_64' }}
+          profile: ${{ matrix.profile }}
+          avd-name: ${{ matrix.avd }}
+          cores: ${{ matrix.cores || 4 }}
+          ram-size: 4096M
+          disk-size: 6G
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: sh android/tools/release-ci/run-suites.sh "$RUNNER_TEMP/device-suites" ${{ matrix.suites }}
+      - name: Results
+        if: always()
+        run: |
+          {
+            echo "### ${{ matrix.name }}"
+            echo '```'
+            cat "$RUNNER_TEMP/device-suites/summary.txt" 2>/dev/null || echo "no suite ran"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Pack the evidence
+        if: always()
+        # One archive: the runners name directories with characters an artifact path may not contain.
+        run: |
+          mkdir -p "$RUNNER_TEMP/device-suites"
+          tar -czf "$RUNNER_TEMP/device-suites-${{ matrix.name }}.tar.gz" -C "$RUNNER_TEMP" device-suites
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-release-devices-${{ matrix.name }}
+          path: ${{ runner.temp }}/device-suites-${{ matrix.name }}.tar.gz
+          retention-days: 14
+
+  verified:
+    name: Verified commit
+    needs: [scope, pr-checks, lint, devices]
+    if: always() && needs.scope.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every verification job to pass
+        env:
+          RESULTS: ${{ needs.pr-checks.result }} ${{ needs.lint.result }} ${{ needs.devices.result }}
+          SHA: ${{ needs.scope.outputs.sha }}
+        run: |
+          for result in $RESULTS; do
+            if [ "$result" != success ]; then
+              echo "Android release verification FAILED for $SHA ($RESULTS)" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          done
+          echo "Android release verification passed for $SHA" | tee -a "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,670 @@
+{
+ "criteria": [
+  {
+   "id": "C1",
+   "reason": "retained_launch_reader_ledger_and_pairs_verified",
+   "status": "pass"
+  },
+  {
+   "id": "C2",
+   "reason": "usable_pairs_against_declared_count_minima",
+   "status": "unassessed"
+  },
+  {
+   "id": "C3",
+   "reason": "unexpected_http_status",
+   "status": "fail"
+  },
+  {
+   "id": "C4",
+   "reason": "coverage_and_response_policy_required",
+   "status": "unassessed"
+  },
+  {
+   "id": "C5",
+   "reason": "absolute_admitted_attempt_error_fraction",
+   "status": "unassessed"
+  },
+  {
+   "id": "C6",
+   "reason": "reader_elapsed_ms",
+   "status": "unassessed"
+  },
+  {
+   "id": "C7",
+   "reason": "rehearsal_measurements_required",
+   "status": "unassessed"
+  },
+  {
+   "id": "C8",
+   "reason": "production_control_not_supplied",
+   "status": "unassessed"
+  }
+ ],
+ "criteria_sha256": "299efe6d55c9ff60dc245026f6914e6c1105471531ad71fadab89e44be17fb7e",
+ "evidence": {
+  "candidate_sha256": "a03d03777ec965b2af3a75c9cfd3d9fcae2c98bf6ba76a3d8b67f89c1d3c1fe4",
+  "launch_source_commit": "83dba6075ec38470002a57b57479648186bb573f",
+  "ledger_sha256": "c1d9e7d5155534d6b3df044f5998af0530d40c0b4ad95aefaad6b647d8099dcb",
+  "reader_sha256": "a804f2d78dcea44a3db5f2ef7cc5d2cdf7b254120665f6bdecd72e3f008e70ef",
+  "sampler_sha256": "46e17e33561201e5c068fec581fb0172c7aa5ffcb6e33f0b3ce1f6e5d5e60153",
+  "source": "bucket",
+  "terminal": "duration-complete"
+ },
+ "families": {
+  "conditional-current-0": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-geocode-addr-v000901": {
+   "candidate": {
+    "304": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-geocode-addr-v000903": {
+   "candidate": {
+    "304": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-geocode-coord": {
+   "candidate": {
+    "304": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-kma-v000901": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-kma-v000903": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-nation-v000901": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-nation-v000903": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-notice": {
+   "candidate": {},
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {},
+   "usable_pairs": 0
+  },
+  "conditional-town-v000705": {
+   "candidate": {},
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {},
+   "usable_pairs": 0
+  },
+  "conditional-town-v000803": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-warning": {
+   "candidate": {
+    "304": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-weather-default-seoul": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-weather-v000901-seoul": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-weather-v000902-seoul": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "conditional-ww": {
+   "candidate": {
+    "304": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "304": 1
+   },
+   "usable_pairs": 0
+  },
+  "current-0": {
+   "candidate": {
+    "200": 25
+   },
+   "minimum_usable_pairs": 20,
+   "planned_pairs": 25,
+   "production": {
+    "200": 25
+   },
+   "usable_pairs": 25
+  },
+  "current-1": {
+   "candidate": {
+    "200": 25
+   },
+   "minimum_usable_pairs": 20,
+   "planned_pairs": 25,
+   "production": {
+    "200": 25
+   },
+   "usable_pairs": 25
+  },
+  "current-2": {
+   "candidate": {
+    "200": 25
+   },
+   "minimum_usable_pairs": 20,
+   "planned_pairs": 25,
+   "production": {
+    "200": 25
+   },
+   "usable_pairs": 25
+  },
+  "current-3": {
+   "candidate": {
+    "200": 25
+   },
+   "minimum_usable_pairs": 20,
+   "planned_pairs": 25,
+   "production": {
+    "200": 25
+   },
+   "usable_pairs": 25
+  },
+  "current-4": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "current-5": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "geocode-addr-v000901": {
+   "candidate": {
+    "200": 2
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 2,
+   "production": {
+    "200": 2
+   },
+   "usable_pairs": 2
+  },
+  "geocode-addr-v000903": {
+   "candidate": {
+    "200": 2
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 2,
+   "production": {
+    "200": 2
+   },
+   "usable_pairs": 2
+  },
+  "geocode-coord": {
+   "candidate": {
+    "200": 2
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 2,
+   "production": {
+    "200": 2
+   },
+   "usable_pairs": 2
+  },
+  "head-current-0": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-geocode-addr-v000901": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-geocode-addr-v000903": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-geocode-coord": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-kma-v000901": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-kma-v000903": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-nation-v000901": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-nation-v000903": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-notice": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "404": 1
+   },
+   "usable_pairs": 0
+  },
+  "head-town-v000705": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-town-v000803": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-warning": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-weather-default-seoul": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-weather-v000901-seoul": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-weather-v000902-seoul": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "head-ww": {
+   "candidate": {
+    "200": 1
+   },
+   "minimum_usable_pairs": 1,
+   "planned_pairs": 1,
+   "production": {
+    "200": 1
+   },
+   "usable_pairs": 1
+  },
+  "kma-v000901": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "kma-v000903": {
+   "candidate": {
+    "200": 25
+   },
+   "minimum_usable_pairs": 20,
+   "planned_pairs": 25,
+   "production": {
+    "200": 25
+   },
+   "usable_pairs": 25
+  },
+  "nation-v000901": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "nation-v000903": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "notice": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "404": 7
+   },
+   "usable_pairs": 0
+  },
+  "town-v000705": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "town-v000803": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "warning": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "weather-default-ny": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "weather-default-seoul": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "weather-v000901-ny": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "weather-v000901-seoul": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "weather-v000902-ny": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "weather-v000902-seoul": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  },
+  "ww": {
+   "candidate": {
+    "200": 7
+   },
+   "minimum_usable_pairs": 5,
+   "planned_pairs": 7,
+   "production": {
+    "200": 7
+   },
+   "usable_pairs": 7
+  }
+ },
+ "launch_sha256": "8be010cd0ef9c50f5172189cef5f0d7d4da5a871026adac6b9bf08fafa5e3b0f",
+ "profile": "production_shadow",
+ "qualification_sha256": "71e45c391bb343f45e71ce2c6d9708416a3c238a6f34fceadbef238c197ed417",
+ "recommendation": "no_go",
+ "run_id": "canary-20261123b",
+ "schema": 1
+}

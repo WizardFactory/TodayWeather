@@ -1682,3 +1682,57 @@ async fn wide_lookup_leaves_a_group_at_its_first_missing_page() {
     assert_eq!(wide.excluded_groups(), narrow.excluded_groups());
     assert_eq!(wide.excluded_members(), narrow.excluded_members());
 }
+/// KMA-NATION-READS: sixty lookups of a complete catalog share one admission, so the later ones
+/// queue well past the 3 s operation cap. Each returns the complete set within its own deadline,
+/// and a publication queued among them commits.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn queued_lookups_and_a_queued_publication_complete_on_a_real_peer() {
+    let peer = Peer::new();
+    let setup = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let (d, raw) = group(100, 1);
+    let id = d.members[0].catalogs[0].clone();
+    setup.publish(d, raw, deadline()).await.unwrap();
+    peer.fault("slow-all", "unused").await;
+    let store = Arc::new(
+        CatalogStore::new(
+            peer.transport(),
+            CatalogLimits {
+                io: 1,
+                ..CatalogLimits::default()
+            },
+        )
+        .unwrap(),
+    );
+    let start = Instant::now();
+    let until = start + Duration::from_secs(30);
+    let reads: Vec<_> = (0..60)
+        .map(|_| {
+            let (store, id) = (store.clone(), id.clone());
+            tokio::spawn(async move { store.lookup(&id, until).await })
+        })
+        .collect();
+    let publication = {
+        let store = store.clone();
+        let (d, raw) = group(200, 2);
+        tokio::spawn(async move { store.publish(d, raw, until).await })
+    };
+    for read in reads {
+        assert!(
+            !ready(read.await.unwrap().unwrap())
+                .acquisitions()
+                .is_empty()
+        );
+    }
+    publication.await.unwrap().unwrap();
+    let queued = start.elapsed();
+    assert!(
+        queued > Duration::from_secs(3),
+        "the queue stayed under the cap: {queued:?}"
+    );
+    assert_eq!(
+        ready(store.lookup(&id, deadline()).await.unwrap())
+            .acquisitions()
+            .len(),
+        2
+    );
+}

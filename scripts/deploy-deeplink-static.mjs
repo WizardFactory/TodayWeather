@@ -16,14 +16,6 @@ export const ASSET_LINKS = ".well-known/assetlinks.json";
 const BUNDLE_ID = "net.wizardfactory.todayweather";
 const ASSOCIATION_CACHE = "public, max-age=3600";
 
-const staticFiles = [
-  ["assets/icon.svg", "image/svg+xml"],
-  ["assets/preview.png", "image/png"],
-  ["assets/open.css", "text/css; charset=utf-8"],
-  ["assets/open.js", "text/javascript; charset=utf-8"],
-  ["open.html", "text/html; charset=utf-8"],
-];
-
 export function associations({ teamId, fingerprint }) {
   if (!/^[A-Z0-9]{10}$/.test(teamId ?? "")) {
     throw Error("APPLE_TEAM_ID must be 10 uppercase alphanumeric characters");
@@ -52,9 +44,7 @@ export function planUpload(identity) {
   if (stack.Resources.Navigation.Properties.FunctionCode !== source) {
     throw Error("stack.json must embed the exact route-request.js source");
   }
-  const files = staticFiles.map(([key, contentType]) => ({
-    key, contentType, cacheControl: "no-cache", body: readFileSync(new URL(key, root)),
-  }));
+  const files = [];
   for (const [key, value] of Object.entries(associations(identity))) {
     const body = Buffer.from(JSON.stringify(value, null, 2) + "\n");
     if (key === AASA && body.length > 128 * 1024) throw Error("AASA exceeds 128 KiB");

@@ -6,19 +6,54 @@ Issue: [#2653](https://github.com/WizardFactory/TodayWeather/issues/2653). A pub
 | --- | --- | --- | --- |
 | Backend service | `backend/tw-svc/vMAJOR.MINOR.PATCH` | Full SHA, host/config inventory, package/dependency identity, PM2/env backup | Explicit operator-approved Hermes rollout; no production Actions yet |
 | Backend gather | `backend/tw-gather/vMAJOR.MINOR.PATCH` | Full SHA, gather config/grid inventory and dependency identity | Separate host approval and collector/coverage verification |
-| Cordova Android | `cordova/android/vMAJOR.MINOR.PATCH` | Full SHA, app ID, versionCode, toolchain/plugin lock, AAB checksum; signing identity reference only | CI build ≠ signed build ≠ submission ≠ store publication; separate signing/store approval |
-| Cordova iOS | `cordova/ios/vMAJOR.MINOR.PATCH` | Full SHA, bundle ID, build number, toolchain/plugin lock, IPA checksum; signing reference only | Same separation, including App Store review and publication |
+| Backend server2 | `backend/server2/vMAJOR.MINOR.PATCH` | Full SHA, executable SHA-256 from the verified [Server2](../../.github/workflows/server2.yml) candidate, configuration inventory | Reserved: server2 has no production rollout yet; its approval and rollback are defined with the [cutover](server2-cutover.md) |
+| Android app | `android/vMAJOR.MINOR.PATCH`, candidates `android/vMAJOR.MINOR.PATCH-rc.N` | Full SHA, package, versionName, versionCode, minSdk/targetSdk, APK SHA-256; signing certificate digest only | [Android release runbook](android-release.md): release CI on the commit, operator build and signing, manual and device gates; store steps by the operator |
+| iOS app | `ios/vMAJOR.MINOR.PATCH`, candidates `ios/vMAJOR.MINOR.PATCH-rc.N` | Full SHA, bundle ID, marketing version, build number, archive or IPA SHA-256; signing reference only | [iOS release verification](../../.github/workflows/ios-release.yml) on the commit, then the [App Store release](../../ios/README.md#app-store-release-in-19): archive, device acceptance, TestFlight, App Review and phased release by the operator |
+| Cordova Android (historical) | `cordova/android/vMAJOR.MINOR.PATCH` | Full SHA, app ID, versionCode, toolchain/plugin lock, AAB checksum; signing identity reference only | CI build ≠ signed build ≠ submission ≠ store publication; separate signing/store approval |
+| Cordova iOS (historical) | `cordova/ios/vMAJOR.MINOR.PATCH` | Full SHA, bundle ID, build number, toolchain/plugin lock, IPA checksum; signing reference only | Same separation, including App Store review and publication |
 | Static webapp | `webapp/vMAJOR.MINOR.PATCH` | Full SHA, successful master-push build run ID, artifact ID and SHA256 archive digest | Manual guarded workflow and `webapp-production` environment approval |
 
 Use immutable tags at exact commits, including peeled annotated tags. Never reuse a tag/version for different bytes. Do not infer the tag commit from the Release's `target_commitish` (which may name a moving branch). Superseded/failed Releases retain their evidence. Backend has one host per Release; a coordinated two-host rollout uses two linked Releases and a parent operator change record. TodayAir is retired; these conventions do not authorize reviving it.
 
+## Versions, candidates and tags
+
+Each delivery scope has its own `MAJOR.MINOR.PATCH` sequence; the scopes do not share version numbers. The tag is the scope, `/v` and the version, and the Release title equals the tag. The Cordova rows remain for the releases made under them; the Cordova client has left operations ([product lifecycle](../architecture/service-overview.md#product-lifecycle)). The tags of 2018 and earlier (`0.9.x`, `1.0.x`) predate this convention and stay as they are.
+
+**Store apps (Android, iOS)** release each binary given to a test track as a candidate, `-rc.N`, published as a GitHub pre-release. A candidate that fails keeps its tag and Release; the next one is `-rc.N+1` with a new versionCode or build number. When a candidate's binary goes to production unchanged, the final tag `vMAJOR.MINOR.PATCH` is created at the same commit, and its notes name the candidate and the same artifact identity. Nothing is rebuilt between the two. **Webapp and backend** scopes have no candidates: the webapp guard accepts `webapp/vMAJOR.MINOR.PATCH` only.
+
+Draft the notes first, then create the annotated tag locally at the exact commit on `master`, check the notes against it, and only then push the tag and create the Release from it:
+
+```sh
+TAG=<scope>/v<version>
+node scripts/release-notes.mjs --scope <scope> --version <version> --commit <full SHA> > notes.md   # refuses an existing tag
+$EDITOR notes.md                                    # replace every <fill in>
+git tag -a "$TAG" <full SHA> -m "<target> <version>"
+node scripts/release-notes.mjs --check notes.md --tag "$TAG" --commit <full SHA> &&
+  git push origin "$TAG" &&
+  gh release create "$TAG" --verify-tag --latest=false --title "$TAG" --notes-file notes.md
+# a store-app candidate: add --prerelease
+```
+
+A tag that was pushed is never moved or reused; a local tag at the wrong commit is deleted and created again before the push.
+
+`--verify-tag` stops `gh` from creating a tag at a moving branch head. `--latest=false` on every Release: the repository has one "Latest" label, and it would say nothing about the other scopes. List one scope's Releases with:
+
+```sh
+gh release list --limit 100 --json tagName,isPrerelease,publishedAt \
+  --jq '.[] | select(.tagName | startswith("android/")) | [.tagName, .isPrerelease, .publishedAt] | @tsv'
+```
+
 ## Release-note template
+
+Draft the notes with `node scripts/release-notes.mjs --scope <scope> --version <version> [--commit <ref>] [--from <ref>]`. It writes the fields below with the scope's identity lines and lists what was merged under the scope's paths since its previous final tag, from the local Git history (`android/`; `ios/`; `web/` and `packages/`; `server/`; `server2/`). The list is a draft: a pull request that only refreshed a snapshot under those paths is listed too, so trim it to what the release changes and write the user impact. Replace every `<fill in>`, then run `node scripts/release-notes.mjs --check notes.md --tag <tag> [--commit <full SHA>]` once the local tag exists and before it is pushed. It is told the tag (and commit) about to be published and fails while a field is unfilled, the notes are of another tag or scope or name another commit, the scope has no candidates for an `-rc.N` tag, or the tag is missing or at another commit. The first Release of a scope has no previous tag and needs `--from <commit>`.
 
 Use this template for all targets, with a scope-specific identity section. Update rollout status with a dated evidence reference; preserve previous attempts. Keep account/resource IDs, secrets and private backups in the operator inventory, not public notes.
 
 ```text
 Source commit: <full 40-character SHA matching the peeled tag>
-Delivery scope: <webapp | backend/tw-svc | backend/tw-gather | cordova/android | cordova/ios>
+Delivery scope: <android | ios | webapp | backend/tw-svc | backend/tw-gather | backend/server2>
+Tag: <scope>/v<version>
+Previous release: <previous final tag of the scope and its commit, or the starting commit>
 Changes: <user impact, fixes, compatibility/config migration>
 Artifact: <build run URL, immutable artifact ID/checksum and target-specific identity>
 Publication: published <UTC time>; this is not deployment completion
@@ -27,7 +62,7 @@ Operator/approval: <owner and environment/approval run reference>
 Verification: <preflight, exact deployed SHA, smoke, warnings and evidence URL>
 Rollback: <known-good source/artifact or opaque private snapshot reference, procedure>
 Attempts: <UTC time, run URL, result, reconciliation and rollback result>
-Cordova only: build status / signing status / submission status / store publication status
+Store status (Android, iOS): build status / signing status / submission status / store publication status
 ```
 
 Webapp notes additionally contain exactly one machine-readable block (replace every example value with verified values). The guard requires the same upstream build run/artifact, unexpired artifact and matching digest. `rollbackReference` is an opaque change-record key; that private record maps it to each workflow snapshot ID and previous artifact/configuration.
@@ -50,8 +85,10 @@ Read run/artifact metadata from GitHub Actions, never guess IDs/digest. A PR art
 
 - **Web build:** existing [Web app](../../.github/workflows/web.yml) PR/push/manual verification, `contents: read`, no AWS credential or production write. The existing artifact name alone is not provenance.
 - **Web production:** [Webapp guarded release](../../.github/workflows/web-release.yml) manual `workflow_dispatch` on upstream master, with the explicit Release tag. No `release`, tag push or `workflow_run` deploy. `contents: read` and `actions: read` validate Release/environment/run/artifact; only the protected deploy job gets `id-token: write`. No Release-body write permission. Workflow-level production concurrency never cancels an active upload, though GitHub can replace older pending runs; no queued run is a promise of execution.
+- **Android verification:** [Android release verification](../../.github/workflows/android-release.yml), manual `workflow_dispatch` for a full SHA and a nightly schedule, `contents: read` (`actions: read` for the nightly comparison), no secret and no environment. It builds debug and test APKs for hosted emulators. It builds no release APK, signs nothing, creates no tag or Release and reaches no store; see [PR CI and release CI](../development/ci-tiers.md).
 - **Backend future:** separately named/manual host-specific workflows and environments, explicit source and host inputs, separate scoped roles and operator approval. No SSH/AWS credentials in build jobs. IAM permissions for AMI/Spot/EIP replacement must be separate from code rollout and bounded to approved resources. See [backend decision](backend-release-automation-decision.md).
-- **Cordova future:** unsigned CI artifacts carry platform/version/toolchain/checksum; signing and store submission/publication have separate protected jobs, secrets and minimal store permissions. Publishing a GitHub Release does not submit or publish an app. No signing/store workflow is introduced here; coordinate with [#2605](https://github.com/WizardFactory/TodayWeather/issues/2605).
+- **Store apps:** the release binary is built and signed on the operator's machine ([Android](android-release.md), [iOS](../../ios/README.md#app-store-release-in-19)). No signing key, store credential or private build input is a GitHub secret. Publishing a GitHub Release does not submit or publish an app.
+- **Cordova (historical):** unsigned CI artifacts carry platform/version/toolchain/checksum; signing and store submission/publication have separate protected jobs, secrets and minimal store permissions. Publishing a GitHub Release does not submit or publish an app. No signing/store workflow is introduced here; coordinate with [#2605](https://github.com/WizardFactory/TodayWeather/issues/2605).
 
 ## Operator activation (separate approval required)
 

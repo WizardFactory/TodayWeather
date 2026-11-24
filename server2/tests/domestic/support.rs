@@ -94,12 +94,12 @@ impl server2::budget::Clock for TestClock {
 }
 /// Take `lock` (the S3 test peers') and start `instant` at `at` (ISO) for the test holding the
 /// guard.
-pub async fn fixed_now(
-    lock: &'static tokio::sync::Mutex<()>,
+pub async fn fixed_now<G>(
+    lock: impl std::future::Future<Output = G>,
     instant: &'static TestInstant,
     at: &str,
-) -> tokio::sync::MutexGuard<'static, ()> {
-    let guard = lock.lock().await;
+) -> G {
+    let guard = lock.await;
     instant.set(clock_ms(at));
     guard
 }
