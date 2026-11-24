@@ -35,3 +35,19 @@ Behavior of the keep rule: TDD (`ResourceKeepTest` red, then green). Build confi
 ## Blast radius
 
 Release APK only. Debug builds, CI builds and the instrumented suites are unchanged.
+
+## Amendment 2026-11-24: keep the analytics choice's listener field (AC5–AC7)
+
+| # | Change | Files | Check |
+| --- | --- | --- | --- |
+| 5 | Keep `HandBackWriter.consentListener` | `android/app/src/main/java/net/wizardfactory/todayweather/HandBack.kt` | R8 release build: field in `mapping.txt`; emulator scenarios S7, S8 |
+| 6 | Release check and source test | `android/tools/release/check_r8.py`, `test_check_r8.py`, `android/app/src/test/.../ListenerKeepTest.kt` | Tests red before the change (missing check, missing annotation), green after; `check_r8.py` against the first 2.0.1 build's mapping excerpt and the new build's mapping |
+| 7 | Documents | this spec, `android/README.md`, runbook step 4 | Links and anchors |
+
+| ID | User and goal | Steps | Expected | Failure |
+| --- | --- | --- | --- | --- |
+| S7 | German user allows usage analytics | de-DE fresh install; menu, Nutzungsanalyse; force a GC in the app; Zustimmen; restart | Suite holds `"true"`; after the restart collection on, row An | Suite unchanged, grant withdrawn at the restart (the defect) |
+| S8 | US user turns usage analytics off and on again | en-US; menu; Turn off; restart; Turn on (after a forced GC); restart | Off after the first restart, on after the second | On turns off at the restart |
+| S9 | Operator checks a release whose R8 run dropped the field | `check_r8.py <apk> <mapping>` | `FAIL R8 removed net.wizardfactory.todayweather.HandBackWriter.consentListener`, status 1 | — |
+
+Verification: TDD for the check and the source test; the keep itself through a real R8 build and the emulator scenarios (alternative evidence: R8 runs only in a release build). Rollback: revert the commit; the keep and its checks go together.

@@ -14,7 +14,9 @@ The check passes when
   header), so the file to upload to Play is complete;
 - R8 obfuscated and shrank the app's own classes (APP_PACKAGE): of the classes it kept, the mapping gives more a
   new name than their own (R8 run with -dontobfuscate renames none), and it maps some to `R8$$REMOVED$$CLASS$$<n>`,
-  the name R8 9.x gives a class it removed (with -dontshrink it removes none).
+  the name R8 9.x gives a class it removed (with -dontshrink it removes none);
+- every field of KEPT_FIELDS is in the mapping under its class, which R8 kept: the field holds a listener that a
+  registry keeps only weakly, and nothing reads it, so without its keep rule R8 removes it and the listener is collected.
 Prints one ok or FAIL line per check, and the mapping file's SHA-256 for the release notes. Status 1: a check
 failed; 2: usage or an unreadable file.
 """
@@ -29,6 +31,14 @@ DEX = re.compile(r"classes\d*\.dex")
 APP_PACKAGE = "net.wizardfactory.todayweather."
 CLASS_LINE = re.compile(rb"^(\S+) -> (\S+):\r?$", re.MULTILINE)
 REMOVED = re.compile(r"R8\$\$REMOVED\$\$CLASS\$\$[0-9]+")
+# (class, field): SharedPreferences keeps its change listeners only weakly, so the app holds the analytics choice's
+# listener in this field (@field:Keep); the first 2.0.1 build lost it and withdrew a grant at the next start.
+# app/src/test/.../ListenerKeepTest.kt checks that the app's sources and this list agree.
+KEPT_FIELDS = (
+    ("net.wizardfactory.todayweather.HandBackWriter", "consentListener"),
+)
+# A field in a mapping: `    <type> <name> -> <new name>`; methods have parameters and may have line numbers.
+FIELD_LINE = re.compile(r"^ {4}[^\s(#:]+ ([^\s(]+) -> \S+$")
 
 
 def markers(data):
@@ -75,6 +85,23 @@ def own_classes(data):
     return kept, renamed, removed
 
 
+def kept_fields(data):
+    """The (class, field) pairs of KEPT_FIELDS that the mapping has: the field's line under its class's line."""
+    wanted = set(KEPT_FIELDS)
+    found = set()
+    current = None
+    for raw in data.decode("utf-8", "replace").splitlines():
+        line = raw.rstrip("\r")
+        if not line.startswith((" ", "#")):
+            match = re.match(r"^(\S+) -> (\S+):$", line)
+            current = match.group(1) if match and not REMOVED.fullmatch(match.group(2)) else None
+            continue
+        field = FIELD_LINE.match(line)
+        if current and field and (current, field.group(1)) in wanted:
+            found.add((current, field.group(1)))
+    return found
+
+
 def main(argv):
     if len(argv) != 3:
         print("usage: check_r8.py <release.apk> <mapping.txt>", file=sys.stderr)
@@ -119,6 +146,10 @@ def main(argv):
           f"R8 renamed {renamed} of the app's {renamed + kept} classes ({APP_PACKAGE}*): not obfuscated")
     check(removed > 0, f"R8 removed {removed} of the app's classes",
           f"R8 removed none of the app's classes ({APP_PACKAGE}*): not shrunk")
+    present = kept_fields(mapping)
+    for owner, field in KEPT_FIELDS:
+        check((owner, field) in present, f"R8 kept {owner}.{field}",
+              f"R8 removed {owner}.{field}: the listener it holds is kept only weakly and can be collected")
     check(bool(recorded) and recorded == actual, "mapping content has the SHA-256 of its header",
           f"mapping content SHA-256 {actual}, its header records {recorded or 'none'}")
     print(f"- R8 mapping SHA-256: {hashlib.sha256(mapping).hexdigest()}")

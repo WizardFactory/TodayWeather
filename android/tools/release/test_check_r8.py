@@ -3,7 +3,8 @@
 The dex files hold the marker strings D8, R8 and L8 write, in the form of the 2.0.x builds (AGP 9.5, R8 9.5.29): the
 unminified release had `~~D8` markers, the minified one an `~~R8` marker with `pg-map-id` in the app's dex and
 `~~L8` with `~~R8` in the desugared library's dex. The mapping header is R8's, whose `pg_map_hash` is the SHA-256 of
-the lines after the header.
+the lines after the header. The fields SharedPreferences holds a listener by (check_r8.KEPT_FIELDS) are in the
+mapping as R8 9.5.29 writes a field it keeps: an indented `<type> <name> -> <new name>` line under its class.
 """
 import hashlib
 import json
@@ -28,16 +29,24 @@ def dex(*markers):
     return b'dex\n039\x00' + b'\x00' * 64 + b''.join(b'\x00' + m for m in markers)
 
 
-# The app's classes as R8 maps them: kept by a rule, renamed, removed (R8 9.x names removed classes).
+# The app's classes as R8 maps them: kept by a rule, renamed, removed (R8 9.x names removed classes), and the class
+# whose field holds the analytics choice's listener, with that field kept.
+LISTENER_FIELD = (b'    android.content.SharedPreferences$OnSharedPreferenceChangeListener consentListener'
+                  b' -> consentListener\n')
+HAND_BACK = (b'net.wizardfactory.todayweather.HandBackWriter -> e.f:\n'
+             b'# {"id":"sourceFile","fileName":"HandBack.kt"}\n'
+             b'    android.content.SharedPreferences suite -> a\n' + LISTENER_FIELD +
+             b'    1:4:boolean rewrite():44:44 -> b\n')
 SHRUNK = (b'kotlin.Unit -> kotlin.Unit:\n'
           b'net.wizardfactory.todayweather.MainActivity -> net.wizardfactory.todayweather.MainActivity:\n'
           b'    void onCreate(android.os.Bundle) -> onCreate\n'
           b'net.wizardfactory.todayweather.core.domain.Js -> a.b:\n'
           b'    int x -> a\n'
           b'net.wizardfactory.todayweather.ui.chart.Chart -> c.d:\n'
-          b'net.wizardfactory.todayweather.ui.Unused -> R8$$REMOVED$$CLASS$$0:\n')
+          b'net.wizardfactory.todayweather.ui.Unused -> R8$$REMOVED$$CLASS$$0:\n' + HAND_BACK)
 NOT_OBFUSCATED = SHRUNK.replace(b'-> a.b:', b'-> net.wizardfactory.todayweather.core.domain.Js:').replace(
-    b'-> c.d:', b'-> net.wizardfactory.todayweather.ui.chart.Chart:')
+    b'-> c.d:', b'-> net.wizardfactory.todayweather.ui.chart.Chart:').replace(
+    b'-> e.f:', b'-> net.wizardfactory.todayweather.HandBackWriter:')
 NOT_SHRUNK = SHRUNK.replace(b'net.wizardfactory.todayweather.ui.Unused -> R8$$REMOVED$$CLASS$$0:\n', b'')
 
 
@@ -76,6 +85,40 @@ class CheckR8Test(unittest.TestCase):
         self.assertEqual(status, 0, out)
         self.assertNotIn('FAIL', out)
         self.assertIn(f'- R8 mapping SHA-256: {hashlib.sha256(mapping()).hexdigest()}', out)
+        self.assertIn('ok   R8 kept net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
+
+    def test_fails_when_r8_removed_a_listener_field(self):
+        status, out, _ = self.run_tool(MINIFIED, mapping(body=SHRUNK.replace(LISTENER_FIELD, b'')))
+        self.assertEqual(status, 1)
+        self.assertIn('FAIL R8 removed net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
+
+    def test_fails_for_the_mapping_of_the_first_2_0_1_build(self):
+        # HandBackWriter as the 2.0.1 build of 30698192a mapped it (R8 9.5.29): the field was removed, the analytics
+        # choice's listener was collected and a grant was withdrawn at the next start.
+        first = (b'net.wizardfactory.todayweather.HandBackWriter -> ql1:\n'
+                 b'# {"id":"sourceFile","fileName":"HandBack.kt"}\n'
+                 b'    android.content.SharedPreferences suite -> a\n'
+                 b'    kotlin.jvm.functions.Function0 consent -> b\n'
+                 b'      # {"id":"com.android.tools.r8.residualsignature","signature":"Lwn;"}\n'
+                 b'    net.wizardfactory.todayweather.core.storage.AppState last -> c\n'
+                 b'    32:37:boolean write(net.wizardfactory.todayweather.core.storage.AppState):28 -> a\n')
+        status, out, _ = self.run_tool(MINIFIED, mapping(body=SHRUNK.replace(HAND_BACK, first)))
+        self.assertEqual(status, 1)
+        self.assertIn('FAIL R8 removed net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
+
+    def test_the_field_must_be_in_its_own_class(self):
+        for body in (SHRUNK.replace(HAND_BACK, b''),
+                     SHRUNK.replace(b'HandBackWriter -> e.f:', b'HandBackWriter -> R8$$REMOVED$$CLASS$$1:'),
+                     SHRUNK.replace(HAND_BACK, b'net.wizardfactory.todayweather.Other -> g.h:\n' + LISTENER_FIELD)):
+            status, out, _ = self.run_tool(MINIFIED, mapping(body=body))
+            self.assertEqual(status, 1, body)
+            self.assertIn('FAIL R8 removed net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
+
+    def test_a_method_of_the_fields_name_is_not_the_field(self):
+        for line in (b'    void consentListener() -> d\n', b'    5:6:void consentListener():50:51 -> d\n'):
+            status, out, _ = self.run_tool(MINIFIED, mapping(body=SHRUNK.replace(LISTENER_FIELD, line)))
+            self.assertEqual(status, 1, line)
+            self.assertIn('FAIL R8 removed net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
 
     def test_fails_for_an_unminified_apk(self):
         d8 = marker('D8', **{'desugared-library-identifiers': ['com.tools.android:desugar_jdk_libs_configuration:2.1.5']})
@@ -118,14 +161,14 @@ class CheckR8Test(unittest.TestCase):
     def test_fails_when_r8_did_not_obfuscate(self):
         status, out, _ = self.run_tool(MINIFIED, mapping(body=NOT_OBFUSCATED))
         self.assertEqual(status, 1)
-        self.assertIn('FAIL R8 renamed 0 of the app\'s 3 classes', out)
+        self.assertIn('FAIL R8 renamed 0 of the app\'s 4 classes', out)
         self.assertIn('ok   R8 removed 1 of the app\'s classes', out)
 
     def test_fails_when_r8_did_not_shrink(self):
         status, out, _ = self.run_tool(MINIFIED, mapping(body=NOT_SHRUNK))
         self.assertEqual(status, 1)
         self.assertIn('FAIL R8 removed none of the app\'s classes', out)
-        self.assertIn('ok   R8 renamed 2 of the app\'s 3 classes', out)
+        self.assertIn('ok   R8 renamed 3 of the app\'s 4 classes', out)
 
     def test_fails_when_the_apps_dex_files_have_two_mapping_ids(self):
         other = 'a' * 64

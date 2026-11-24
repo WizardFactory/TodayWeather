@@ -20,3 +20,10 @@ No product behavior changes. Persisted state (`files/app_state.json`, widget pre
 ## Documents (AC4)
 
 `docs/operations/android-release.md` step 4 copies `mapping.txt` next to the signed APK, passes it to `check-apk.sh`, and states the Crashlytics upload, its network need and the random mapping ID; step 5 reads the crash buffer; step 7 uploads the mapping to Play as the version's deobfuscation file; step 9 keeps it; the rebuild comparison builds without the Crashlytics upload and allows the mapping ID as its only difference.
+
+## Amendment 2026-11-24: fields kept for weakly held listeners (AC5–AC7)
+
+Consumes the intent amendment of the same date.
+
+- A field that only holds a listener a registry keeps weakly is written but never read, so R8 removes it and the listener can be collected. In the app this is `HandBackWriter.consentListener` (the analytics choice's `OnSharedPreferenceChangeListener`, `HandBack.kt`); it carries `@field:Keep` (`androidx.annotation.Keep`), which the default `proguard-android-optimize.txt` keeps (`-keepclasseswithmembers class * { @androidx.annotation.Keep <fields>; }`), so `app/proguard-rules.pro` still holds no rule. Other registrations (network callback, broadcast receivers, Play services task listeners) are held strongly by their registries.
+- `check_r8.py` also fails when the mapping has no field line (`<type> <name> -> <new name>`, no parameters or line numbers) for an entry of `KEPT_FIELDS` under that class's own mapping line, or the class was removed: `FAIL R8 removed <class>.<field>`. `ListenerKeepTest` (app, JVM) fails when `registerOnSharedPreferenceChangeListener` is called anywhere but in `HandBack.kt`, when the field lacks `@field:Keep`, or when `KEPT_FIELDS` does not name it.
