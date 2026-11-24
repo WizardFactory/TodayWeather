@@ -545,8 +545,9 @@ struct MenuRows: View {
         .accessibilityIdentifier("shell-menu-\(row.rawValue)")
     }
 
-    /// The analytics row shows its choice after a middle dot (`LOC_ANALYTICS_CHOICE · LOC_ANALYTICS_DISABLED` until
-    /// IN-15 records a choice; analytics is off until the user opts in).
+    /// The analytics row shows whether analytics is on after a middle dot (이용 통계 · 켜짐 or · 꺼짐, the native texts of
+    /// `LOC_ANALYTICS_CHOICE`, `LOC_ANALYTICS_ALLOWED` and `LOC_ANALYTICS_DISABLED`; IN-15 sets it from the stored choice,
+    /// else the region's default).
     private func blockText(_ row: MenuRow) -> String {
         if row == .trackingPermission {
             return "\(catalog(row.textKey)) · \(catalog(model.trackingStatus == .authorized ? "LOC_TRACKING_ALLOWED" : "LOC_TRACKING_NOT_ALLOWED"))"

@@ -133,7 +133,8 @@ public enum CordovaMigration {
                 report[key] = "migrated"
             }
         }
-        // The Cordova analytics opt-in never carries over (analytics stays off until the user opts in, IN-15).
+        // The Cordova analytics choice never carries over (IN-15): the native app starts without a choice, so the device
+        // region's default applies (2026-11-24).
         if sources.local["twAnalyticsConsentV1"] != nil || sources.suite["twAnalyticsConsentV1"] != nil {
             report["twAnalyticsConsentV1"] = "ignored"
         }

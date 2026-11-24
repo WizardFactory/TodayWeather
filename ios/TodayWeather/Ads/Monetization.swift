@@ -9,8 +9,9 @@ import UIKit
 /// Ads, usage analytics and crash reporting of the app (IN-15, #2964): the Cordova `Monetization`, `TwAds` and the
 /// emi AdMob adapter, connected to the shell (IN-07).
 ///
-/// - Usage analytics (`UsageAnalytics`) applies the stored choice when the shell is created (after the Cordova
-///   migration, after `AnalyticsGuard` turned collection off); the menu's 선택적 이용 통계 row changes it.
+/// - Usage analytics (`UsageAnalytics`) applies the stored choice, else the default of the device region (on outside the
+///   EEA, the United Kingdom and Switzerland, 2026-11-24), when the shell is created (after the Cordova migration, after
+///   `AnalyticsGuard` turned collection off); the menu's 이용 통계 row changes it.
 /// - The ads start when the shell first shows a tab, as TabCtrl's `TwAds.init()` (S01 comes first, IN-10): Remote
 ///   Config and UMP gate native cards and forecast interstitials. A build without valid AdMob
 ///   identifiers (`AdsSettings`) requests no ads.
@@ -22,9 +23,11 @@ final class Monetization {
     static let shared: Monetization = {
         let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "monetization")
         let settings = AdsSettings.current
-        // The choice is handed back to a fallback Cordova build at every write (IN-17).
+        // The choice is handed back to a fallback Cordova build at every write (IN-17). Without a stored choice the
+        // device's region setting decides (not the app's language; `AnalyticsRegion`).
         return Monetization(analytics: UsageAnalytics(sdk: FirebaseAnalyticsSdk(), records: HandBackConsentRecords.app,
                                                       trafficType: AdsSettings.trafficType(settings),
+                                                      region: Locale.current.region?.identifier,
                                                       log: { log.notice("\($0, privacy: .public)") }),
                             settings: settings)
     }()
@@ -218,8 +221,10 @@ final class Monetization {
 
     // MARK: Menu rows
 
-    /// 선택적 이용 통계: the Ionic popup with 거부 / 철회 and 동의; a choice that could not be saved shows
-    /// `LOC_PRIVACY_SAVE_FAILED`. The menu stays open.
+    /// 이용 통계: the Ionic popup. Where analytics is on by default (2026-11-24) it says so and offers 끄기 and 켜기;
+    /// in the EEA, the United Kingdom, Switzerland and an unknown region it asks for consent as before, with 거부 / 철회
+    /// and 동의. Off writes "false", on writes "true"; a choice that could not be saved shows `LOC_PRIVACY_SAVE_FAILED`.
+    /// The menu stays open. The native texts come from `ios/Support/native-strings.json`.
     private func chooseAnalytics(_ shell: ShellModel) {
         let catalog = Catalog(code: shell.locale.catalog)
         let choose: (Bool) -> Void = { [weak self, weak shell] value in
@@ -227,9 +232,13 @@ final class Monetization {
             shell.show(Popup(title: "TodayWeather", lines: [catalog("LOC_PRIVACY_SAVE_FAILED")],
                              buttons: [.init(text: catalog("LOC_OK"), style: .positive)]))
         }
-        shell.show(Popup(title: catalog("LOC_ANALYTICS_CHOICE"), lines: [catalog("LOC_ANALYTICS_DETAIL")],
-                         buttons: [.init(text: catalog("LOC_ANALYTICS_DENY"), action: { choose(false) }),
-                                   .init(text: catalog("LOC_ANALYTICS_ALLOW"), action: { choose(true) })]))
+        let onByDefault = analytics.collectsByDefault
+        let (detail, off, on) = onByDefault
+            ? ("LOC_ANALYTICS_DETAIL_ON_BY_DEFAULT", "LOC_ANALYTICS_TURN_OFF", "LOC_ANALYTICS_TURN_ON")
+            : ("LOC_ANALYTICS_DETAIL", "LOC_ANALYTICS_DENY", "LOC_ANALYTICS_ALLOW")
+        shell.show(Popup(title: catalog("LOC_ANALYTICS_CHOICE"), lines: [catalog(detail)],
+                         buttons: [.init(text: catalog(off), action: { choose(false) }),
+                                   .init(text: catalog(on), action: { choose(true) })]))
     }
 
     /// 광고 개인정보 선택: UMP's privacy options form, or `LOC_AD_PRIVACY_UNAVAILABLE`.

@@ -282,12 +282,15 @@ final class MemoryRecords: AnalyticsConsentRecords {
     var failChoiceWrites = false
     var failChoiceRemoval = false
     var failCollectionWrites = false
+    /// Each write that succeeded, as "write choice true" or "write collection false" (to check the order against SDK calls).
+    var journal: (String) -> Void = { _ in }
 
     func readChoice() -> String? { choice }
 
     func writeChoice(_ value: Bool) -> Bool {
         guard !failChoiceWrites else { return false }
         choice = value ? "true" : "false"
+        journal("write choice \(value)")
         return true
     }
 
@@ -302,6 +305,7 @@ final class MemoryRecords: AnalyticsConsentRecords {
     func writeCollection(_ enabled: Bool) -> Bool {
         guard !failCollectionWrites else { return false }
         collection = enabled
+        journal("write collection \(enabled)")
         return true
     }
 }
