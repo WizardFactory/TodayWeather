@@ -3,10 +3,8 @@ package net.wizardfactory.todayweather.core.data
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import net.wizardfactory.todayweather.core.domain.forecast.PlaceIndex
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.Place
-import net.wizardfactory.todayweather.core.storage.PlaceList
 import net.wizardfactory.todayweather.core.storage.closeStart
 import net.wizardfactory.todayweather.core.storage.startShows
 
@@ -21,9 +19,11 @@ import net.wizardfactory.todayweather.core.storage.startShows
  * and on the start page that closes S01 as a first place does. Only the screens see it: widgets, push, S02's list and
  * the store do not.
  *
- * - **Threads (CODEX-3190-1, -8):** the unsaved place is one value ([unsaved]) changed by compare-and-set, and nothing
- *   is held while the saved state is called, so a photo refresh off the main thread never writes back a place that was
- *   replaced meanwhile, and a holder that resumes a waiting reader while it publishes never waits on this one.
+ * - **Threads (CODEX-3190-1, -8, -9):** the app changes it on the main thread (photos arrive there too). As a guard the
+ *   unsaved place is one value ([unsaved]) changed by compare-and-set, and nothing is held while the saved state is
+ *   called, so a change in flight never writes back a place that was replaced meanwhile, and a holder that resumes a
+ *   waiting reader while it publishes never waits on this one. Changes handed to the holder are pure: it applies them
+ *   again on each publish and when it writes them (CODEX-3190-11).
  * - **Selection (CODEX-3190-2):** the unsaved place is the selected one when it was selected last, or when the saved
  *   selection names no enabled saved place. While it is selected, S02's changes ([savedAccess]) keep the saved selection
  *   on the saved place selected before it ([Unsaved.returnTo]), else the first enabled one, else none, so the next start
@@ -49,11 +49,15 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
     val savedAccess: StateAccess = object : StateAccess {
         override fun current(): AppState? = saved.current()
 
-        override fun change(update: (AppState) -> AppState) = saved.change { s ->
-            val changed = update(s)
+        override fun change(update: (AppState) -> AppState) {
+            // Read once: the holder applies the change again when it writes it, after the unsaved place may have gone
+            // (CODEX-3190-11).
             val now = shown.value
-            // Judged after the change: turning off the only enabled place makes the unsaved place the selected one.
-            if (now == null || !selected(changed, now)) changed else changed.copy(placeIndex = savedSelection(changed, now.returnTo))
+            saved.change { s ->
+                val changed = update(s)
+                // Judged after the change: turning off the only enabled place makes the unsaved place the selected one.
+                if (now == null || !selected(changed, now)) changed else changed.copy(placeIndex = savedSelection(changed, now.returnTo))
+            }
         }
     }
 
@@ -90,8 +94,12 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
             else s.copy(places = s.places + now.place, placeIndex = s.places.size)
             if (added.startShows) added.closeStart().copy(placeIndex = added.placeIndex) else added
         }
-        // After the save, so the start page never shows in between; a place shown meanwhile stays.
-        shown.compareAndSet(now, null)
+        // After the save, so the start page never shows in between. The place saved leaves the slot also when its own
+        // fields (a photo) changed meanwhile; another place shown meanwhile stays (CODEX-3190-9).
+        while (true) {
+            val after = shown.value ?: break
+            if (!samePlace(after.place, now.place) || shown.compareAndSet(after, null)) break
+        }
         return saved.current()?.placeIndex
     }
 
@@ -133,13 +141,23 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
         /** The saved place the saved selection names, when it is an enabled one. */
         private fun enabledSelection(state: AppState): Place? = state.places.getOrNull(state.placeIndex)?.takeIf { !it.disable }
 
-        /** The saved selection while the unsaved place is selected: [returnTo] when enabled, else the first enabled place, else -1. */
+        /**
+         * The saved selection while the unsaved place is selected: [returnTo] when it is still there and enabled, else
+         * the first enabled row (not `setFirstCityIndex`, which names row 0 or 1 even when disabled), else -1.
+         */
         private fun savedSelection(state: AppState, returnTo: Place?): Int {
-            val back = returnTo?.let { PlaceList.indexOf(state.places, it) } ?: -1
+            val back = returnTo?.let { place -> state.places.indexOfFirst { samePlace(it, place) } } ?: -1
             if (back >= 0 && !state.places[back].disable) return back
-            val disabled = state.places.map { it.disable }
-            if (PlaceIndex.enabledCount(disabled) == 0) return -1
-            return PlaceIndex.first(disabled, -1)
+            return state.places.indexOfFirst { !it.disable }
+        }
+
+        /**
+         * The same place whatever its loaded fields (photo, source): the current position by its flag; another place by
+         * its name, address and coordinates, so two places of one name at different coordinates differ (CODEX-3190-10).
+         */
+        private fun samePlace(a: Place, b: Place): Boolean = when {
+            a.currentPosition || b.currentPosition -> a.currentPosition && b.currentPosition
+            else -> a.name == b.name && a.address == b.address && a.location == b.location
         }
     }
 

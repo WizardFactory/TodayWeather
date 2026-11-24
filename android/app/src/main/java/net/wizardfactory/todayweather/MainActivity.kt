@@ -813,7 +813,9 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
     private fun savedOnly(index: Double): Double = if (preview.isSaved(index)) index else -1.0
 
     private fun loadPhotos() {
-        twApp.appScope.launch { if (twApp.photos.load() != null) session.photosLoaded() }
+        // The feed loads off the main thread; the places take their photos on it, where every other change of the
+        // screens' state happens (CODEX-3190-1, -9).
+        twApp.appScope.launch { if (twApp.photos.load() != null) withContext(Dispatchers.Main) { session.photosLoaded() } }
     }
 
     override fun onCleared() {

@@ -358,4 +358,93 @@ class LinkPreviewTest {
         assertEquals(1, preview.add())
         assertEquals(1, saved.value.placeIndex)
     }
+
+    /**
+     * CODEX-3190-2: without the place to return to, the saved selection is the first enabled row, never a disabled one
+     * that Cordova's `setFirstCityIndex` (index 0 or 1) would name.
+     */
+    @Test
+    fun theFallbackIsTheFirstEnabledRow() {
+        val off = current.copy(disable = true)
+        val hidden = london.copy(disable = true)
+        val busan = Place(false, false, "부산", "부산광역시 중구", "KR", Location(35.179, 129.076))
+        val daegu = Place(false, false, "대구", "대구광역시 중구", "KR", Location(35.871, 128.601))
+        val saved = Memory(started.copy(places = listOf(off, hidden, busan, daegu), placeIndex = 2))
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        preview.savedAccess.change { net.wizardfactory.todayweather.core.storage.PlaceList.remove(it, 2) }
+        assertEquals(listOf(off, hidden, daegu), saved.value.places)
+        assertEquals(2, saved.value.placeIndex, "Daegu, the first enabled row")
+    }
+
+    /** CODEX-3190-10: the place to return to is found by its coordinates too, not only its name and address. */
+    @Test
+    fun thePlaceToReturnToIsFoundByItsCoordinates() {
+        val homeA = Place(false, false, "Home", null, null, Location(10.0, 20.0))
+        val homeB = Place(false, false, "Home", null, null, Location(40.0, 20.0))
+        val saved = Memory(started.copy(places = listOf(current, london, homeA, homeB), placeIndex = 3))
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        preview.savedAccess.change { net.wizardfactory.todayweather.core.storage.PlaceList.remove(it, 1) }
+        assertEquals(listOf(current, homeA, homeB), saved.value.places)
+        assertEquals(2, saved.value.placeIndex, "the Home at 40°")
+    }
+
+    /**
+     * CODEX-3190-11: the holder applies a change again when it writes it (and on each publish), so S02's change decides
+     * its rule once, when it is made: applied after the star, it still keeps the place to return to.
+     */
+    @Test
+    fun anS02ChangeAppliedAgainLaterKeepsItsRule() {
+        val busan = Place(false, false, "부산", "부산광역시 중구", "KR", Location(35.179, 129.076))
+        val daegu = Place(false, false, "대구", "대구광역시 중구", "KR", Location(35.871, 128.601))
+        val pending = mutableListOf<(AppState) -> AppState>()
+        val base = started.copy(places = listOf(current, london, busan, daegu), placeIndex = 2)
+        val saved = Memory(base)
+        val recording = object : StateAccess {
+            override fun current() = saved.current()
+            override fun change(update: (AppState) -> AppState) {
+                pending += update
+                saved.change(update)
+            }
+        }
+        val preview = LinkPreview(recording)
+        preview.show(seoul)
+        preview.savedAccess.change { net.wizardfactory.todayweather.core.storage.PlaceList.remove(it, 1) }
+        val shown = saved.value.placeIndex
+        preview.add()
+        // The store applies the delete again, after the star cleared the unsaved place.
+        assertEquals(shown, pending.first()(base).placeIndex, "the same selection when applied again")
+        assertEquals(1, shown)
+    }
+
+    /**
+     * CODEX-3190-9: a change of the unsaved place's own fields (a photo) while the star saves it does not leave it in the
+     * unsaved slot: the place saved is gone from there; a different place shown meanwhile stays.
+     */
+    @Test
+    fun aPhotoDuringTheStarDoesNotKeepTheSavedPlaceUnsaved() {
+        lateinit var preview: LinkPreview
+        var photo = true
+        var photos = 0
+        val saved = Memory(started)
+        val reentrant = object : StateAccess {
+            override fun current() = saved.current()
+            override fun change(update: (AppState) -> AppState) {
+                saved.change(update)
+                if (photo) {
+                    photo = false
+                    val name = "photo-${++photos}.jpg"
+                    preview.change { s -> s.copy(places = s.places.map { if (it.name == "서울") it.copy(photo = name) else it }) }
+                }
+            }
+        }
+        preview = LinkPreview(reentrant)
+        preview.show(seoul)
+        preview.change { it.copy(placeIndex = it.places.lastIndex) }
+        photo = true
+        assertEquals(2, preview.add())
+        assertNull(preview.unsaved.value, "the saved place left the unsaved slot")
+        assertEquals(3, saved.value.places.size)
+    }
 }

@@ -41,7 +41,7 @@
   "manual_sha256": "531459eb41bfc3a466a434cc1d1992ce99c469f2a88f909e57092013dc0ee104",
   "pdf_sha256": "a3fa7d160cea832a18cf6d3fb7406d81af02fa5e09680b0b06634a0a8ee30416",
   "sources": {
-    "android/app/src/test/java/net/wizardfactory/todayweather/DeepLinkScreenTest.kt": "d5a14d5a9048f98f2929b3baecbe093ae2f562ba5e9bc832a865fa0d60bb1e69",
+    "android/app/src/test/java/net/wizardfactory/todayweather/DeepLinkScreenTest.kt": "27f16c6250d944f7e2a492466da427c4593859a5270c898766ac6ab1e52f962f",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherTab.kt": "84874c0769d69635cd98f74cd6b5f8e48f4a9bf4c07f0688ee6d56b1d247b9d1",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/places/PlacesTab.kt": "fb07d75a6f27d0b6dadeeb663ffd292e882c2cda185452f65542918c58c86082",
     "android/app/src/main/res/values-ko/link_strings.xml": "c2fc9a1217ae640f5429a3b111beda25fb391a2adc9b64dd43cd5f405686727e",
