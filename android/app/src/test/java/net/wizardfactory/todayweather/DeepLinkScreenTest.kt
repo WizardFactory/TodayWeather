@@ -126,7 +126,7 @@ abstract class DeepLinkScreens {
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
             // S02's search over the bundled towns; a chosen result goes where the app sends it (LinkOpener.show).
             val places = PlacesHost(null, { TownSearch(BundledTowns.load(context)) }) { s ->
-                PlacesPage(memory, repository, session, StartFlow(memory, repository, GeocodeClient("https://server.test.invalid", http), NoLocation,
+                PlacesPage(preview.savedAccess, repository, session, StartFlow(preview.savedAccess, repository, GeocodeClient("https://server.test.invalid", http), NoLocation,
                     { listOf("ko-KR") }), NoLocation, s, removeAlarms = {}, openPlace = opener::show)
             }
             AppContent(LinkPreview.overlay(saved!!, unsaved), entries, loading, retry, session, host, "test", onExit = {}, places = places,
@@ -173,7 +173,7 @@ class DeepLinkScreenTest : DeepLinkScreens() {
         show(listOf(hoehyeon, london))
         open("https://link.todayweather.ai/air/london?pollutant=pm10")
         assertEquals(1, memory.current()!!.placeIndex)
-        assertNull(preview.place.value)
+        assertNull(preview.unsaved.value?.place)
         rule.onNodeWithTag(ShellTags.page(Tab.AIR)).assertExists()
         rule.onNodeWithTag(WeatherTabTags.STAR).assertDoesNotExist()
     }
@@ -189,7 +189,7 @@ class DeepLinkScreenTest : DeepLinkScreens() {
         rule.onNodeWithTag(WeatherTabTags.STAR).assertExists()
         rule.onNodeWithTag(AirTags.NEXT).performClick()
         rule.waitForIdle()
-        assertEquals("부산", preview.place.value?.name)
+        assertEquals("부산", preview.unsaved.value?.place?.name)
         assertEquals(0, memory.current()!!.placeIndex)
         rule.onNodeWithTag(WeatherTabTags.BELL).assertExists()
         rule.onNodeWithTag(WeatherTabTags.STAR).assertDoesNotExist()
@@ -198,14 +198,14 @@ class DeepLinkScreenTest : DeepLinkScreens() {
         rule.onNodeWithTag(WeatherTabTags.STAR).assertExists()
         rule.onNodeWithTag(ShellTags.tab(Tab.LOCATIONS)).performClick()
         rule.waitForIdle()
-        assertEquals("부산", preview.place.value?.name)
+        assertEquals("부산", preview.unsaved.value?.place?.name)
         rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
         rule.waitForIdle()
         rule.onNodeWithTag(WeatherTabTags.STAR).assertExists()
         assertEquals(listOf("회현동"), memory.current()!!.places.map { it.name })
         // Another link replaces it.
         open("https://link.todayweather.ai/place/daegu")
-        assertEquals("대구", preview.place.value?.name)
+        assertEquals("대구", preview.unsaved.value?.place?.name)
         assertEquals(listOf("회현동"), memory.current()!!.places.map { it.name })
     }
 

@@ -3,8 +3,10 @@ package net.wizardfactory.todayweather.core.data
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import net.wizardfactory.todayweather.core.domain.forecast.PlaceIndex
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.Place
+import net.wizardfactory.todayweather.core.storage.PlaceList
 import net.wizardfactory.todayweather.core.storage.closeStart
 import net.wizardfactory.todayweather.core.storage.startShows
 
@@ -19,41 +21,66 @@ import net.wizardfactory.todayweather.core.storage.startShows
  * and on the start page that closes S01 as a first place does. Only the screens see it: widgets, push, S02's list and
  * the store do not.
  *
- * Shows, changes and the star run one at a time ([lock]), whichever thread calls them: a photo refresh off the main
- * thread never writes back a place that a search or link replaced meanwhile (CODEX-3190-1). The screens read the place
- * and its selection as one value ([unsaved]).
+ * - **Threads (CODEX-3190-1, -8):** the unsaved place is one value ([unsaved]) changed by compare-and-set, and nothing
+ *   is held while the saved state is called, so a photo refresh off the main thread never writes back a place that was
+ *   replaced meanwhile, and a holder that resumes a waiting reader while it publishes never waits on this one.
+ * - **Selection (CODEX-3190-2):** the unsaved place is the selected one when it was selected last, or when the saved
+ *   selection names no enabled saved place. While it is selected, S02's changes ([savedAccess]) keep the saved selection
+ *   on the saved place selected before it ([Unsaved.returnTo]), else the first enabled one, else none, so the next start
+ *   opens that place (#3180) and never a deleted or disabled row.
  */
 class LinkPreview(private val saved: StateAccess) : StateAccess {
-    /** The unsaved place and whether it is the selected one (the saved selection stays the one before it). */
-    data class Unsaved(val place: Place, val selected: Boolean)
+    /**
+     * The unsaved place; [selected] when it was selected last; [returnTo], the saved place selected before it, which a
+     * new start opens.
+     */
+    data class Unsaved(val place: Place, val selected: Boolean, val returnTo: Place? = null)
 
-    private val lock = Any()
     private val shown = MutableStateFlow<Unsaved?>(null)
-    private val placeNow = MutableStateFlow<Place?>(null)
-    private val selectedNow = MutableStateFlow(false)
 
     /** The unsaved place with its selection, as one value: what the screens draw ([overlay]). */
     val unsaved: StateFlow<Unsaved?> = shown.asStateFlow()
 
-    /** The place shown without being saved; null when none is. */
-    val place: StateFlow<Place?> = placeNow.asStateFlow()
+    /**
+     * The saved state for S02, which lists and changes the saved places only: while the unsaved place is selected, a
+     * delete or a disable keeps the saved selection on [Unsaved.returnTo] when it stays enabled, else on the first enabled
+     * place, else on none (-1). Otherwise Cordova's rules apply as they are.
+     */
+    val savedAccess: StateAccess = object : StateAccess {
+        override fun current(): AppState? = saved.current()
 
-    /** True while the unsaved place is the selected one: the header shows its star in the bell's position. */
-    val selected: StateFlow<Boolean> = selectedNow.asStateFlow()
+        override fun change(update: (AppState) -> AppState) = saved.change { s ->
+            val changed = update(s)
+            val now = shown.value
+            if (now == null || !selected(s, now)) changed else changed.copy(placeIndex = savedSelection(changed, now.returnTo))
+        }
+    }
 
     /** Shows [place] (enabled) as the selected place, in place of an earlier unsaved one. */
-    fun show(place: Place) = synchronized(lock) { set(Unsaved(place.copy(disable = false), selected = true)) }
+    fun show(place: Place) {
+        while (true) {
+            val now = shown.value
+            val base = saved.current()
+            val returnTo = when {
+                now != null && base != null && selected(base, now) -> now.returnTo
+                else -> base?.let(::enabledSelection)
+            }
+            if (shown.compareAndSet(now, Unsaved(place.copy(disable = false), selected = true, returnTo = returnTo))) return
+        }
+    }
 
-    fun clear() = synchronized(lock) { set(null) }
+    fun clear() {
+        shown.value = null
+    }
 
     /**
      * Saves the selected unsaved place where it stands, at the end of the list, and keeps it selected; when a saved
      * place lies within 0.01° ([LinkRoutes.nearbySaved]: by coordinates, as a link or a result matches, not
-     * `getIndexOfCity`'s name and address, CODEX-3164-4) that one is selected instead. On the start page the add closes
-     * S01 (`closeStart`), keeping that selection. The selected index, or null when the unsaved place is not the
-     * selected one. The app has no place limit (S02 neither).
+     * `getIndexOfCity`'s name and address, CODEX-3164-4) that one is selected instead, so a second tap saves nothing more.
+     * On the start page the add closes S01 (`closeStart`), keeping that selection. The selected index, or null when the
+     * unsaved place is not the selected one. The app has no place limit (S02 neither).
      */
-    fun add(): Int? = synchronized(lock) {
+    fun add(): Int? {
         val now = shown.value ?: return null
         if (!selected(saved.current() ?: return null, now)) return null
         saved.change { s ->
@@ -62,9 +89,9 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
             else s.copy(places = s.places + now.place, placeIndex = s.places.size)
             if (added.startShows) added.closeStart().copy(placeIndex = added.placeIndex) else added
         }
-        // After the save, so the start page never shows in between.
-        set(null)
-        saved.current()?.placeIndex
+        // After the save, so the start page never shows in between; a place shown meanwhile stays.
+        shown.compareAndSet(now, null)
+        return saved.current()?.placeIndex
     }
 
     /** True when [index] of the shown state is the unsaved place: no saved place, alarm or widget has it. */
@@ -99,42 +126,49 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
             else -> state.copy(places = state.places + unsaved.place)
         }
 
-        /**
-         * Whether [unsaved] is the selected place over the saved [state]: when it was selected last, or when the saved
-         * selection is past the saved places, where it would name the unsaved place (S02 deleted the last enabled place,
-         * and Cordova's `removeCity` keeps the index; CODEX-3190-2).
-         */
-        private fun selected(state: AppState, unsaved: Unsaved): Boolean = unsaved.selected || state.placeIndex !in state.places.indices
+        /** Whether [unsaved] is the selected place over the saved [state]. */
+        private fun selected(state: AppState, unsaved: Unsaved): Boolean = unsaved.selected || enabledSelection(state) == null
+
+        /** The saved place the saved selection names, when it is an enabled one. */
+        private fun enabledSelection(state: AppState): Place? = state.places.getOrNull(state.placeIndex)?.takeIf { !it.disable }
+
+        /** The saved selection while the unsaved place is selected: [returnTo] when enabled, else the first enabled place, else -1. */
+        private fun savedSelection(state: AppState, returnTo: Place?): Int {
+            val back = returnTo?.let { PlaceList.indexOf(state.places, it) } ?: -1
+            if (back >= 0 && !state.places[back].disable) return back
+            val disabled = state.places.map { it.disable }
+            if (PlaceIndex.enabledCount(disabled) == 0) return -1
+            return PlaceIndex.first(disabled, -1)
+        }
     }
 
     override fun current(): AppState? = saved.current()?.let(::overlay)
 
-    override fun change(update: (AppState) -> AppState): Unit = synchronized(lock) {
-        val now = shown.value ?: return saved.change(update)
-        val base = saved.current() ?: return
-        val before = overlay(base, now)
-        val after = update(before)
-        if (after.places.size != before.places.size) {
-            // A change that adds or removes places is the saved list's own: the unsaved place goes first.
-            set(null)
-            return saved.change(update)
-        }
-        val last = before.places.lastIndex
-        set(Unsaved(after.places.last(), selected = after.placeIndex == last))
-        saved.change { s ->
-            val changed = update(overlay(s, now))
-            if (changed.places.size != s.places.size + 1) return@change s
-            // While the unsaved place is selected, the saved selection stays the one before it.
-            val selection = if (changed.placeIndex == s.places.size) s.placeIndex else changed.placeIndex
-            changed.copy(places = changed.places.dropLast(1), placeIndex = selection)
+    override fun change(update: (AppState) -> AppState) {
+        while (true) {
+            val now = shown.value ?: return saved.change(update)
+            val base = saved.current() ?: return
+            val before = overlay(base, now)
+            val after = update(before)
+            if (after.places.size != before.places.size) {
+                // A change that adds or removes places is the saved list's own: the unsaved place goes first.
+                if (!shown.compareAndSet(now, null)) continue
+                return saved.change(update)
+            }
+            val last = before.places.lastIndex
+            val selectedAfter = after.placeIndex == last
+            // Moving onto the unsaved place remembers the saved place it came from.
+            val returnTo = if (selectedAfter && !selected(base, now)) enabledSelection(base) else now.returnTo
+            // A show, a star or another change in between: compute again over what is shown now.
+            if (!shown.compareAndSet(now, Unsaved(after.places.last(), selectedAfter, returnTo))) continue
+            saved.change { s ->
+                val changed = update(overlay(s, now))
+                if (changed.places.size != s.places.size + 1) return@change s
+                // While the unsaved place is selected, the saved selection stays the one before it.
+                val selection = if (changed.placeIndex == s.places.size) s.placeIndex else changed.placeIndex
+                changed.copy(places = changed.places.dropLast(1), placeIndex = selection)
+            }
+            return
         }
     }
-
-    private fun set(value: Unsaved?) {
-        shown.value = value
-        placeNow.value = value?.place
-        selectedNow.value = value?.selected == true
-    }
-
-    private fun overlay(state: AppState, value: Unsaved?): AppState = Companion.overlay(state, value)
 }

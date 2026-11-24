@@ -160,7 +160,7 @@ class PlacesScreenTest {
             val context = LocalContext.current
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
             val places = PlacesHost(null, { TownSearch(BundledTowns.load(context)) }) { s ->
-                PlacesPage(memory, repository, session, StartFlow(memory, repository, GeocodeClient("https://server.test.invalid", http), device,
+                PlacesPage(preview.savedAccess, repository, session, StartFlow(preview.savedAccess, repository, GeocodeClient("https://server.test.invalid", http), device,
                     { listOf("ko-KR") }), device, s, removeAlarms = { removed += it }, openPlace = opener::show)
             }
             AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, places = places, startTab = startTab,
@@ -326,7 +326,7 @@ class PlacesScreenTest {
         rule.waitForIdle()
         rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).assertExists()
         assertEquals("nothing is saved", listOf(null, "서울"), memory.current().places.map { it.name })
-        assertEquals("부산광역시", preview.place.value?.name)
+        assertEquals("부산광역시", preview.unsaved.value?.place?.name)
         rule.onNodeWithTag(WeatherTabTags.STAR).assertExists()
         rule.onNodeWithTag(WeatherTabTags.BELL).assertDoesNotExist()
         rule.onNodeWithTag(WeatherTabTags.SHARE).assertExists()
@@ -335,7 +335,7 @@ class PlacesScreenTest {
         val state = memory.current()
         assertEquals("부산광역시", state.places.last().name)
         assertEquals(state.places.lastIndex, state.placeIndex)
-        assertNull(preview.place.value)
+        assertNull(preview.unsaved.value?.place)
         rule.onNodeWithTag(WeatherTabTags.STAR).assertDoesNotExist()
         rule.onNodeWithTag(WeatherTabTags.BELL).assertExists()
     }
@@ -350,7 +350,7 @@ class PlacesScreenTest {
         rule.onNodeWithTag(PlacesTags.FOUND).performClick()
         rule.waitForIdle()
         assertEquals("nothing is saved", 2, memory.current().places.size)
-        val shown = preview.place.value!!
+        val shown = preview.unsaved.value?.place!!
         assertEquals("회현동", shown.name)
         assertFalse(shown.currentPosition)
     }
@@ -403,17 +403,17 @@ class PlacesScreenTest {
         rule.onNodeWithTag(PlacesTags.town(0)).performClick()
         rule.waitForIdle()
         rule.onNodeWithTag(ShellTags.page(Tab.DAILY)).assertExists()
-        assertEquals("부산광역시", preview.place.value?.name)
+        assertEquals("부산광역시", preview.unsaved.value?.place?.name)
         rule.onNodeWithTag(WeatherTabTags.STAR).assertExists()
         rule.onNodeWithTag(WeatherTabTags.SEARCH).performClick()
         rule.waitForIdle()
         rule.onNodeWithTag(PlacesTags.MODE).performClick()
         rule.waitForIdle()
-        assertEquals("cancelling the search returns to the unsaved place", "부산광역시", preview.place.value?.name)
+        assertEquals("cancelling the search returns to the unsaved place", "부산광역시", preview.unsaved.value?.place?.name)
         // The Locations tab keeps it but lists the saved places only.
         rule.onNodeWithTag(ShellTags.tab(Tab.LOCATIONS)).performClick()
         rule.waitForIdle()
-        assertEquals("부산광역시", preview.place.value?.name)
+        assertEquals("부산광역시", preview.unsaved.value?.place?.name)
         rule.onNodeWithTag(PlacesTags.row(1)).assertExists()
         rule.onAllNodesWithTag(PlacesTags.row(2)).fetchSemanticsNodes().let { assertEquals(0, it.size) }
         assertEquals(2, memory.current().places.size)
@@ -422,7 +422,7 @@ class PlacesScreenTest {
         rule.waitForIdle()
         assertEquals(1, memory.current().placeIndex)
         rule.onNodeWithTag(WeatherTabTags.BELL).assertExists()
-        assertEquals("부산광역시", preview.place.value?.name)
+        assertEquals("부산광역시", preview.unsaved.value?.place?.name)
     }
 
     /** #2925 F2, F3: with the keyboard up the button finds at once (a result tap only closes it), and the found row replaces the towns. */
@@ -493,7 +493,7 @@ class PlacesScreenTest {
         search("부산")
         rule.onNodeWithTag(PlacesTags.town(0)).performClick()
         rule.waitForIdle()
-        assertNull(preview.place.value)
+        assertNull(preview.unsaved.value?.place)
         assertEquals(saved, memory.current().places)
         assertEquals("the saved Busan is selected", 2, memory.current().placeIndex)
         rule.onNodeWithTag(WeatherTabTags.BELL).assertExists()

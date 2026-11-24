@@ -44,7 +44,7 @@ class LinkOpenerTest {
         val t = setup(started)
         t.preview.show(Place(false, false, "부산", location = Location(35.179, 129.076)))
         t.opener.open(DeepLinkTarget.Place("london", WeatherView.AIR, "pm10"))
-        assertEquals("부산", t.preview.place.value?.name, "the unsaved place opened earlier stays in the list")
+        assertEquals("부산", t.preview.unsaved.value?.place?.name, "the unsaved place opened earlier stays in the list")
         assertEquals(listOf("open 1"), t.calls)
         assertEquals(LinkRoute.Weather(WeatherView.AIR, "pm10", 1, null), t.opener.requests.value?.route)
     }
@@ -53,7 +53,7 @@ class LinkOpenerTest {
     fun anUnsavedPlaceIsAPreviewThatLoads() = runTest {
         val t = setup(started)
         t.opener.open(DeepLinkTarget.Coordinate(37.383, 127.119, "분당구", WeatherView.DAILY, null))
-        assertEquals("분당구", t.preview.place.value?.name)
+        assertEquals("분당구", t.preview.unsaved.value?.place?.name)
         assertEquals(started, t.saved.flow.value, "nothing saved")
         assertEquals(listOf("reload"), t.calls)
         assertEquals(WeatherView.DAILY, (t.opener.requests.value?.route as LinkRoute.Weather).view)
@@ -98,9 +98,9 @@ class LinkOpenerTest {
         t.opener.open(DeepLinkTarget.Open(null))
         assertNull(t.opener.requests.value, "S01 stays")
         t.opener.open(DeepLinkTarget.Place("seoul", WeatherView.HOURLY, null))
-        assertEquals("서울", t.preview.place.value?.name, "S01 is bypassed by a preview, also with a saved place nearby")
+        assertEquals("서울", t.preview.unsaved.value?.place?.name, "S01 is bypassed by a preview, also with a saved place nearby")
         assertEquals(listOf("reload"), t.calls)
-        assertEquals(LinkRoute.Weather(WeatherView.HOURLY, null, null, t.preview.place.value), t.opener.requests.value?.route)
+        assertEquals(LinkRoute.Weather(WeatherView.HOURLY, null, null, t.preview.unsaved.value?.place), t.opener.requests.value?.route)
     }
 
     /** CODEX-3164-7: `/open` changes no place but still asks the screens to close the menu and pages. */
@@ -135,17 +135,17 @@ class LinkOpenerTest {
     fun aSearchResultShowsUnsavedOrSelectsTheSavedPlaceNearby() = runTest {
         val t = setup(started)
         t.opener.show(Place(false, false, "부산광역시", "부산광역시", "KR", Location(35.18, 129.08)))
-        assertEquals("부산광역시", t.preview.place.value?.name)
+        assertEquals("부산광역시", t.preview.unsaved.value?.place?.name)
         assertEquals(started, t.saved.flow.value, "nothing saved")
         t.saved.change { it.copy(placeIndex = 0) }
         t.opener.show(Place(false, false, "London", "London, UK", "GB", Location(51.51, -0.13)))
-        assertEquals("부산광역시", t.preview.place.value?.name, "the saved London is selected; the unsaved place stays")
-        assertEquals(false, t.preview.selected.value)
+        assertEquals("부산광역시", t.preview.unsaved.value?.place?.name, "the saved London is selected; the unsaved place stays")
+        assertEquals(false, (t.preview.unsaved.value?.selected == true))
         assertEquals(1, t.saved.flow.value!!.placeIndex)
         // Another result replaces the unsaved place.
         t.opener.show(Place(false, false, "대구광역시", "대구광역시", "KR", Location(35.87, 128.6)))
-        assertEquals("대구광역시", t.preview.place.value?.name)
-        assertEquals(true, t.preview.selected.value)
+        assertEquals("대구광역시", t.preview.unsaved.value?.place?.name)
+        assertEquals(true, (t.preview.unsaved.value?.selected == true))
         assertEquals(started.places, t.saved.flow.value!!.places)
         assertEquals(emptyList(), t.calls)
         assertNull(t.opener.requests.value)
@@ -162,11 +162,11 @@ class LinkOpenerTest {
         t.opener.show(Place(false, false, "부산광역시", "부산광역시", "KR", Location(35.18, 129.08)))
         t.opener.show(Place(false, false, "분당구", "경기도 성남시 분당구", "KR", Location(37.385, 127.12)))
         assertEquals(0, t.saved.flow.value!!.placeIndex)
-        assertEquals("부산광역시", t.preview.place.value?.name, "the unsaved place stays")
-        assertEquals(false, t.preview.selected.value)
+        assertEquals("부산광역시", t.preview.unsaved.value?.place?.name, "the unsaved place stays")
+        assertEquals(false, (t.preview.unsaved.value?.selected == true))
         // Disabled, the current position is not a place to open.
         t.saved.change { it.copy(places = listOf(here.copy(disable = true), london), placeIndex = 1) }
         t.opener.show(Place(false, false, "분당구", "경기도 성남시 분당구", "KR", Location(37.385, 127.12)))
-        assertEquals("분당구", t.preview.place.value?.name)
+        assertEquals("분당구", t.preview.unsaved.value?.place?.name)
     }
 }

@@ -741,10 +741,13 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
         return true
     }
 
-    /** S02's search and its visits (#2890); a deleted place's alarms go in the app's scope. */
+    /**
+     * S02's search and its visits (#2890); a deleted place's alarms go in the app's scope. S02 changes the saved places
+     * through the preview's saved view, which keeps the place to return to while an unsaved place is selected.
+     */
     val places = PlacesHost(twApp.places, { twApp.towns.await() }) { scope ->
-        PlacesPage(twApp.appState, twApp.weather, session,
-            StartFlow(twApp.appState, twApp.weather, twApp.geocode, twApp.location, ::languages, telemetry, cityUpdated), twApp.location, scope,
+        PlacesPage(preview.savedAccess, twApp.weather, session,
+            StartFlow(preview.savedAccess, twApp.weather, twApp.geocode, twApp.location, ::languages, telemetry, cityUpdated), twApp.location, scope,
             removeAlarms = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.removeCity(index) } }, cityUpdated = cityUpdated, telemetry = telemetry,
             openPlace = { place -> links.show(place) })
     }
