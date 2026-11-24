@@ -39,6 +39,8 @@ node_modules
 /.planning/
 /reports/
 /.archify/
+# Local cache of private go-to-market records; the private bucket is the record (gtm/sources.md).
+/gtm/data/
 __pycache__/
 
 # Archify visual-check outputs are local-only, regardless of directory or format.

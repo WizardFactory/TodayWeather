@@ -12,10 +12,10 @@ import subprocess
 import sys
 from urllib.parse import unquote, urlsplit
 
-FORBIDDEN = ('reports/', '.archify/', '.planning/', 'test-results/', 'playwright-report/')
+FORBIDDEN = ('reports/', '.archify/', '.planning/', 'test-results/', 'playwright-report/', 'gtm/data/')
 POLICY = 'scripts/artifact-policy.json'
 MANIFEST = 'docs/rewrite/screenshots/manifest.json'
-TEXT_ROOTS = ('docs/', 'intent/', 'specs/', 'plans/', 'scripts/verification/')
+TEXT_ROOTS = ('docs/', 'intent/', 'specs/', 'plans/', 'scripts/verification/', 'gtm/')
 ROOT_DOCS = {'README.md', 'AGENTS.md', 'CLAUDE.md', 'server/test/offline/README.md'}
 
 
