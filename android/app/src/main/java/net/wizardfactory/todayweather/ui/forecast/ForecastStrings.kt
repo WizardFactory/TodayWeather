@@ -18,5 +18,5 @@ fun forecastTexts(context: Context): ChartTexts = ChartTexts(forecastKeys().mapN
     if (id == 0) null else key to context.getString(id)
 }.toMap())
 
-/** Looked up by name: res/raw/keep.xml keeps them in the shrunk release (ResourceKeepTest). */
+/** Looked up by name: src/release/res/raw/keep.xml keeps them in the shrunk release (ResourceKeepTest). */
 internal fun forecastKeys(): List<String> = (ForecastPage.KEYS + AirPage.KEYS + SettingLists.KEYS + NationPages.KEYS).distinct()

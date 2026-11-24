@@ -29,6 +29,7 @@ GRADLEW
     chmod +x "$TMP/export/android/gradlew"
 }
 # Runs the wrapper from a shell that holds leftovers of every kind; extra NAME=value arguments are added to them.
+# WRAPPER_ARGS, when set, are the wrapper's own arguments.
 # The Gradle user home is the test's own: a CI runner names its own, with init scripts, in GRADLE_USER_HOME.
 run() { # status in $status, output in $TMP/log
     status=0
@@ -37,7 +38,7 @@ run() { # status in $status, output in $TMP/log
           TW_SERVER_URL=https://leftover.invalid TW_ADMOB_APP_ID_ANDROID=leftover TW_ANDROID_KEYSTORE=/keys/release.jks \
           ORG_GRADLE_PROJECT_versionCode=1 'ORG_GRADLE_PROJECT_demo.option=1' GRADLE_OPTS=-Dleft=over \
           JAVA_TOOL_OPTIONS=-Dleft=over "JDK_JAVA_OPTIONS=-Dgradle.user.home=$TMP/other-home" UNRELATED_SETTING=leftover \
-          "$@" sh "$TMP/export/android/tools/release/gradle-release.sh"
+          "$@" sh "$TMP/export/android/tools/release/gradle-release.sh" ${WRAPPER_ARGS:-}
     ) > "$TMP/log" 2>&1 || status=$?
 }
 names() { sed -n '3,$p' "$RECORD" | sed -n 's/^\([A-Za-z_][A-Za-z0-9_.]*\)=.*/\1/p' | sort | tr '\n' ' '; }
@@ -78,6 +79,14 @@ export_dir; printf 'org.gradle.jvmargs=-Xmx4g\nsecretToken=first-part \\\n    co
 export_dir; run "MULTI_LINE=first
 SECOND_LINE_SECRET=do-not-print"
 [ "$status" = 0 ] && grep -q 'MULTI_LINE' "$TMP/log" && ! grep -Eq 'SECOND_LINE_SECRET|do-not-print' "$TMP/log" && ! grep -Eq 'SECOND_LINE_SECRET|do-not-print' "$RECORD" && ok "a value of several lines is neither shown nor passed, and its lines are not taken for names" || { bad "a value of several lines is neither shown nor passed"; cat "$TMP/log"; }
+
+# A rebuild that only compares bytes leaves out the Crashlytics mapping upload, and only that; nothing else passes.
+export_dir; WRAPPER_ARGS=--without-crashlytics-upload; run; WRAPPER_ARGS=
+[ "$status" = 0 ] && grep -q "^ARGS --no-daemon --no-build-cache --gradle-user-home $TMP/home/.gradle assembleRelease -x :app:uploadCrashlyticsMappingFileRelease\$" "$RECORD" && ok "--without-crashlytics-upload excludes the mapping upload task" || { bad "--without-crashlytics-upload (status $status)"; cat "$TMP/log"; head -1 "$RECORD" 2>/dev/null; }
+for extra in "-PversionCode=1" "--without-crashlytics-upload -Pother=1" "assembleDebug"; do
+    export_dir; WRAPPER_ARGS=$extra; run; WRAPPER_ARGS=
+    [ "$status" = 2 ] && grep -q "usage" "$TMP/log" && [ ! -e "$RECORD" ] && ok "refuses the argument $extra" || { bad "refuses the argument $extra (status $status)"; cat "$TMP/log"; }
+done
 
 export_dir; rm "$TMP/export/CANDIDATE"; run
 [ "$status" = 1 ] && grep -q "not an export" "$TMP/log" && [ ! -e "$RECORD" ] && ok "refuses to build outside an export" || { bad "refuses to build outside an export (status $status)"; cat "$TMP/log"; }

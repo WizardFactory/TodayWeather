@@ -7,7 +7,7 @@ Consumes [intent](../intent/android-r8.md) and [spec](../specs/android-r8.md).
 | # | Change | Files | Check |
 | --- | --- | --- | --- |
 | 1 | Enable R8 and resource shrinking for `release` | `android/app/build.gradle.kts`, `android/app/proguard-rules.pro` | `assembleRelease` without private inputs (placeholder ad IDs): mapping written, dex markers |
-| 2 | Keep the catalog strings read by name | `android/app/src/main/res/raw/keep.xml`, `ChartStrings.kt`, `ForecastStrings.kt`, `ResourceKeepTest.kt` | Test red with a narrower pattern, green with `LOC_*`; `aapt2 dump resources` of the APK has all 328 `LOC_*` strings |
+| 2 | Keep the catalog strings read by name | `android/app/src/release/res/raw/keep.xml`, `ChartStrings.kt`, `ForecastStrings.kt`, `ResourceKeepTest.kt` | Test red with a narrower pattern, green with `LOC_*`; `aapt2 dump resources` of the APK has all 328 `LOC_*` strings |
 | 3 | Mapping check in the release tools | `android/tools/release/check_r8.py`, `test_check_r8.py`, `check-apk.sh`, `.github/workflows/android.yml`, `scripts/release-notes.mjs` | Unit tests with made APKs; real minified and unminified APKs; `check-apk.sh` end to end on debug-signed APKs |
 | 4 | Documents | runbook, `android/README.md`, `docs/operations/github-releases.md`, `specs/android-release.md` | Links and anchors |
 

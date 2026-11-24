@@ -9,7 +9,7 @@ fun chartTexts(context: Context): ChartTexts = ChartTexts(CHART_KEYS.mapNotNull 
     if (id == 0) null else key to context.getString(id)
 }.toMap())
 
-/** Looked up by name: res/raw/keep.xml keeps them in the shrunk release (ResourceKeepTest). */
+/** Looked up by name: src/release/res/raw/keep.xml keeps them in the shrunk release (ResourceKeepTest). */
 internal val CHART_KEYS = listOf(
     "LOC_HOUR", "LOC_THIS_DAY_TEMP", "LOC_PREVIOUS_DAY_TEMP",
     "LOC_A_COUPLE_OF_DAYS_AGO", "LOC_THE_DAY_BEFORE_YESTERDAY", "LOC_YESTERDAY", "LOC_TODAY", "LOC_TOMORROW",

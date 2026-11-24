@@ -28,7 +28,20 @@ def dex(*markers):
     return b'dex\n039\x00' + b'\x00' * 64 + b''.join(b'\x00' + m for m in markers)
 
 
-def mapping(map_id=APP_ID, body=b'a.b.C -> a:\n    int x -> a\n', recorded=None):
+# The app's classes as R8 maps them: kept by a rule, renamed, removed (R8 9.x names removed classes).
+SHRUNK = (b'kotlin.Unit -> kotlin.Unit:\n'
+          b'net.wizardfactory.todayweather.MainActivity -> net.wizardfactory.todayweather.MainActivity:\n'
+          b'    void onCreate(android.os.Bundle) -> onCreate\n'
+          b'net.wizardfactory.todayweather.core.domain.Js -> a.b:\n'
+          b'    int x -> a\n'
+          b'net.wizardfactory.todayweather.ui.chart.Chart -> c.d:\n'
+          b'net.wizardfactory.todayweather.ui.Unused -> R8$$REMOVED$$CLASS$$0:\n')
+NOT_OBFUSCATED = SHRUNK.replace(b'-> a.b:', b'-> net.wizardfactory.todayweather.core.domain.Js:').replace(
+    b'-> c.d:', b'-> net.wizardfactory.todayweather.ui.chart.Chart:')
+NOT_SHRUNK = SHRUNK.replace(b'net.wizardfactory.todayweather.ui.Unused -> R8$$REMOVED$$CLASS$$0:\n', b'')
+
+
+def mapping(map_id=APP_ID, body=SHRUNK, recorded=None):
     digest = recorded if recorded is not None else hashlib.sha256(body).hexdigest()
     header = (b'# compiler: R8\n# compiler_version: 9.5.29\n# min_api: 24\n# common_typos_disable\n'
               b'# {"id":"com.android.tools.r8.mapping","version":"2.2"}\n'
@@ -97,10 +110,35 @@ class CheckR8Test(unittest.TestCase):
         self.assertEqual(status, 1)
 
     def test_fails_for_a_mapping_without_a_header(self):
-        status, out, _ = self.run_tool(MINIFIED, b'a.b.C -> a:\n')
+        status, out, _ = self.run_tool(MINIFIED, SHRUNK)
         self.assertEqual(status, 1)
         self.assertIn('FAIL mapping pg_map_id none', out)
         self.assertIn('its header records none', out)
+
+    def test_fails_when_r8_did_not_obfuscate(self):
+        status, out, _ = self.run_tool(MINIFIED, mapping(body=NOT_OBFUSCATED))
+        self.assertEqual(status, 1)
+        self.assertIn('FAIL R8 renamed 0 of the app\'s 3 classes', out)
+        self.assertIn('ok   R8 removed 1 of the app\'s classes', out)
+
+    def test_fails_when_r8_did_not_shrink(self):
+        status, out, _ = self.run_tool(MINIFIED, mapping(body=NOT_SHRUNK))
+        self.assertEqual(status, 1)
+        self.assertIn('FAIL R8 removed none of the app\'s classes', out)
+        self.assertIn('ok   R8 renamed 2 of the app\'s 3 classes', out)
+
+    def test_fails_when_the_apps_dex_files_have_two_mapping_ids(self):
+        other = 'a' * 64
+        mixed = {**MINIFIED, 'classes3.dex': dex(marker('R8', **{'pg-map-id': other}))}
+        for map_id in (APP_ID, other):
+            status, out, _ = self.run_tool(mixed, mapping(map_id=map_id))
+            self.assertEqual(status, 1, map_id)
+            self.assertIn(f'FAIL mapping pg_map_id {map_id}, the APK\'s R8 code has {" ".join(sorted([APP_ID, other]))}', out)
+
+    def test_fails_for_a_mapping_id_that_is_not_a_string(self):
+        status, out, _ = self.run_tool({**MINIFIED, 'classes3.dex': dex(marker('R8', **{'pg-map-id': []}))})
+        self.assertEqual(status, 1)
+        self.assertIn('FAIL R8 marker with an invalid pg-map-id: [[]]', out)
 
     def test_fails_without_dex_files(self):
         status, out, _ = self.run_tool({'lib/classes.dex': dex(marker('R8', **{'pg-map-id': APP_ID}))})
