@@ -52,7 +52,8 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
         override fun change(update: (AppState) -> AppState) = saved.change { s ->
             val changed = update(s)
             val now = shown.value
-            if (now == null || !selected(s, now)) changed else changed.copy(placeIndex = savedSelection(changed, now.returnTo))
+            // Judged after the change: turning off the only enabled place makes the unsaved place the selected one.
+            if (now == null || !selected(changed, now)) changed else changed.copy(placeIndex = savedSelection(changed, now.returnTo))
         }
     }
 

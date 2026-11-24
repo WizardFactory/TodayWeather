@@ -351,6 +351,7 @@ class LinkPreviewTest {
         preview.change { it.copy(placeIndex = 0) }
         assertEquals(false, preview.unsaved.value?.selected)
         preview.savedAccess.change { net.wizardfactory.todayweather.core.storage.PlaceList.disableCurrent(it, true) }
+        assertEquals(-1, saved.value.placeIndex, "no disabled row stays selected")
         val shown = preview.current()!!
         assertEquals(1, shown.placeIndex, "the unsaved place is the one shown")
         assertTrue(preview.isSelected(shown))
