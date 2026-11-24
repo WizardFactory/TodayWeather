@@ -25,16 +25,14 @@ import net.wizardfactory.todayweather.core.storage.startShows
  *   waiting reader while it publishes never waits on this one. Changes handed to the holder are pure: it applies them
  *   again on each publish and when it writes them (CODEX-3190-11).
  * - **Selection (CODEX-3190-2):** the unsaved place is the selected one when it was selected last, or when the saved
- *   selection names no enabled saved place. While it is selected, S02's changes ([savedAccess]) keep the saved selection
- *   on the saved place selected before it ([Unsaved.returnTo]), else the first enabled one, else none, so the next start
- *   opens that place (#3180) and never a deleted or disabled row.
+ *   selection names no enabled saved place. While it is selected, the saved selection stays on the saved row selected
+ *   before it, and S02's changes ([savedAccess]) follow that very row (the same object) to where the change put it, else
+ *   select the first enabled row, else none, so the next start opens that place (#3180) and never a deleted or disabled
+ *   row. No place is matched by its fields (CODEX-3190-10, -13, -14).
  */
 class LinkPreview(private val saved: StateAccess) : StateAccess {
-    /**
-     * The unsaved place; [selected] when it was selected last; [returnTo], the saved place selected before it, which a
-     * new start opens.
-     */
-    data class Unsaved(val place: Place, val selected: Boolean, val returnTo: Place? = null)
+    /** The unsaved place; [selected] when it was selected last. */
+    data class Unsaved(val place: Place, val selected: Boolean)
 
     private val shown = MutableStateFlow<Unsaved?>(null)
 
@@ -43,7 +41,8 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
 
     /**
      * The saved state for S02, which lists and changes the saved places only: while the unsaved place is selected, a
-     * delete or a disable keeps the saved selection on [Unsaved.returnTo] when it stays enabled, else on the first enabled
+     * delete or a disable keeps the saved selection on the row it named before the change when that row stays and is
+     * enabled, else on the first enabled
      * place, else on none (-1). Otherwise Cordova's rules apply as they are.
      */
     val savedAccess: StateAccess = object : StateAccess {
@@ -56,7 +55,7 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
             saved.change { s ->
                 val changed = update(s)
                 // Judged after the change: turning off the only enabled place makes the unsaved place the selected one.
-                if (now == null || !selected(changed, now)) changed else changed.copy(placeIndex = savedSelection(changed, now.returnTo))
+                if (now == null || !selected(changed, now)) changed else changed.copy(placeIndex = savedSelection(s, changed))
             }
         }
     }
@@ -66,11 +65,7 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
         while (true) {
             val now = shown.value
             val base = saved.current()
-            val returnTo = when {
-                now != null && base != null && selected(base, now) -> now.returnTo
-                else -> base?.let(::enabledSelection)
-            }
-            if (shown.compareAndSet(now, Unsaved(place.copy(disable = false), selected = true, returnTo = returnTo))) return
+            if (shown.compareAndSet(now, Unsaved(place.copy(disable = false), selected = true))) return
         }
     }
 
@@ -142,25 +137,25 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
         private fun enabledSelection(state: AppState): Place? = state.places.getOrNull(state.placeIndex)?.takeIf { !it.disable }
 
         /**
-         * The saved selection while the unsaved place is selected: [returnTo] when it is still there and enabled, else
-         * the first enabled row (not `setFirstCityIndex`, which names row 0 or 1 even when disabled), else -1.
+         * The saved selection after S02 changed [before] into [after] while the unsaved place is selected: the row
+         * [before]'s selection named, found as the same object (a delete or a switch keeps the other rows' objects; a
+         * row changed in place keeps its index when the list kept its size), when it is enabled; else the first enabled
+         * row (not `setFirstCityIndex`, which names row 0 or 1 even when disabled); else -1.
          */
-        private fun savedSelection(state: AppState, returnTo: Place?): Int {
-            val back = returnTo?.let { place -> state.places.indexOfFirst { samePlace(it, place) } } ?: -1
-            if (back >= 0 && !state.places[back].disable) return back
-            return state.places.indexOfFirst { !it.disable }
+        private fun savedSelection(before: AppState, after: AppState): Int {
+            val row = before.places.getOrNull(before.placeIndex)
+            val moved = row?.let { r -> after.places.indexOfFirst { it === r } } ?: -1
+            val back = when {
+                moved >= 0 -> moved
+                row != null && after.places.size == before.places.size -> before.placeIndex
+                else -> -1
+            }
+            if (back >= 0 && !after.places[back].disable) return back
+            return after.places.indexOfFirst { !it.disable }
         }
 
-        /**
-         * The same place whatever its loaded fields (photo, source): the current position by its flag; another place by
-         * its name and address, and by its coordinates when both have them, so two places of one name at different
-         * coordinates differ (CODEX-3190-10) and an old place whose coordinates a response fills in later stays the same
-         * (CODEX-3190-13).
-         */
-        private fun samePlace(a: Place, b: Place): Boolean = when {
-            a.currentPosition || b.currentPosition -> a.currentPosition && b.currentPosition
-            else -> a.name == b.name && a.address == b.address && (a.location == null || b.location == null || a.location == b.location)
-        }
+        /** The unsaved place the star saved, whatever its own fields changed meanwhile (a photo): its name, address and coordinates. */
+        private fun samePlace(a: Place, b: Place): Boolean = a.name == b.name && a.address == b.address && a.location == b.location
     }
 
     override fun current(): AppState? = saved.current()?.let(::overlay)
@@ -178,10 +173,8 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
             }
             val last = before.places.lastIndex
             val selectedAfter = after.placeIndex == last
-            // Moving onto the unsaved place remembers the saved place it came from.
-            val returnTo = if (selectedAfter && !selected(base, now)) enabledSelection(base) else now.returnTo
             // A show, a star or another change in between: compute again over what is shown now.
-            if (!shown.compareAndSet(now, Unsaved(after.places.last(), selectedAfter, returnTo))) continue
+            if (!shown.compareAndSet(now, Unsaved(after.places.last(), selectedAfter))) continue
             saved.change { s ->
                 val changed = update(overlay(s, now))
                 if (changed.places.size != s.places.size + 1) return@change s

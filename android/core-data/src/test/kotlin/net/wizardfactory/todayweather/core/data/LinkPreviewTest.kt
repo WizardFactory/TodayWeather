@@ -224,7 +224,7 @@ class LinkPreviewTest {
         refresh.join()
         show.join()
         assertEquals(busan, preview.unsaved.value?.place, "the place shown last stays")
-        assertEquals(LinkPreview.Unsaved(busan, selected = true, returnTo = london), preview.unsaved.value)
+        assertEquals(LinkPreview.Unsaved(busan, selected = true), preview.unsaved.value)
         assertEquals(busan, preview.current()!!.places.last())
         assertEquals(started, saved.value, "nothing saved")
     }
@@ -462,5 +462,21 @@ class LinkPreviewTest {
         saved.change { s -> s.copy(places = s.places.map { if (it.name == "회현동") it.copy(location = Location(37.56, 126.98)) else it }) }
         preview.savedAccess.change { net.wizardfactory.todayweather.core.storage.PlaceList.remove(it, 1) }
         assertEquals(1, saved.value.placeIndex, "회현동")
+    }
+
+    /**
+     * CODEX-3190-14: an earlier saved place of the same name and address without coordinates does not stand in for the
+     * place to return to: S02's change keeps the very row selected before, wherever it moves.
+     */
+    @Test
+    fun anEarlierPlaceOfTheSameNameDoesNotStandIn() {
+        val oldHome = Place(false, false, "회현동", "대한민국 서울특별시 중구 회현동", "KR", null)
+        val newHome = oldHome.copy(location = Location(37.56, 126.98))
+        val saved = Memory(started.copy(places = listOf(current, oldHome, london, newHome), placeIndex = 3))
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        preview.savedAccess.change { net.wizardfactory.todayweather.core.storage.PlaceList.remove(it, 2) }
+        assertEquals(listOf(current, oldHome, newHome), saved.value.places)
+        assertEquals(2, saved.value.placeIndex, "the row selected before, not the earlier one of its name")
     }
 }
