@@ -329,6 +329,28 @@ test("golden vector IDs are unique and contain no legacy Branch URLs or secrets"
   assert.deepEqual(contract.excludedHosts, ["todayweather.ai", "app.todayweather.ai"]);
 });
 
+test("store fallbacks carry the share-link campaign for App Store Connect and Google Play", () => {
+  const apple = new URL(contract.appStoreUrl);
+  assert.equal(apple.origin + apple.pathname, "https://apps.apple.com/app/apple-store/id1041700694");
+  assert.match(apple.searchParams.get("pt") ?? "", /^\d+$/);
+  assert.equal(apple.searchParams.get("ct"), "sharelink");
+  assert.ok(apple.searchParams.get("ct").length <= 40);
+  assert.equal(apple.searchParams.get("mt"), "8");
+
+  const play = new URL(contract.playStoreUrl);
+  assert.equal(play.origin + play.pathname, "https://play.google.com/store/apps/details");
+  assert.equal(play.searchParams.get("id"), "net.wizardfactory.todayweather");
+  const referrer = play.searchParams.get("referrer");
+  assert.ok(encodeURIComponent(referrer).length <= 512);
+  assert.deepEqual(Object.fromEntries(new URLSearchParams(referrer)), {
+    utm_source: "link.todayweather.ai",
+    utm_medium: "share",
+    utm_campaign: "sharelink",
+  });
+  // The referrer is a single query value: its own separators stay encoded.
+  assert.equal([...play.searchParams.keys()].join(","), "id,referrer");
+});
+
 test("every parseCase matches the reference native parser and edge router", () => {
   for (const tc of golden.parseCases) {
     const target = referenceParseNative(tc.url);

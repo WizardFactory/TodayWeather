@@ -144,8 +144,8 @@ test('the stylesheet loads the subset font beside it', () => {
 
 test('the native summaries link straight to their stores', () => {
   const expected = new Map([
-    ['iPhone 앱', 'https://apps.apple.com/kr/app/id1041700694'],
-    ['Android 앱', 'https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather'],
+    ['iPhone 앱', 'https://apps.apple.com/kr/app/apple-store/id1041700694?pt=117919046&ct=landing&mt=8'],
+    ['Android 앱', 'https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather&referrer=utm_source%3Dtodayweather.ai%26utm_medium%3Dweb%26utm_campaign%3Dlanding'],
   ]);
   for (const page of pages) {
     const html = readFileSync(page, 'utf8');
