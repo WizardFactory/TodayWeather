@@ -103,6 +103,7 @@ final class StartPage {
         let flow = self.flow
         addTask = Task { [weak self] in
             let outcome = await flow.useCurrentLocation { self?.loading = $0 }
+            guard !Task.isCancelled else { return }
             self?.addTask = nil
             self?.show(outcome)
         }
@@ -110,12 +111,21 @@ final class StartPage {
 
     private func clearSearch() { query.clear() }
 
+    /// The star of a place a link showed over S01 closed it (#3097): an add still loading saves nothing and shows nothing
+    /// (CODEX-3195-11).
+    func abandon() {
+        addTask?.cancel()
+        addTask = nil
+        loading = false
+    }
+
     private func run(_ add: @escaping (StartFlow) async -> StartFlow.Outcome) {
         guard addTask == nil else { return }
         let flow = self.flow
         loading = true
         addTask = Task { [weak self] in
             let outcome = await add(flow)
+            guard !Task.isCancelled else { return }
             self?.loading = false
             self?.addTask = nil
             self?.show(outcome)

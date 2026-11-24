@@ -182,7 +182,12 @@ final class AppLaunch {
         let weather = WeatherScreens(session: session, shell: shell, screenSize: Self.screenSize())
         self.weather = weather
         let opener = LinkOpener(unsaved: unsaved, openPlace: { [weak session] in session?.openPlace($0, sender: .deeplink) },
-                                reload: { [weak session] in session?.reload(.deeplink) })
+                                reload: { [weak session] in session?.reload(.deeplink) },
+                                unblock: { [weak session] in
+                                    // An open O03 (weather or position) stops every reload (CODEX-3195-3).
+                                    session?.closeRetry()
+                                    session?.closePositionRetry()
+                                })
         linkOpener = opener
         weather.isUnsaved = { [weak unsaved] in unsaved?.isSelected($0) ?? false }
         weather.onStar = { [weak self] in self?.star() }
@@ -319,16 +324,7 @@ final class AppLaunch {
     /// A place link over S01 shows the tabs without closing S01 (no `startVersion`); the star closes it. Links that change
     /// nothing (an unknown city, a page or `/open` over S01) leave the screens as they are.
     private func openLink(_ target: DeepLinkTarget) {
-        guard let shell, let weather else { return }
-        switch target {
-        case .place, .coordinate:
-            // An open retry confirmation (O03) stops every reload; the link's place loads instead (CODEX-3195-3).
-            weather.session.closeRetry()
-            weather.session.closePositionRetry()
-        default:
-            break
-        }
-        guard let route = linkOpener?.open(target) else { return }
+        guard let shell, let weather, let route = linkOpener?.open(target) else { return }
         closeForLink()
         switch route {
         case .app:
@@ -353,7 +349,10 @@ final class AppLaunch {
         AppLaunch.weatherTelemetry("favorite_change", ["action": .text("add")])
         shell.showNotice(LinkTexts.of(locale.catalog).addedFavorite)
         if startBypassed {
+            // The star closed S01: an add it started saves nothing more and switches no tab (CODEX-3195-11).
             startBypassed = false
+            startPage?.abandon()
+            startPage = nil
             if let weather { alarms?.startClosed(session: weather.session) }
         }
     }

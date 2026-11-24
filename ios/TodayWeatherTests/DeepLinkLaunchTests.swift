@@ -169,6 +169,9 @@ struct DeepLinkLaunchTests {
         launch.migrationFinished(ShellFixture.state())
         let session = try #require(launch.weather?.session)
         #expect(await HostedShellTests.AirLiveTests.wait(10) { session.retry })
+        // A link that opens nothing (an unknown city) leaves the confirmation (CODEX-3195-10).
+        try Self.open(launch, "https://link.todayweather.ai/place/atlantis")
+        #expect(session.retry)
         let before = server.requests.count
         try Self.open(launch, "https://link.todayweather.ai/place/busan")
         #expect(!session.retry, "the confirmation closed")
@@ -198,6 +201,48 @@ struct DeepLinkLaunchTests {
         #expect(!StartGate.shows(launch.holder.state?.cordovaExtras["startVersion"]))
         #expect(launch.holder.state?.places.last?.name == "서울")
         #expect(launch.unsaved?.unsaved?.selected == false, "the added place is the selected one")
+    }
+
+    /// CODEX-3195-11: the star of a place a link showed over S01 closes S01; an S01 add still loading then saves nothing
+    /// and switches no tab.
+    @Test func theStarClosingS01CancelsAnAddStillLoading() async throws {
+        let body = try References.data("places-kma-seoul.input.json")
+        let server = WeatherTabTests.Server { _ in .answer(1.0, body) }
+        let launch = AppLaunch(store: MemoryStore(),
+                               environment: .init(preferredLanguages: ["ko-KR"], photosURL: nil, version: "test",
+                                                  serverURL: "https://server.test.invalid"),
+                               weatherHTTP: server, weatherCache: nil,
+                               location: { TestLocation(system: .authorizedWhenInUse) }, placeSearch: { nil })
+        var start = ShellFixture.state(startVersion: nil)
+        start.places = [.currentPositionPlaceholder]
+        start.placeIndex = -1
+        launch.migrationFinished(start)
+        let page = try #require(launch.startPage)
+        page.addShortcut(CityShortcuts.forScreenHeight(800).first!)
+        try Self.open(launch, "https://link.todayweather.ai/place/jeju?view=daily")
+        launch.weather?.onStar()
+        #expect(launch.startPage == nil)
+        try await Task.sleep(for: .seconds(2))
+        #expect(launch.holder.state?.places.map(\.name) == [nil, "제주"], "the S01 add saved nothing")
+        #expect(launch.holder.state?.placeIndex == 1)
+        #expect(launch.shell?.selected == .dailyforecast, "no tab switch")
+    }
+
+    /// CODEX-3195-2: a search answer arriving after another tab took over (a link, before the tab's close is observed)
+    /// opens nothing.
+    @Test func aSearchAnswerAfterTheTabChangedOpensNothing() async throws {
+        let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul])
+        f.shell.select(.search)
+        #expect(await HostedShellTests.AirLiveTests.wait(5) { f.places.visits == 1 })
+        // The answer's callbacks run right after the tab changed, before the tab's close is observed.
+        let visit = f.places.page
+        f.shell.select(.air)
+        visit.onOpen(PlacesFixture.busan)
+        visit.onOpened()
+        visit.onPopup(.alert("LOC_FAIL_TO_GET_WEATHER_INFO"))
+        #expect(f.unsaved.unsaved == nil)
+        #expect(f.shell.selected == .air)
+        #expect(f.shell.popups.isEmpty)
     }
 }
 
@@ -230,6 +275,7 @@ extension HostedShellTests {
             #expect(menu.maxX <= title.minX && title.maxX <= search.minX + 1, "menu, the name, then search: \(menu) \(title) \(search)")
             #expect(search.maxX <= star.minX + 1 && star.maxX <= share.minX + 1, "search, star, share: \(search) \(star) \(share)")
             #expect(search.width >= 44 && search.height >= 44, "touch size: \(search)")
+        #expect(star.width >= 44 && star.height >= 44, "the star's touch size (CODEX-3195-6): \(star)")
         }
     }
 }

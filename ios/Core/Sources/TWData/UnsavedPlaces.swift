@@ -293,11 +293,16 @@ public final class LinkOpener {
     private let unsaved: UnsavedPlaces
     private let openPlace: (Int) -> Void
     private let reload: () -> Void
+    /// Closes what would stop the linked place's load, once the route is a weather tab: an open retry confirmation (O03)
+    /// refuses every reload (CODEX-3195-3); a link that opens nothing leaves it (CODEX-3195-10).
+    private let unblock: () -> Void
 
-    public init(unsaved: UnsavedPlaces, openPlace: @escaping (Int) -> Void, reload: @escaping () -> Void) {
+    public init(unsaved: UnsavedPlaces, openPlace: @escaping (Int) -> Void, reload: @escaping () -> Void,
+                unblock: @escaping () -> Void = {}) {
         self.unsaved = unsaved
         self.openPlace = openPlace
         self.reload = reload
+        self.unblock = unblock
     }
 
     /// Applies `target`: the route the app shows, or nil when the link changes nothing.
@@ -310,6 +315,7 @@ public final class LinkOpener {
         case .app, .page:
             if start { return nil }
         case .weather(_, _, let index, let place):
+            unblock()
             if let place {
                 unsaved.show(place)
                 reload()

@@ -121,7 +121,10 @@ public final class StartFlow {
     /// `saveCity` then `addCity`: an existing place, or a body that does not convert, is "already added".
     private func add(_ city: Place) async -> Outcome {
         guard let s = holder.state else { return .none }
-        switch await repository.load(city, units: s.units, acceptLanguage: acceptLanguage(), force: true) {
+        let loaded = await repository.load(city, units: s.units, acceptLanguage: acceptLanguage(), force: true)
+        // Cancelled while it loaded (the star of a linked place closed S01, #3097): nothing is saved.
+        if Task.isCancelled { return .none }
+        switch loaded {
         case .loaded(_, let entry, _):
             var saved = city
             if let source = Self.source(entry.weather) { saved.source = source }
@@ -194,6 +197,7 @@ public final class StartFlow {
         let place = GeocodeClient.place(geoInfo, currentPosition: true)
         guard let s = holder.state else { return .none }
         let result = await repository.load(place, units: s.units, acceptLanguage: acceptLanguage(), force: true)
+        if Task.isCancelled { return .none }
         loading(false)
         switch result {
         case .loaded(_, let entry, _):

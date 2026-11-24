@@ -116,10 +116,19 @@ final class PlacesScreens {
     /// SearchCtrl's `init` for a new visit.
     private func openVisit() {
         query.clear()
-        page = makePage()
-        page.onPopup = { [weak self] in self?.show($0) }
-        page.onOpen = { [weak self] in self?.onOpenPlace($0) }
-        page.onOpened = { [weak self] in self?.opened() }
+        // The visit replaced and its answers still on their way act no more (CODEX-3195-2).
+        page.close()
+        let visit = makePage()
+        page = visit
+        // An answer acts only for this visit while the Locations tab shows: another tab or a link may have taken over
+        // before the tab's close was observed (CODEX-3195-2).
+        let current: () -> Bool = { [weak self, weak visit] in
+            guard let self, let visit, self.page === visit, case .tab = self.shell.screen else { return false }
+            return self.shell.selected == .search
+        }
+        page.onPopup = { [weak self] in if current() { self?.show($0) } }
+        page.onOpen = { [weak self] in if current() { self?.onOpenPlace($0) } }
+        page.onOpened = { [weak self] in if current() { self?.opened() } }
         query = PlaceQuery(search: search, towns: towns, scansTowns: true, keepsLastTowns: false)
         shownFinds = page.finds
         editing = false
