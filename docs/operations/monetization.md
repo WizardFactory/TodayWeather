@@ -236,6 +236,18 @@ Ignored verification artifacts remain in `reports/verification/client/monetizati
 and Archify sidecars; isolated native build inputs/output are under the task's
 temporary directory. They are not prerequisites for maintained document links.
 
+## Usage analytics on by default (2026-11-24, #2660)
+
+AK decided on 2026-11-24 to turn usage analytics on by default in the native apps, with these rules (cross-platform contract: `specs/analytics-default-on.md`, added by PR #3178):
+
+- Outside the EEA, the United Kingdom and Switzerland, a device without a stored choice collects by default. In those regions, and when the device region is unknown, collection still needs the user's consent.
+- A stored choice wins: an earlier decline or withdrawal stays off. Applying the default writes no choice.
+- Analytics storage is granted only while collecting; ad storage, ad user data and ad personalization stay denied.
+- The menu row is "이용 통계" / "Usage analytics" / "利用状況分析" with on/off status.
+- A withdrawal that cannot be saved keeps collection off for that session and shows the save-failed notice; if it still cannot be persisted, the region default can apply at the next start (accepted residual).
+
+The privacy, terms and support pages state the same rules. Before a release with this behavior ships: publish the updated pages, update the Play Data safety answers (analytics data is collected by default outside the opt-in regions, with an opt-out) and re-check the App Store privacy answers. The section below records the earlier opt-in behavior, which still applies in the opt-in regions.
+
 ## Optional Analytics choice (2026-10-01, #2660)
 
 Usage analytics now starts off in native defaults and the JavaScript gate. The app settings menu persists an explicit consent choice and offers withdrawal; earlier unconsented screen/events are not replayed on a new grant. Analytics storage can be granted while ad storage, ad-user-data and ad-personalization remain denied. UMP continues to gate ads separately; turning Analytics off does not turn Ads/Crashlytics/FCM/Remote Config off. Event metrics and automatic ad revenue are available only where consent/SDK configuration actually permits measurement. Preserve this boundary in any experiment; Remote Config cannot enable analytics consent. See [privacy review](store-privacy-review.md) and [retention/deletion](store-data-retention.md).
