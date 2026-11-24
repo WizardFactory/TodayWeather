@@ -61,21 +61,22 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
     }
 
     /**
-     * The saved state for S09, which changes the saved places' alarms and, when it opens for a saved place, selects it
-     * (`setCityIndex(fav)`): that selection is the user's, so the unsaved place is no longer the selected one
-     * (CODEX-3190-15). Other changes (the alarm records) select nothing.
+     * The saved state for S09 and S01, whose changes may select a saved place: S09 opened for a place
+     * (`setCityIndex(fav)`), S01's add (`closeStart`). A change that sets the saved selection, to the same index too, is
+     * the user's choice of that saved place, so the unsaved place is no longer the selected one (CODEX-3190-15, -19).
+     * Whether a change sets it is read by applying it once more to the state with no selection: the holder applies its
+     * changes again anyway, so they are pure. Other changes (the alarm records) select nothing.
      */
-    val alarmAccess: StateAccess = object : StateAccess {
+    val selectingAccess: StateAccess = object : StateAccess {
         override fun current(): AppState? = saved.current()
 
         override fun change(update: (AppState) -> AppState) {
             val now = shown.value
-            val before = saved.current()?.placeIndex
+            val before = saved.current()
             saved.change(update)
             val after = saved.current() ?: return
-            if (now != null && after.placeIndex != before && enabledSelection(after) != null) {
-                shown.compareAndSet(now, now.copy(selected = false))
-            }
+            val selects = before != null && update(before.copy(placeIndex = NO_SELECTION)).placeIndex != NO_SELECTION
+            if (now != null && selects && enabledSelection(after) != null) shown.compareAndSet(now, now.copy(selected = false))
         }
     }
 
@@ -139,6 +140,9 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
     fun overlay(state: AppState): AppState = overlay(state, shown.value)
 
     companion object {
+        /** A selection no change makes: whether a change sets the selection is read against it. */
+        private const val NO_SELECTION = Int.MIN_VALUE
+
         /**
          * The same view from a collected [unsaved] value: a screen that collects it and the saved state redraws on each,
          * also when only the selection moved off the unsaved place.

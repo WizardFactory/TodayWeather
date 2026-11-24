@@ -756,7 +756,7 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
     val alarms = AlarmsHost { scope, openSettings ->
         // S09 opened for a saved place selects it; through the preview's alarm view, so an unsaved place gives way
         // (CODEX-3190-15).
-        AlarmPage(preview.alarmAccess, twApp.notifications, post = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.postPlace(index) } },
+        AlarmPage(preview.selectingAccess, twApp.notifications, post = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.postPlace(index) } },
             openSettings = openSettings, scope = scope)
     }
 
@@ -771,7 +771,9 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     /** The start page's visit of this app open (S01, #2889). */
     val start: StartPage by lazy {
-        StartPage(StartFlow(twApp.appState, twApp.weather, twApp.geocode, twApp.location, ::languages, telemetry, cityUpdated), viewModelScope)
+        // S01's add selects the place it saves; through the selecting view an unsaved place shown over S01 by a link gives
+        // way (CODEX-3190-19).
+        StartPage(StartFlow(preview.selectingAccess, twApp.weather, twApp.geocode, twApp.location, ::languages, telemetry, cityUpdated), viewModelScope)
     }
 
     /** `locationOn`: location services turned on while the app is open reload a selected current position. */

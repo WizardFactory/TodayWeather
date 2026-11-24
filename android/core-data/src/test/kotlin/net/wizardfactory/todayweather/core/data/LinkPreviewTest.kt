@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.Location
 import net.wizardfactory.todayweather.core.storage.Place
+import net.wizardfactory.todayweather.core.storage.closeStart
 import net.wizardfactory.todayweather.core.storage.startShows
 
 /**
@@ -490,13 +491,13 @@ class LinkPreviewTest {
         val saved = Memory(started.copy(places = listOf(current, london, busan), placeIndex = 2))
         val preview = LinkPreview(saved)
         preview.show(seoul)
-        preview.alarmAccess.change { it.copy(placeIndex = 1) }
+        preview.selectingAccess.change { it.copy(placeIndex = 1) }
         assertEquals(1, saved.value.placeIndex)
         assertEquals(false, preview.unsaved.value?.selected)
         assertEquals(1, preview.current()!!.placeIndex)
         // A save of the alarms (push records only) changes no selection.
         preview.change { it.copy(placeIndex = 3) }
-        preview.alarmAccess.change { it.copy(push = it.push) }
+        preview.selectingAccess.change { it.copy(push = it.push) }
         assertEquals(true, preview.unsaved.value?.selected)
     }
 
@@ -514,5 +515,33 @@ class LinkPreviewTest {
         assertEquals(-1, saved.value.placeIndex)
         assertEquals(true, preview.unsaved.value?.selected)
         assertEquals(1, preview.add())
+    }
+
+    /** CODEX-3190-15: S09 opened for the saved place the selection already names still selects it. */
+    @Test
+    fun openingTheAlarmsOfTheSavedSelectionSelectsIt() {
+        val saved = Memory(started.copy(places = listOf(current, london), placeIndex = 1))
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        preview.selectingAccess.change { it.copy(placeIndex = 1) }
+        assertEquals(false, preview.unsaved.value?.selected)
+        assertEquals(1, preview.current()!!.placeIndex)
+    }
+
+    /**
+     * CODEX-3190-19: S01's add that finishes after a link showed an unsaved place over S01 is the user's own choice: it
+     * is saved and selected, and the unsaved place gives way, so the pages and the next start agree.
+     */
+    @Test
+    fun anS01AddFinishingAfterALinkSelectsTheAddedPlace() {
+        val saved = Memory(AppState())
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        preview.selectingAccess.change { s ->
+            (net.wizardfactory.todayweather.core.storage.PlaceList.add(s, london) ?: s).closeStart()
+        }
+        assertEquals(london.name, saved.value.places[saved.value.placeIndex].name)
+        assertEquals(false, preview.unsaved.value?.selected)
+        assertEquals(saved.value.placeIndex, preview.current()!!.placeIndex)
     }
 }
