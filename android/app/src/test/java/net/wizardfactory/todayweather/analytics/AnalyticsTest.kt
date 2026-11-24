@@ -282,6 +282,47 @@ class AnalyticsTest {
         }
     }
 
+    /**
+     * A withdrawal whose first SDK stop fails is still written, and the decision applied after the write turns the SDK
+     * off; a failure there too shows the notice (CODEX-3178-20, order of writes in the spec).
+     */
+    @Test
+    fun aWithdrawalIsWrittenEvenWhenTheFirstSdkStopFails() {
+        for (failing in listOf("collection false", "analytics storage denied")) {
+            choices.edit().remove(ConsentStore.KEY).commit()
+            val sdk = OnceFailing(failing)
+            val a = Analytics(sdk, ConsentStore(choices, collection), "development") { "KR" }.also { it.start() }
+            assertTrue(a.choice.value)
+            sdk.calls.clear()
+            sdk.armed = true
+            assertTrue(a.setCollectionEnabled(false), failing)
+            assertEquals("false", choices.getString(ConsentStore.KEY, null), failing)
+            assertEquals(collectionOff, sdk.calls.takeLast(2), "the SDK ends off and denied ($failing)")
+            assertFalse(a.track("weather_fetch", fetch))
+        }
+        val sdk = Sdk(failOn = "collection false")
+        choices.edit().remove(ConsentStore.KEY).commit()
+        val a = Analytics(sdk, ConsentStore(choices, collection), "development") { "DE" }.also { it.start() }
+        assertFalse(a.setCollectionEnabled(false), "an SDK that keeps failing shows the notice")
+        assertEquals("false", choices.getString(ConsentStore.KEY, null))
+    }
+
+    /** An SDK double whose [failing] call throws once after [armed] is set. */
+    private class OnceFailing(private val failing: String) : AnalyticsSdk {
+        val calls = mutableListOf<String>()
+        var armed = false
+        private fun call(name: String) {
+            calls += name
+            if (armed && name == failing) {
+                armed = false
+                throw IllegalStateException(name)
+            }
+        }
+        override fun setCollectionEnabled(enabled: Boolean) = call("collection $enabled")
+        override fun setConsent(analytics: Boolean) = call("analytics storage ${if (analytics) "granted" else "denied"}")
+        override fun logEvent(name: String, params: Map<String, Any>) = call("event $name")
+    }
+
     @Test
     fun anSdkFailureWithdrawsTheGrant() {
         val sdk = Sdk(failOn = "collection true")

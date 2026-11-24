@@ -924,7 +924,7 @@
     "android/app/src/main/java/net/wizardfactory/todayweather/ads/NativeForecastAds.kt": "69af2c459bd3d23fecb1a3fd8c3fbbf1664b12af97d5b68b92b9e8aedc770dca",
     "android/app/src/main/java/net/wizardfactory/todayweather/ads/NativeInventory.kt": "3c403a7bb32bc8b1d98864471e162f552cbf880499af68f641db4254823db86f",
     "android/app/src/main/java/net/wizardfactory/todayweather/ads/TwAds.kt": "ce8cfa146b4326c52df68f15db46ab66b6e3fd908aa5a9fb4ffc42dee4f3c3ba",
-    "android/app/src/main/java/net/wizardfactory/todayweather/analytics/Analytics.kt": "0b1651185be67c51f4057df273c0b9785002037ef751aa59d79095c6a162566d",
+    "android/app/src/main/java/net/wizardfactory/todayweather/analytics/Analytics.kt": "e11597e65a7aef199a732a0e0f3aceaf3f158ac4656a6e08671ec39109582aa5",
     "android/app/src/main/java/net/wizardfactory/todayweather/analytics/RemoteBannerConfig.kt": "bdbe176c325f78f3b577c4374f562f126b8fa5b8e10bf14be29dba58567030b6",
     "android/app/src/main/java/net/wizardfactory/todayweather/location/AndroidLocationAccess.kt": "4d26ff3b9b0516f979bdc652c063f12140c161a96ed1d4d7073817119546d222",
     "android/app/src/main/java/net/wizardfactory/todayweather/location/LocationGlyph.kt": "a0b9ea053b7c80c02e79d0e51dc45c2a2249988f80f3a789bcff73139286252d",
