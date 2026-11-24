@@ -323,6 +323,30 @@ class AnalyticsTest {
         override fun logEvent(name: String, params: Map<String, Any>) = call("event $name")
     }
 
+    /**
+     * A grant whose commit fails keeps the stored choice even when the SDK then throws while it is turned off: "no
+     * choice" does not become a decline (CODEX-3178-23), and the SDK ends off.
+     */
+    @Test
+    fun aFailedGrantKeepsNoChoiceWhenTheSdkFailsAfterIt() {
+        for (region in listOf("DE", "KR")) {
+            choices.failPuts = false
+            choices.edit().remove(ConsentStore.KEY).commit()
+            val sdk = OnceFailing("collection false")
+            val a = Analytics(sdk, ConsentStore(choices, collection), "development") { region }.also { it.start() }
+            if (region == "KR") assertTrue(a.setCollectionEnabled(true)).also { choices.edit().remove(ConsentStore.KEY).commit() }
+            choices.failPuts = true
+            choices.failValue = "true"
+            sdk.calls.clear()
+            sdk.armed = true
+            assertFalse(a.setCollectionEnabled(true), region)
+            assertEquals(null, choices.getString(ConsentStore.KEY, null), "no choice stays no choice ($region)")
+            assertFalse(a.choice.value)
+            assertEquals(collectionOff, sdk.calls.takeLast(2), "the SDK ends off and denied ($region)")
+            choices.failValue = null
+        }
+    }
+
     @Test
     fun anSdkFailureWithdrawsTheGrant() {
         val sdk = Sdk(failOn = "collection true")
@@ -386,15 +410,17 @@ class AnalyticsTest {
     private class FailingPrefs(private val real: SharedPreferences) : SharedPreferences by real {
         var fail = false
 
-        /** Only writes of a value fail; a removal succeeds. */
+        /** Only writes of a value fail ([failValue] only, when set); a removal succeeds. */
         var failPuts = false
+        var failValue: String? = null
 
         override fun edit(): SharedPreferences.Editor = when {
             fail -> Failing(real.edit())
             failPuts -> object : SharedPreferences.Editor by real.edit() {
                 private val staged = real.edit()
                 private var put = false
-                override fun putString(key: String?, value: String?) = also { put = true }
+                override fun putString(key: String?, value: String?) =
+                    also { if (failValue == null || value == failValue) put = true else staged.putString(key, value) }
                 override fun remove(key: String?) = also { staged.remove(key) }
                 override fun commit() = !put && staged.commit()
             }

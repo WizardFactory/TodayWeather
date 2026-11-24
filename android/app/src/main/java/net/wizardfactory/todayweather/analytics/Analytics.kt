@@ -154,7 +154,8 @@ class Analytics(
         if (!value) stopSdk()
         val saved = store.write(value)
         choiceFlow.value = saved && value
-        return applyCollection(choiceFlow.value) && saved
+        // A grant that was not written keeps the stored choice, also when the SDK then fails (CODEX-3178-23).
+        return applyCollection(choiceFlow.value, storeOnFailure = saved || !value) && saved
     }
 
     /** An event of the schema with its own fields only; false when it is dropped or not sent. */

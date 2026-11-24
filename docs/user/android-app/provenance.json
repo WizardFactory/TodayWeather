@@ -560,7 +560,7 @@
     "android/app/src/androidTest/java/net/wizardfactory/todayweather/ManualCaptureTest.kt": "08cc130823969649337ad495e87a1cfe28c9a9344d09f8afaf76c0e1001729c1",
     "android/app/src/androidTest/java/net/wizardfactory/todayweather/NoAdsPlatform.kt": "4464819fe947132bc40be9a80a7779b2e2820957c7a7483919ecd6bc32ece45e",
     "android/app/src/androidTest/java/net/wizardfactory/todayweather/TestRunner.kt": "67b9a05800b0f3883832f4ebae9eb63d76e07c2a25d1d8399a210481d011406f",
-    "android/app/src/main/AndroidManifest.xml": "d5471207131d2593917e8a93ce9c951c4525e361ea93ad788340f33fe4f59271",
+    "android/app/src/main/AndroidManifest.xml": "c1742ec4fa39560cb16778870aa64ab2e8f95374a8c4b7886d2ceaeb21c6dc3a",
     "android/app/src/main/assets/data/towns.json": "d7465149c463fdbacbb0a52bad9a19cb37a7c7566d0d9134f37eef36fa51ac16",
     "android/app/src/main/assets/img/app_icon.png": "c10cdce6943ead714e5363d3a5da9574d578abd6dbed9eadf974fee84d76b976",
     "android/app/src/main/assets/img/bg.png": "247869fd255893887b263e7e231aacff990e21ed6fc18b78a6057d2c6e00641c",
@@ -924,7 +924,7 @@
     "android/app/src/main/java/net/wizardfactory/todayweather/ads/NativeForecastAds.kt": "69af2c459bd3d23fecb1a3fd8c3fbbf1664b12af97d5b68b92b9e8aedc770dca",
     "android/app/src/main/java/net/wizardfactory/todayweather/ads/NativeInventory.kt": "3c403a7bb32bc8b1d98864471e162f552cbf880499af68f641db4254823db86f",
     "android/app/src/main/java/net/wizardfactory/todayweather/ads/TwAds.kt": "ce8cfa146b4326c52df68f15db46ab66b6e3fd908aa5a9fb4ffc42dee4f3c3ba",
-    "android/app/src/main/java/net/wizardfactory/todayweather/analytics/Analytics.kt": "e11597e65a7aef199a732a0e0f3aceaf3f158ac4656a6e08671ec39109582aa5",
+    "android/app/src/main/java/net/wizardfactory/todayweather/analytics/Analytics.kt": "36273d043bd15f7e9a5d5b100f21c07f30f56a2c2497a7e45b8579bd935b184c",
     "android/app/src/main/java/net/wizardfactory/todayweather/analytics/RemoteBannerConfig.kt": "bdbe176c325f78f3b577c4374f562f126b8fa5b8e10bf14be29dba58567030b6",
     "android/app/src/main/java/net/wizardfactory/todayweather/location/AndroidLocationAccess.kt": "4d26ff3b9b0516f979bdc652c063f12140c161a96ed1d4d7073817119546d222",
     "android/app/src/main/java/net/wizardfactory/todayweather/location/LocationGlyph.kt": "a0b9ea053b7c80c02e79d0e51dc45c2a2249988f80f3a789bcff73139286252d",
@@ -1234,9 +1234,10 @@
       "pull_request": 3178,
       "date": "2026-11-24 (Asia/Seoul)",
       "changed_sources": [
+        "android/app/src/main/AndroidManifest.xml",
         "android/app/src/main/java/net/wizardfactory/todayweather/analytics/Analytics.kt"
       ],
-      "assessment": "After the capture at 87a0ca3a0c55f7c61f549d1eaa0ab1e288050c02, the review of PR 3178 simplified how ConsentStore handles failed writes (the coordinator decision of 2026-11-24: the choice is read only through SharedPreferences and the pending-withdrawal record is removed). No screen, text or decision for an intact install changes, so the screenshots and instructions stay valid; the changed hashes are renewed with this assessment, not by a new capture."
+      "assessment": "After the capture at 87a0ca3a0c55f7c61f549d1eaa0ab1e288050c02, the review of PR 3178 simplified how ConsentStore handles failed writes (the coordinator decision of 2026-11-24: the choice is read only through SharedPreferences, no pending-withdrawal record, a failed grant keeps the stored choice) and turned off the analytics SDK's TCF intake in the manifest. No screen, text or decision for an intact install changes, so the screenshots and instructions stay valid; the changed hashes are renewed with this assessment, not by a new capture."
     }
   ]
 }

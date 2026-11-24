@@ -54,8 +54,8 @@ named in the capture record.
   separately for notification permission. Android versions and device vendors may
   present different system dialogs.
 - Usage analytics (이용 통계) is on by default in Korea and other regions outside the EEA,
-  the United Kingdom and Switzerland, and can be turned off in the menu; in those regions
-  it stays off until you allow it. The menu screens show the Korean default (켜짐); the
+  the United Kingdom and Switzerland, and can be turned off in the menu; in the EEA, the United Kingdom and Switzerland,
+  and when the device region is unknown, it stays off until you allow it. The menu screens show the Korean default (켜짐); the
   opt-in page sets the app's region to Germany (`analyticsOptIn` capture section). The
   capture's test application sends no analytics. Advertising privacy choices depend on
   region and the consent service; they are separate from analytics.
