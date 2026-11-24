@@ -27,7 +27,9 @@ import net.wizardfactory.todayweather.core.data.StateAccess
 import net.wizardfactory.todayweather.core.data.WeatherRepository
 import net.wizardfactory.todayweather.core.data.WeatherSession
 import net.wizardfactory.todayweather.core.data.cityRecord
+import net.wizardfactory.todayweather.core.domain.share.DeepLinkTarget
 import net.wizardfactory.todayweather.core.domain.share.ShareMessage
+import net.wizardfactory.todayweather.core.domain.share.WeatherView
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.closeStart
@@ -50,9 +52,10 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * Sharing from the weather and air tabs (#2895 AC1, O16) and the entry links (`todayweather://N`): the share buttons of
- * S03, S04 and S05 open the system chooser with the selected place's Cordova message as plain text; a place without a
- * location shares nothing (O02 comes with AN-10); a link's place index is queued for the session, other intents not.
+ * Sharing from the weather and air tabs (#2895 AC1, O16) and the entry links (`todayweather://N`, `link.todayweather.ai`):
+ * the share buttons of S03, S04 and S05 open the system chooser with the selected place's Cordova message as plain text,
+ * ending with the `link.todayweather.ai` link of the tab shared from (#3096, D35); a place without a location shares
+ * nothing (O02 comes with AN-10); a link's place index or target is queued for the session, other intents not.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
@@ -86,9 +89,8 @@ class ShareTest {
             val retry by session.retry.collectAsState()
             val context = LocalContext.current
             val share = WeatherShare(context, memory::current, { repository.weather.value }, session::openStartPopup)
-            val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {},
-                onShare = share::share)
-            AppContent(state, entries, loading, retry, session, host, "test", onExit = {})
+            val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
+            AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, share = share::share)
         }
         session.reload(WeatherSession.Sender.INIT)
         rule.waitForIdle()
@@ -100,9 +102,13 @@ class ShareTest {
     fun eachTabSharesTheSelectedPlacesMessage() {
         show(listOf(seoul))
         val record = cityRecord(seoul, repository.weather.value[WeatherRepository.key(seoul)])
-        val expected = ShareMessage.build(record, ShareMessage.Texts("현재", "최고", "최저", "오늘날씨"), "ko-KR")!!
-        assertTrue(expected.startsWith("회현동\n현재 ") && expected.endsWith("\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM"), expected)
+        val links = mapOf(Tab.HOURLY to (WeatherView.HOURLY to "https://link.todayweather.ai/place/seoul"),
+            Tab.DAILY to (WeatherView.DAILY to "https://link.todayweather.ai/place/seoul?view=daily"),
+            Tab.AIR to (WeatherView.AIR to "https://link.todayweather.ai/air/seoul"))
         for (tab in listOf(Tab.HOURLY, Tab.DAILY, Tab.AIR)) {
+            val (view, link) = links.getValue(tab)
+            val expected = ShareMessage.build(record, ShareMessage.Texts("현재", "최고", "최저", "오늘날씨"), view)!!
+            assertTrue(expected.startsWith("회현동\n현재 ") && expected.endsWith("\n\n오늘날씨 $link"), expected)
             rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
             rule.waitForIdle()
             rule.onNodeWithTag(WeatherTabTags.SHARE).performClick()
@@ -122,13 +128,13 @@ class ShareTest {
 
     @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
     @Test
-    fun otherLanguagesShareTheEnglishLink() {
+    fun otherLanguagesShareTheSameLink() {
         show(listOf(seoul))
         rule.onNodeWithTag(WeatherTabTags.SHARE).performClick()
         rule.waitForIdle()
         @Suppress("DEPRECATION")
         val text = shared()!!.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)!!.getStringExtra(Intent.EXTRA_TEXT)!!
-        assertTrue(text.startsWith("회현동\nCurrent ") && text.endsWith("\n\nTodayWeather https://twa.app.link/II1JstpVoM"), text)
+        assertTrue(text.startsWith("회현동\nCurrent ") && text.endsWith("\n\nTodayWeather https://link.todayweather.ai/place/seoul"), text)
     }
 
     /** `doTabShare` without a location shares nothing and asks how to start (O02, AN-10). */
@@ -159,6 +165,26 @@ class ShareTest {
         val fromRecents = Intent(Intent.ACTION_VIEW, Uri.parse("todayweather://0")).addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)
         assertTrue(links.accept(fromRecents), "a task opened again from Recents gets its first link again, which selects nothing")
         assertEquals(2.0, links.indexes.tryReceive().getOrNull())
+        assertNull(links.indexes.tryReceive().getOrNull())
+    }
+
+    /** Verified App Links of link.todayweather.ai (#3096) queue their target; other hosts are not entry links. */
+    @Test
+    fun appLinksQueueTheirTarget() {
+        val links = EntryLinks()
+        fun view(url: String) = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        assertTrue(links.accept(view("https://link.todayweather.ai/place/seoul?view=daily")))
+        assertTrue(links.accept(view("https://LINK.todayweather.ai/nation/air/")))
+        assertTrue(links.accept(view("https://link.todayweather.ai/unknown")), "a link of the host that opens nothing is still taken")
+        assertTrue(links.accept(view("https://link.todayweather.ai/loc?lat=37.5&lon=127").addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)),
+            "Recents replays nothing")
+        for (other in listOf("https://todayweather.ai/mobile/privacy.html", "https://app.todayweather.ai/weather/seoul/hourly",
+            "http://link.todayweather.ai/place/seoul")) {
+            assertTrue(!links.accept(view(other)), other)
+        }
+        assertEquals(DeepLinkTarget.Place("seoul", WeatherView.DAILY, null), links.targets.tryReceive().getOrNull())
+        assertEquals(DeepLinkTarget.NationAir, links.targets.tryReceive().getOrNull())
+        assertNull(links.targets.tryReceive().getOrNull())
         assertNull(links.indexes.tryReceive().getOrNull())
     }
 

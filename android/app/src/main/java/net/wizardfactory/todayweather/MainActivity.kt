@@ -18,6 +18,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.Flow
 import net.wizardfactory.todayweather.core.domain.alarms.ForegroundMessage
 import net.wizardfactory.todayweather.core.data.AlarmPage
+import net.wizardfactory.todayweather.core.data.LinkOpener
+import net.wizardfactory.todayweather.core.data.LinkPage
+import net.wizardfactory.todayweather.core.data.LinkPreview
+import net.wizardfactory.todayweather.core.data.LinkRequest
+import net.wizardfactory.todayweather.core.data.LinkRoute
+import net.wizardfactory.todayweather.core.domain.share.WeatherView
+import net.wizardfactory.todayweather.ui.link.LinkPreviewBar
 import net.wizardfactory.todayweather.core.data.answerAlertIntro
 import net.wizardfactory.todayweather.notify.PushMessage
 import net.wizardfactory.todayweather.ui.alarms.AlarmsScreen
@@ -118,14 +125,15 @@ import net.wizardfactory.todayweather.ui.start.StartScreen
  * The launcher activity. It keeps the Cordova component name (`net.wizardfactory.todayweather/.MainActivity`),
  * so home-screen shortcuts of the Cordova app open it. The splash screen stays until the Cordova data migration
  * has finished, and entry intents wait for it too. While the startup gate holds, the start page S01 shows instead of
- * the tabs (#2889); the tabs then open on Hourly.
+ * the tabs (#2889); the tabs then open on Hourly. A linked place shown without being saved covers S01 until it is added
+ * or left (#3096).
  */
 class MainActivity : ComponentActivity() {
     private val app get() = application as TodayWeatherApp
 
     /** The weather pages' location glyph: with location off, a tap clears the selected place's gate so it loads on return. */
     private val locationGlyph by lazy {
-        LocationGlyph(this) { app.appState.current()?.let { s -> s.places.getOrNull(s.placeIndex)?.let(app.weather::invalidate) } }
+        LocationGlyph(this) { opened.preview.current()?.let { s -> s.places.getOrNull(s.placeIndex)?.let(app.weather::invalidate) } }
     }
     private lateinit var opened: OpenedModel
     private lateinit var nativeAds: NativeForecastAds
@@ -171,11 +179,15 @@ class MainActivity : ComponentActivity() {
             opened.consent.openPrivacyOptions(this, ::refreshNativeEligibility, onUnavailable)
         }
         setContent {
-            val state by app.appState.state.collectAsState()
+            val saved by app.appState.state.collectAsState()
+            // The screens see a linked place not saved appended and selected (LinkPreview).
+            val previewPlace by opened.preview.place.collectAsState()
+            val state = saved?.let(opened.preview::overlay)
+            val link by opened.links.requests.collectAsState()
             // The start page closed in this app open: the tabs open on Hourly (`close()`).
             var afterStart by rememberSaveable { mutableStateOf(false) }
             state?.let { s ->
-                if (s.startShows) {
+                if (s.startShows && previewPlace == null) {
                     LaunchedEffect(Unit) {
                         afterStart = true
                         app.analytics.screen("start")
@@ -199,9 +211,9 @@ class MainActivity : ComponentActivity() {
                         onExpand = { expand -> app.appState.change { it.copy(expandShortChart = expand) } },
                         onLocationGlyph = locationGlyph::tap,
                         locationEnabled = locationGlyph::enabled,
-                        onShare = WeatherShare(this, app.appState::current, { app.weather.weather.value }, session::openStartPopup)::share,
                     )
                 }
+                val weatherShare = remember(context) { WeatherShare(this, opened.preview::current, { app.weather.weather.value }, session::openStartPopup) }
                 val handoffs = remember(context) {
                     // The user agent may load the WebView the first time: the mail is built off the main thread.
                     MenuHandoffs(openSystem = { url -> Handoff.openSystem(this, url) }, sendFeedback = {
@@ -216,7 +228,9 @@ class MainActivity : ComponentActivity() {
                     onScreen = app.analytics::screen, startTab = if (afterStart) Tab.HOURLY else null,
                     openAppSettings = { AndroidLocationAccess.openAppSettings(this) },
                     openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) }, places = opened.places,
-                    alarms = opened.alarms, messages = app.foreground.messages, alertIntro = opened.alertIntro)
+                    alarms = opened.alarms, messages = app.foreground.messages, alertIntro = opened.alertIntro,
+                    link = link, onLinkHandled = opened.links::handled, preview = previewPlace != null, onAddPreview = opened::addPreview,
+                    onLeavePreview = opened.preview::clear, share = weatherShare::share)
             }
         }
     }
@@ -273,7 +287,9 @@ class MainActivity : ComponentActivity() {
  * - the retry confirmation, the current position's confirmation (O03 `forecast`) and, with no enabled place, the start
  *   choice O02 that a weather page, a weather or Air tab tapped or a share opens (#2889).
  * - the saved places S02 in the Locations tab (#2890);
- * - S09 from the bells, the weather-alert introduction O06 and messages while the app shows (O07) (#2893).
+ * - S09 from the bells, the weather-alert introduction O06 and messages while the app shows (O07) (#2893);
+ * - `link.todayweather.ai` links (#3096): [link] closes the menu and the pages over the tabs, then opens its tab or
+ *   page; while the selected place is a linked place not saved ([preview]), Add to favorites shows over the tab bar.
  */
 @Composable
 fun AppContent(
@@ -309,6 +325,16 @@ fun AppContent(
     nativeAd: (@Composable (Tab) -> (@Composable () -> Unit))? = null,
     onVisit: (Tab) -> Unit = {},
     onRepeatVisit: (Tab, () -> Unit) -> Boolean = { _, _ -> false },
+    /** A link to apply once, then reported with [onLinkHandled]. */
+    link: LinkRequest? = null,
+    onLinkHandled: (Long) -> Unit = {},
+    /** The selected place is a linked place shown without being saved: no bell, and Add to favorites ([onAddPreview]). */
+    preview: Boolean = false,
+    onAddPreview: () -> Unit = {},
+    /** Leaving a preview for the Locations tab ends it. */
+    onLeavePreview: () -> Unit = {},
+    /** The share button with the tab shared from and its pollutant; null: [host]'s. */
+    share: ((WeatherView, String?) -> Unit)? = null,
 ) {
     val theme = Theme.of(state.settings.theme)
     val forecastCharts = remember { ForecastCharts() }
@@ -318,6 +344,9 @@ fun AppContent(
     // `?code=` of /tab/air: the pollutant S03 or S04 opened S05 on. The weather tabs keep it in the URL (`$location.path`),
     // so S05 opens on it again; the Locations tab replaces the URL (`href="#/tab/search"`) and clears it.
     var airCode by rememberSaveable { mutableStateOf<String?>(null) }
+    // The pollutant S05 shows, which a share from it sends; an Air link opens S05 anew on its pollutant (`airLinks`).
+    var airShown by remember { mutableStateOf<String?>(null) }
+    var airLinks by rememberSaveable { mutableIntStateOf(0) }
     // The settings pages (SettingsRoutes) and the nationwide and warning pages (NationRoutes) open over the tabs, last on
     // top; a saved route this version does not have is dropped. About is a popup over the menu (O10).
     val known = { route: String -> SettingsRoutes.known(route) || NationRoutes.known(route) || (alarms != null && AlarmRoutes.known(route)) }
@@ -339,6 +368,16 @@ fun AppContent(
     }
     val nationPages by (nation?.pages ?: remember { MutableStateFlow(emptyMap()) }).collectAsState()
     var about by rememberSaveable { mutableStateOf(false) }
+    // A link closes the menu, About and every page over the tabs at once (an open nationwide page's request ends).
+    fun closeForLink() {
+        navigation.menuOpen = false
+        about = false
+        val over = saved.filter(known)
+        if (over.isEmpty()) return
+        over.filter(NationRoutes::known).forEach { nation?.close(it) }
+        saved = emptyList()
+        returns++
+    }
     // 선택적 이용 통계's popup and the privacy alerts (`showAlert('TodayWeather', …)`), by their message.
     var analyticsPopup by rememberSaveable { mutableStateOf(false) }
     var privacyAlert by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -350,6 +389,7 @@ fun AppContent(
     val positionRetry by session.positionRetry.collectAsState()
     fun openLocations() {
         airCode = null
+        onLeavePreview()
         navigation.selected = Tab.LOCATIONS
     }
     // O02's answer: the current position on Hourly, or the Locations tab.
@@ -364,11 +404,19 @@ fun AppContent(
         null
     }
     // The bells open S09: the weather header's for the selected place (`goPushPage`), S02's for its row.
+    // A linked place not saved has no alarms; its share carries the tab shared from.
     val selectedIndex by rememberUpdatedState(state.placeIndex)
-    val bellHost = remember(host, alarms) {
-        if (alarms == null) host else WeatherTabHost(host.texts, host.photos, host.readCache, host.onPrevious, host.onNext, host.onExpand,
-            onBell = { open(AlarmRoutes.of(selectedIndex)) }, onShare = host.onShare, onLocationGlyph = host.onLocationGlyph,
-            locationEnabled = host.locationEnabled)
+    val previewShown by rememberUpdatedState(preview)
+    val shareTab by rememberUpdatedState(navigation.selected)
+    val sharePollutant by rememberUpdatedState(airShown ?: airCode)
+    val bellHost = remember(host, alarms, share) {
+        if (alarms == null && share == null) host else WeatherTabHost(host.texts, host.photos, host.readCache, host.onPrevious, host.onNext, host.onExpand,
+            onBell = if (alarms == null) host.onBell else ({ if (!previewShown) open(AlarmRoutes.of(selectedIndex)) }),
+            onShare = if (share == null) host.onShare else ({
+                val view = when (shareTab) { Tab.DAILY -> WeatherView.DAILY; Tab.AIR -> WeatherView.AIR; else -> WeatherView.HOURLY }
+                share(view, if (view == WeatherView.AIR) sharePollutant else null)
+            }),
+            onLocationGlyph = host.onLocationGlyph, locationEnabled = host.locationEnabled)
     }
     // O07: one message at a time while the tabs show (Ionic's popups wait in a queue).
     val foregroundMessages = remember { mutableStateListOf<PushMessage>() }
@@ -387,6 +435,33 @@ fun AppContent(
     fun openFromPlaces(index: Int?) {
         navigation.selected = PlaceRows.startTab(state.settings.startupPage)
         session.openFromSearch(index)
+    }
+    // A link (specs/deeplink.md §6.2): the menu, About and the pages over the tabs close, then its tab or page opens.
+    if (link != null) {
+        LaunchedEffect(link.id) {
+            when (val route = link.route) {
+                is LinkRoute.Weather -> {
+                    closeForLink()
+                    airCode = if (route.view == WeatherView.AIR) route.pollutant else null
+                    if (route.view == WeatherView.AIR) airLinks++
+                    navigation.selected = when (route.view) {
+                        WeatherView.HOURLY -> Tab.HOURLY
+                        WeatherView.DAILY -> Tab.DAILY
+                        WeatherView.AIR -> Tab.AIR
+                    }
+                }
+                is LinkRoute.Page -> {
+                    closeForLink()
+                    openNation(when (route.page) {
+                        LinkPage.NATION_WEATHER -> NationRoutes.NATION
+                        LinkPage.NATION_AIR -> NationRoutes.NATION_AIR
+                        LinkPage.WARNINGS -> NationRoutes.WARNINGS
+                    })
+                }
+                LinkRoute.App -> closeForLink()
+            }
+            onLinkHandled(link.id)
+        }
     }
     val screen = pages.lastOrNull()?.let(::screenName) ?: "tab.${navigation.selected.state}"
     LaunchedEffect(screen) { onScreen(screen) }
@@ -466,7 +541,12 @@ fun AppContent(
         banner = banner,
         onExit = onExit,
         navigation = navigation,
-        onSelect = { tab -> if (tab == Tab.LOCATIONS) airCode = null },
+        onSelect = { tab ->
+            if (tab == Tab.LOCATIONS) {
+                airCode = null
+                onLeavePreview()
+            }
+        },
         // `doTabForecast`: with no enabled place a weather or Air tab asks how to start instead.
         onTabTap = { tab ->
             val none = tab != Tab.LOCATIONS && PlaceIndex.enabledCount(state.places.map { it.disable }) == 0
@@ -562,6 +642,7 @@ fun AppContent(
             }
             if (retry) RetryDialog(onClose = session::closeRetry, onRetry = session::confirmRetry)
         },
+        notice = if (preview && navigation.selected != Tab.LOCATIONS) ({ colors -> LinkPreviewBar(colors, onAddPreview) }) else null,
     ) { tab ->
         when (tab) {
             Tab.HOURLY, Tab.DAILY -> rememberWeatherTab(tab, state, entries, loading, theme, bellHost, forecastCharts, forecastImages, onAirInfo = { code ->
@@ -570,8 +651,10 @@ fun AppContent(
                 navigation.selected = Tab.AIR
             }, onUnits = openUnits, applies = applies, locating = locating, onNoPlace = session::openStartPopup, nativeAd = visibleAd,
                 onForecastRead = { if (it == selected) forecastRead = true })
-            Tab.AIR -> rememberAirTab(state, entries, loading, theme, bellHost, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
-                onUnits = openUnits, locating = locating, nativeAd = visibleAd)
+            Tab.AIR -> key(airLinks) {
+                rememberAirTab(state, entries, loading, theme, bellHost, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
+                    onUnits = openUnits, locating = locating, nativeAd = visibleAd, onShown = { airShown = it })
+            }
             else -> placesPage?.let { page ->
                 // A new visit gets a new tab: its state and its opening run again.
                 key(page) {
@@ -601,14 +684,36 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
     val photoLoader = PhotoLoader(app)
     private val telemetry = Telemetry { name, params -> twApp.analytics.track(name, params) }
 
-    /** Refresh alarms and publish the newly cached weather to home-screen widgets after a place update. */
+    /**
+     * A place a `link.todayweather.ai` link shows without saving it (#3096): the weather pages read and change the saved
+     * state through it. Push, widgets and S02 keep the saved state.
+     */
+    val preview = LinkPreview(twApp.appState)
+
+    /**
+     * Refresh alarms and publish the newly cached weather to home-screen widgets after a place update; a linked place
+     * not saved has neither.
+     */
     private val cityUpdated: (Int) -> Unit = { index ->
-        twApp.appScope.launch(Dispatchers.IO) { twApp.push.updateCity(index) }
-        twApp.appScope.launch { WidgetRefresh.refresh(twApp, displayOnly = true) }
+        if (index < (twApp.appState.current()?.places?.size ?: 0)) {
+            twApp.appScope.launch(Dispatchers.IO) { twApp.push.updateCity(index) }
+            twApp.appScope.launch { WidgetRefresh.refresh(twApp, displayOnly = true) }
+        }
     }
 
-    val session = WeatherSession(twApp.weather, viewModelScope, twApp.appState, ::languages, { twApp.photos.photos }, ::loadPhotos,
+    val session = WeatherSession(twApp.weather, viewModelScope, preview, ::languages, { twApp.photos.photos }, ::loadPhotos,
         telemetry = telemetry, location = twApp.location, cityUpdated = cityUpdated)
+
+    /** `link.todayweather.ai` links of this app open, applied in order (specs/deeplink.md §6.2). */
+    val links = LinkOpener(twApp.appState.state, preview, openPlace = { session.openPlace(it.toDouble()) },
+        reload = { session.reload(WeatherSession.Sender.DEEPLINK) })
+
+    /** Add to favorites on a linked place: saved and selected as S02's add does (on S01, as its first place). */
+    fun addPreview() {
+        val index = preview.add() ?: return
+        telemetry.track("favorite_change", mapOf("action" to "add"))
+        cityUpdated(index)
+    }
 
     /** S02's search and its visits (#2890); a deleted place's alarms go in the app's scope. */
     val places = PlacesHost(twApp.places, { twApp.towns.await() }) { scope ->
@@ -655,6 +760,8 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
         twApp.analytics.onOpened()
         // `todayweather://N`: the place is selected and loads (`branchInit`, `reloadEvent 'deeplink'`), once the start page has closed.
         viewModelScope.launch { twApp.entryLinks.deliver(twApp.appState.state, ready = { !it.startShows }, open = session::openPlace) }
+        // `link.todayweather.ai`: a place opens at once, also over S01; a page waits for S01 to close (LinkOpener).
+        viewModelScope.launch { twApp.entryLinks.deliverTargets(twApp.appState.state, links::open) }
         // A notification tap: the place is selected and loads (`reloadEvent 'push'`), once the start page has closed.
         viewModelScope.launch {
             twApp.notificationTaps.deliver(twApp.appState.state, ready = { !it.startShows }) { session.openPlace(it, WeatherSession.Sender.PUSH) }

@@ -216,6 +216,8 @@ fun TodayWeatherShell(
     onTabTap: (Tab) -> Boolean = { false },
     overlay: @Composable BoxScope.() -> Unit = {},
     popups: @Composable BoxScope.() -> Unit = {},
+    /** A bar over the tab bar for the tab page shown (a linked place's Add to favorites); the pages over the tabs cover it. */
+    notice: (@Composable (ShellColors) -> Unit)? = null,
     content: @Composable (Tab) -> TabContent = { TabContent() },
 ) {
     val selected = navigation.selected
@@ -246,6 +248,7 @@ fun TodayWeatherShell(
                                         scrolled = if (state.theme == Theme.PHOTO) tab.scrolled else ({ 0f })) { tab.actions(this, colors) }
                                 }
                             }
+                            notice?.invoke(colors)
                             TabBar(selected, colors) { tab ->
                                 if (!onTabTap(tab) && tab != selected) {
                                     navigation.selected = tab

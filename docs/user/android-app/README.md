@@ -29,6 +29,8 @@ configured live services; weather values and warnings are dated examples. Images
 are reduced to 720×1600 and a 256-color palette without replacing screen content.
 The pull-to-refresh page keeps its 19 November capture with sample Seoul weather.
 
+[Read the shared-links supplement](shared-links/README.md) for `link.todayweather.ai` links: a shared place opens on its tab, and 즐겨찾기 추가 keeps it.
+
 [Read the current-temperature supplement](current-temperature/manual.pdf) for the updated fractional reading in the forecast header. Its [editable source](current-temperature/manual.json) uses a Korean Seoul fixture rendered with the native Android Compose screen under Robolectric SDK 34.
 
 ## Refresh the selected place
