@@ -271,13 +271,14 @@ struct BarFrame<Leading: View, Trailing: View>: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .layoutPriority(-1)
+                        // On the name only: the glyph and buttons beside it keep their own identifiers (#3180).
+                        .accessibilityIdentifier(titleIdentifier)
                     if let titleAccessory { titleAccessory }
                 }
                     // WebKit puts the baseline of a 44 pt line 1 pt lower than SwiftUI centers the text (measured).
                     .offset(y: titleOffset)
                     .frame(maxWidth: .infinity, minHeight: ShellMetrics.headerHeight)
                     .padding(.horizontal, max(ShellMetrics.titleMargin, titleClearance))
-                    .accessibilityIdentifier(titleIdentifier)
             }
             HStack(alignment: .top, spacing: 0) {
                 leading()

@@ -327,7 +327,7 @@ final class ManualUITests: XCTestCase {
             shot("14-station-selected")
         }
 
-        // Saved places: search and add 부산, switch, add London, edit and delete.
+        // Saved places: search 부산 and save it with the star (#3180), switch, the same for London, edit and delete.
         tap("shell-tab-search")
         wait("places-list")
         shot("15-places")
@@ -335,6 +335,8 @@ final class ManualUITests: XCTestCase {
         shot("16-place-search")
         tapResult("places-prediction-0")
         XCTAssertTrue(waitForTitle { $0.contains("부산") }, "Hourly for 부산: \(title)")
+        tap("forecast-star")
+        wait("forecast-bell")
         Thread.sleep(forTimeInterval: 3)
         shot("17-busan")
         let busan = title
@@ -345,6 +347,8 @@ final class ManualUITests: XCTestCase {
         search("London")
         tapResult("places-prediction-0")
         XCTAssertTrue(waitForTitle { $0 == "London" || $0 == "런던" }, "Hourly for London: \(title)")
+        tap("forecast-star")
+        wait("forecast-bell")
         Thread.sleep(forTimeInterval: 3)
         shot("19-london")
         tap("shell-tab-search")
