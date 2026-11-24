@@ -58,12 +58,13 @@ class LinkOpener(
     }
 
     /**
-     * A place chosen in the search (#3180): the saved place within 0.01° is selected, else the place shows without
-     * being saved. The search loads it and chooses the tab (`goPage`), so nothing is asked of the screens here.
+     * A place chosen in the search (#3180): the saved place within 0.01° is selected (the enabled current position
+     * included), else the place shows without being saved. The search loads it and chooses the tab (`goPage`), so
+     * nothing is asked of the screens here.
      */
     fun show(place: Place) {
         val saved = state.value ?: return
-        val index = LinkRoutes.nearbySaved(saved, place)
+        val index = LinkRoutes.nearbySaved(saved, place, withCurrentPosition = true)
         if (index < 0) return preview.show(place)
         preview.change { it.copy(placeIndex = index) }
     }

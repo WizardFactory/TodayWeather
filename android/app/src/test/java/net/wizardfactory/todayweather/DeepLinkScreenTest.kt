@@ -12,6 +12,10 @@ import net.wizardfactory.todayweather.ui.places.PlacesTags
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import kotlin.test.assertTrue
 import androidx.activity.ComponentActivity
@@ -112,20 +116,20 @@ abstract class DeepLinkScreens {
             reload = { session.reload(WeatherSession.Sender.DEEPLINK) })
         rule.setContent {
             val saved by memory.flow.collectAsState()
-            val shown by preview.place.collectAsState()
+            val unsaved by preview.unsaved.collectAsState()
+            val shown = unsaved?.place
             val link by opener.requests.collectAsState()
             val entries by repository.weather.collectAsState()
             val loading by repository.loading.collectAsState()
             val retry by session.retry.collectAsState()
             val context = LocalContext.current
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
-            val selected by preview.selected.collectAsState()
             // S02's search over the bundled towns; a chosen result goes where the app sends it (LinkOpener.show).
             val places = PlacesHost(null, { TownSearch(BundledTowns.load(context)) }) { s ->
                 PlacesPage(memory, repository, session, StartFlow(memory, repository, GeocodeClient("https://server.test.invalid", http), NoLocation,
                     { listOf("ko-KR") }), NoLocation, s, removeAlarms = {}, openPlace = opener::show)
             }
-            AppContent(LinkPreview.overlay(saved!!, shown, selected), entries, loading, retry, session, host, "test", onExit = {}, places = places,
+            AppContent(LinkPreview.overlay(saved!!, unsaved), entries, loading, retry, session, host, "test", onExit = {}, places = places,
                 link = link, onLinkHandled = opener::handled, preview = shown != null, onAddPreview = { preview.add() }, share = { view, pollutant -> shared += view to pollutant })
         }
         session.reload(WeatherSession.Sender.INIT)
@@ -282,6 +286,47 @@ class HeaderFitTest : DeepLinkScreens() {
         assertTrue(star.right <= share.left + 1.dp, "the star ends before share: $star $share")
         // The search button keeps its touch size (36 × 44 dp) though the name is cut.
         assertTrue(search.right - search.left >= 36.dp && search.bottom - search.top >= 44.dp, "touch size: $search")
+        // The name ends with an ellipsis (CODEX-3190-6).
+        assertTrue(ellipsized("경기도 성남시 분당구 정자일로 분당내곡로 긴 이름"), "the name is cut with an ellipsis")
+    }
+
+    /** The current position's glyph before a long name: the glyph, the name, its search button and the bell all fit. */
+    @Test
+    fun theCurrentPositionGlyphFitsBeforeALongName() {
+        show(listOf(Place(true, false, "현재 위치", "대한민국 경기도 성남시 분당구 정자일로 분당내곡로 아주 긴 동네 이름", "KR", Location(37.38, 127.12))))
+        val width = rule.onRoot().getUnclippedBoundsInRoot().right
+        val menu = rule.onNodeWithTag(ShellTags.MENU_BUTTON).getUnclippedBoundsInRoot()
+        val glyph = rule.onNodeWithTag(WeatherTabTags.LOCATION).getUnclippedBoundsInRoot()
+        val search = rule.onNodeWithTag(WeatherTabTags.SEARCH).getUnclippedBoundsInRoot()
+        val bell = rule.onNodeWithTag(WeatherTabTags.BELL).getUnclippedBoundsInRoot()
+        val share = rule.onNodeWithTag(WeatherTabTags.SHARE).getUnclippedBoundsInRoot()
+        for (tag in listOf(ShellTags.MENU_BUTTON, WeatherTabTags.LOCATION, WeatherTabTags.SEARCH, WeatherTabTags.BELL, WeatherTabTags.SHARE)) {
+            rule.onNodeWithTag(tag).assertIsDisplayed()
+        }
+        assertTrue(menu.right <= glyph.left && glyph.right <= search.left, "menu, glyph, then the name and search: $menu $glyph $search")
+        assertTrue(search.right <= bell.left && bell.right <= share.left + 1.dp && share.right <= width, "$search $bell $share of $width")
+        assertTrue(ellipsizedBetween(glyph.right, search.left), "the name is cut with an ellipsis")
+    }
+
+    /** True when the text node showing [text] ends its last line with an ellipsis. */
+    private fun ellipsized(text: String): Boolean {
+        val layouts = mutableListOf<TextLayoutResult>()
+        rule.onNodeWithText(text, useUnmergedTree = true).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        val layout = layouts.single()
+        return layout.isLineEllipsized(layout.lineCount - 1)
+    }
+
+    /** True when the header's text between [left] and [right] (the title) ends with an ellipsis. */
+    private fun ellipsizedBetween(left: androidx.compose.ui.unit.Dp, right: androidx.compose.ui.unit.Dp): Boolean {
+        val titles = rule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
+            .fetchSemanticsNodes().filter { node ->
+                val bounds = with(rule.density) { node.boundsInRoot.let { it.left.toDp() to it.right.toDp() } }
+                bounds.first >= left - 1.dp && bounds.second <= right + 1.dp && node.boundsInRoot.top < with(rule.density) { 60.dp.toPx() }
+            }
+        val layouts = mutableListOf<TextLayoutResult>()
+        titles.single().config[SemanticsActions.GetTextLayoutResult].action!!.invoke(layouts)
+        val layout = layouts.single()
+        return layout.isLineEllipsized(layout.lineCount - 1)
     }
 }
 

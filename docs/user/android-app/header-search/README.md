@@ -32,7 +32,8 @@ cd .. && "$MANUAL_PYTHON" "$MANUAL_SKILL/scripts/build_manual.py" \
 "$MANUAL_PYTHON" android/tools/manual/verify.py docs/user/android-app/header-search
 ```
 
-This edition used WenQuanYi Zen Hei (`wqy-zenhei.ttc`) for Korean; the font is not
-distributed here. Render and inspect every page before replacing the PDF.
+This edition was captured on macOS and used NanumGothic (the macOS system font asset
+`NanumGothic.ttc`) for Korean; the font is not distributed here. Captures from another host
+differ slightly in anti-aliasing. Render and inspect every page before replacing the PDF.
 `verify.py` checks the images, the PDF's text and embedded screenshots, and the capture
 sources against `provenance.json`; update its hashes when the screens or their sources change.

@@ -150,4 +150,23 @@ class LinkOpenerTest {
         assertEquals(emptyList(), t.calls)
         assertNull(t.opener.requests.value)
     }
+
+    /**
+     * CODEX-3190-4: a search result within 0.01° of the enabled current position opens it, as #3180 counts it among the
+     * saved places; the unsaved place stays. A link still skips the current position, which moves.
+     */
+    @Test
+    fun aSearchResultNearTheCurrentPositionOpensIt() = runTest {
+        val here = Place(currentPosition = true, disable = false, name = "현재 위치", location = Location(37.38, 127.12))
+        val t = setup(started.copy(places = listOf(here, london), placeIndex = 1))
+        t.opener.show(Place(false, false, "부산광역시", "부산광역시", "KR", Location(35.18, 129.08)))
+        t.opener.show(Place(false, false, "분당구", "경기도 성남시 분당구", "KR", Location(37.385, 127.12)))
+        assertEquals(0, t.saved.flow.value!!.placeIndex)
+        assertEquals("부산광역시", t.preview.place.value?.name, "the unsaved place stays")
+        assertEquals(false, t.preview.selected.value)
+        // Disabled, the current position is not a place to open.
+        t.saved.change { it.copy(places = listOf(here.copy(disable = true), london), placeIndex = 1) }
+        t.opener.show(Place(false, false, "분당구", "경기도 성남시 분당구", "KR", Location(37.385, 127.12)))
+        assertEquals("분당구", t.preview.place.value?.name)
+    }
 }

@@ -46,12 +46,16 @@ object LinkRoutes {
             Place(false, false, target.name ?: DeepLink.coordinateText(target.lat, target.lon), location = Location(target.lat, target.lon)))
     }
 
-    /** The first enabled saved place within 0.01° of [place] (never the current position); -1 when none is. */
-    fun nearbySaved(state: AppState, place: Place): Int {
+    /**
+     * The first enabled saved place within 0.01° of [place]; -1 when none is. A link never matches the current position,
+     * which moves; a search result does ([withCurrentPosition]), as #3180 counts it among the saved places (CODEX-3190-4).
+     */
+    fun nearbySaved(state: AppState, place: Place, withCurrentPosition: Boolean = false): Int {
         val at = place.location ?: return -1
         return state.places.indexOfFirst { saved ->
             val location = saved.location
-            !saved.currentPosition && !saved.disable && location != null && DeepLink.nearSaved(location.lat, location.long, at.lat, at.long)
+            (withCurrentPosition || !saved.currentPosition) && !saved.disable && location != null &&
+                DeepLink.nearSaved(location.lat, location.long, at.lat, at.long)
         }
     }
 

@@ -11,7 +11,7 @@
     },
     {
       "title": "Search for a place",
-      "instruction": "Tap the magnifier. The same search as on 즐겨찾기 (Locations) opens with the keyboard ready. Type a name and tap a result. To go back without choosing, tap 취소 or press Back.",
+      "instruction": "Tap the magnifier. The same search as on 즐겨찾기 (Locations) opens with the keyboard ready. Type a name and tap a result. While the keyboard is up, the first tap only closes it; tap the result again to open it. To go back without choosing, tap 취소 or press Back.",
       "screenshot": "search.png",
       "caption": "The search with results for 부산.",
       "expected": "취소 or Back returns to the screen you came from."
@@ -21,7 +21,7 @@
       "instruction": "The place opens on the screen you searched from. It is not saved: an outline star stands where the bell was. You can swipe or use the arrows to go to your saved places and come back to it. A link someone shared (link.todayweather.ai) opens a place the same way.",
       "screenshot": "unsaved-place.png",
       "caption": "A place that is not saved: the star in place of the bell.",
-      "expected": "Only one unsaved place is kept. Another search result or shared link replaces it, and it is gone after the app is closed and opened again. It is not in the 즐겨찾기 list and has no alarms or widget."
+      "expected": "Only one unsaved place is kept. Another unsaved search result or shared link replaces it; a result or link for one of your saved places (within about 1 km, your current position included for a search) opens that saved place and keeps the unsaved one. It is gone after the app is closed and opened again. It is not in the 즐겨찾기 list and has no alarms or widget."
     },
     {
       "title": "Save it with the star",

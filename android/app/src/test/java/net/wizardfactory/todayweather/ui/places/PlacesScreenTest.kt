@@ -151,9 +151,9 @@ class PlacesScreenTest {
         val opener = LinkOpener(memory.flow, preview, openPlace = { session.openPlace(it.toDouble()) }, reload = { session.reload(WeatherSession.Sender.DEEPLINK) })
         rule.setContent {
             val savedState by memory.flow.collectAsState()
-            val shown by preview.place.collectAsState()
-            val selected by preview.selected.collectAsState()
-            val state = LinkPreview.overlay(savedState, shown, selected)
+            val unsaved by preview.unsaved.collectAsState()
+            val shown = unsaved?.place
+            val state = LinkPreview.overlay(savedState, unsaved)
             val entries by repository.weather.collectAsState()
             val loading by repository.loading.collectAsState()
             val retry by session.retry.collectAsState()
@@ -382,6 +382,19 @@ class PlacesScreenTest {
         rule.waitForIdle()
         rule.onNodeWithTag(ShellTags.page(Tab.DAILY)).assertExists()
         rule.onNodeWithTag(ShellTags.EXIT_DIALOG).assertDoesNotExist()
+        // CODEX-3190-5: with the side menu open over the search, back closes the menu first, then returns to Daily.
+        rule.onNodeWithTag(WeatherTabTags.SEARCH).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.MENU).assertExists()
+        Espresso.pressBack()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.MENU).assertDoesNotExist()
+        rule.onNodeWithTag(ShellTags.page(Tab.LOCATIONS)).assertExists()
+        Espresso.pressBack()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.page(Tab.DAILY)).assertExists()
         // A chosen result opens on Daily, unsaved; a second search from it keeps it until another result is chosen.
         rule.onNodeWithTag(WeatherTabTags.SEARCH).performClick()
         rule.waitForIdle()

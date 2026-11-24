@@ -181,9 +181,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             val saved by app.appState.state.collectAsState()
             // The screens see a place shown without being saved as the last place of the list (LinkPreview).
-            val previewPlace by opened.preview.place.collectAsState()
-            val previewSelected by opened.preview.selected.collectAsState()
-            val state = saved?.let { LinkPreview.overlay(it, previewPlace, previewSelected) }
+            val unsaved by opened.preview.unsaved.collectAsState()
+            val previewPlace = unsaved?.place
+            val state = saved?.let { LinkPreview.overlay(it, unsaved) }
             val link by opened.links.requests.collectAsState()
             // The start page closed in this app open: the tabs open on Hourly (`close()`).
             var afterStart by rememberSaveable { mutableStateOf(false) }
@@ -683,7 +683,7 @@ fun AppContent(
                     val savedOnly = if (preview) state.copy(places = state.places.dropLast(1)) else state
                     rememberPlacesTab(savedOnly, entries, theme, page, places!!, onSelect = ::openFromPlaces, onOpened = { openFromPlaces(null) },
                         onAlarm = { i -> if (alarms != null) open(AlarmRoutes.of(i)) }, nativeAd = visibleAd,
-                        fromHeader = searchFrom != null, onBack = ::closeSearch)
+                        fromHeader = searchFrom != null, onBack = ::closeSearch, menuOpen = navigation.menuOpen)
                 }
             } ?: TabContent()
         }
@@ -788,12 +788,13 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
         twApp.onOpened()
         twApp.analytics.onOpened()
         // `todayweather://N`: the place is selected and loads (`branchInit`, `reloadEvent 'deeplink'`), once the start page has closed.
-        viewModelScope.launch { twApp.entryLinks.deliver(twApp.appState.state, ready = { !it.startShows }, open = session::openPlace) }
+        // An index from outside names saved places only: one past them is no place, never the unsaved one (CODEX-3190-3).
+        viewModelScope.launch { twApp.entryLinks.deliver(twApp.appState.state, ready = { !it.startShows }) { session.openPlace(savedOnly(it)) } }
         // `link.todayweather.ai`: a place opens at once, also over S01; a page waits for S01 to close (LinkOpener).
         viewModelScope.launch { twApp.entryLinks.deliverTargets(twApp.appState.state, links::open) }
         // A notification tap: the place is selected and loads (`reloadEvent 'push'`), once the start page has closed.
         viewModelScope.launch {
-            twApp.notificationTaps.deliver(twApp.appState.state, ready = { !it.startShows }) { session.openPlace(it, WeatherSession.Sender.PUSH) }
+            twApp.notificationTaps.deliver(twApp.appState.state, ready = { !it.startShows }) { session.openPlace(savedOnly(it), WeatherSession.Sender.PUSH) }
         }
         loadPhotos()
         connectivity.registerDefaultNetworkCallback(online)
@@ -806,6 +807,9 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
             session.reload(WeatherSession.Sender.INIT)
         }
     }
+
+    /** [index] when it names a saved place, else -1, which selects nothing and only loads (as an index past the list did). */
+    private fun savedOnly(index: Double): Double = if (preview.isSaved(index)) index else -1.0
 
     private fun loadPhotos() {
         twApp.appScope.launch { if (twApp.photos.load() != null) session.photosLoaded() }

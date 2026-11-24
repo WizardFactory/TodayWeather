@@ -148,18 +148,19 @@ private class PlacesColors(val page: Color, val row: Color, val border: Color, v
  *   then Google's predictions, 300 ms after the last change and the latest answer only, or the found position, under
  *   Google's logo; a word without predictions keeps the last ones. With no enabled place the input takes focus.
  * - opened by the weather header's search button ([fromHeader], #3180): the visit starts in search mode with the input
- *   focused, and 취소 or Android back returns to the tab it came from ([onBack]) instead of showing the list.
+ *   focused, and 취소 or Android back returns to the tab it came from ([onBack]) instead of showing the list; while the
+ *   side menu is open over it ([menuOpen]), back closes the menu first (CODEX-3190-5).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme: Theme, page: PlacesPage, host: PlacesHost, onSelect: (Int) -> Unit,
                       onOpened: () -> Unit, onAlarm: (Int) -> Unit = {}, nativeAd: (@Composable () -> Unit)? = null,
-                      fromHeader: Boolean = false, onBack: () -> Unit = {}): TabContent {
+                      fromHeader: Boolean = false, onBack: () -> Unit = {}, menuOpen: Boolean = false): TabContent {
     val colors = PlacesColors.of(theme)
     var headerHeight by remember { mutableStateOf(44.dp) }
     var editing by rememberSaveable { mutableStateOf(false) }
     var searching by rememberSaveable { mutableStateOf(fromHeader) }
-    BackHandler(enabled = fromHeader) { onBack() }
+    BackHandler(enabled = fromHeader && !menuOpen) { onBack() }
     var field by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
     val word = field.text.trim()
     var predictions by remember { mutableStateOf<List<Prediction>>(emptyList()) }

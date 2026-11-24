@@ -77,7 +77,7 @@ class LinkPreviewTest {
         assertEquals(listOf(current, london, seoul), preview.current()!!.places)
         assertEquals(0, preview.current()!!.placeIndex)
         // What a screen draws from the collected flows equals what the session reads.
-        assertEquals(preview.current(), LinkPreview.overlay(saved.value, preview.place.value, preview.selected.value))
+        assertEquals(preview.current(), LinkPreview.overlay(saved.value, preview.unsaved.value))
         // A response for the saved place selected now is saved, and the unsaved place's own fields stay in memory.
         preview.change { s -> s.copy(places = s.places.mapIndexed { i, p -> if (i == 0) p.copy(photo = "a.jpg") else p }) }
         assertEquals("a.jpg", saved.value.places[0].photo)
@@ -192,5 +192,91 @@ class LinkPreviewTest {
         preview.show(Place(false, false, "Home 2", location = Location(10.004, 20.004)))
         assertEquals(2, preview.add())
         assertEquals(4, saved.value.places.size)
+    }
+
+    /**
+     * CODEX-3190-1: a change that runs off the main thread (a photo refresh) reads the unsaved place, then another place
+     * is shown before the change writes. The change must not bring the earlier place back: changes and shows are one at
+     * a time, and the screens read the place and its selection as one value.
+     */
+    @Test
+    fun aChangeInFlightNeverBringsBackAReplacedPlace() {
+        val saved = Memory(started)
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        val busan = Place(false, false, "부산", "부산광역시 중구", "KR", Location(35.179, 129.076))
+        val reading = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        val refresh = Thread {
+            preview.change { s ->
+                reading.countDown()
+                release.await()
+                s.copy(places = s.places.map { if (it.name == "서울") it.copy(photo = "seoul.jpg") else it })
+            }
+        }
+        refresh.start()
+        reading.await()
+        val show = Thread { preview.show(busan) }
+        show.start()
+        // The show waits for the change in flight; let the change finish.
+        Thread.sleep(100)
+        release.countDown()
+        refresh.join()
+        show.join()
+        assertEquals(busan, preview.place.value, "the place shown last stays")
+        assertEquals(LinkPreview.Unsaved(busan, selected = true), preview.unsaved.value)
+        assertEquals(busan, preview.current()!!.places.last())
+        assertEquals(started, saved.value, "nothing saved")
+    }
+
+    /** CODEX-3190-1: a second tap of the star, or a change right after it, saves nothing more. */
+    @Test
+    fun theStarSavesOnce() {
+        val saved = Memory(started)
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        assertEquals(2, preview.add())
+        assertNull(preview.add())
+        preview.change { it.copy(placeIndex = 2) }
+        assertEquals(listOf(current, london, seoul), saved.value.places)
+        assertNull(preview.unsaved.value)
+    }
+
+    /**
+     * CODEX-3190-2: deleting the last enabled saved place leaves the saved selection past the end of the list (Cordova's
+     * `removeCity`). With an unsaved place that index would name it, so it is the selected place: the star shows and saves.
+     */
+    @Test
+    fun aSavedSelectionPastTheListSelectsTheUnsavedPlace() {
+        val off = current.copy(disable = true)
+        val saved = Memory(AppState(places = listOf(off, london), placeIndex = 1, cordovaExtras = started.cordovaExtras))
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        preview.change { it.copy(placeIndex = 1) }
+        assertEquals(false, preview.unsaved.value?.selected)
+        // S02 deletes London through the saved state, as the Locations tab does.
+        saved.change { net.wizardfactory.todayweather.core.storage.PlaceList.remove(it, 1) }
+        assertEquals(1, saved.value.placeIndex, "Cordova keeps the index")
+        val shown = preview.current()!!
+        assertEquals(listOf(off, seoul), shown.places)
+        assertEquals(1, shown.placeIndex)
+        assertTrue(preview.isSelected(shown), "the header shows the star")
+        assertEquals(1, preview.add(), "the star saves it")
+        assertEquals(listOf(off, seoul), saved.value.places)
+    }
+
+    /**
+     * CODEX-3190-3: an index from outside (`todayweather://N`, a notification's `cityIndex`) counts saved places only, so
+     * one past them never selects the unsaved place.
+     */
+    @Test
+    fun outsideIndexesCountSavedPlacesOnly() {
+        val saved = Memory(started)
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        assertTrue(preview.isSaved(1.0))
+        assertFalse(preview.isSaved(2.0), "the unsaved slot")
+        assertFalse(preview.isSaved(-1.0))
+        assertTrue(preview.isSaved(1.5), "a fraction selects as before (`setCityIndex`)")
     }
 }
