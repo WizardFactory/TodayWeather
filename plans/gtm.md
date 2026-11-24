@@ -13,7 +13,7 @@ One top-level `gtm/` folder holds the maintained go-to-market information for To
 | D1 | Where daily figures and review bodies are stored, given the public repository. | **AK, 2026-11-23: Amazon S3 first.** Recommended form below. |
 | D2 | What "key information" covers. | **AK, 2026-11-23: as recommended below, with locations recorded carefully** ([gtm/sources.md](../gtm/sources.md)). |
 | D3 | Who supplies the missing access. | **AK, 2026-11-23: done directly through Ego Lite.** See "Access state". |
-| D4 | Where the daily run executes. | **AK, 2026-11-23: Hermes on the Linux host `contabo.flying`, set up from another workspace.** Recommended form below as input for that workspace. |
+| D4 | Where the daily run executes. | **AK, 2026-11-23: on the Hermes host, set up from another workspace.** Recommended form below as input for that workspace. |
 
 ### D1 recommendation: a dedicated private bucket
 
@@ -40,7 +40,7 @@ Public examples of a full GTM hub for an ad-funded app were not found; the close
 - Variable names go under `terminal.env_passthrough` and values in the Hermes profile `.env`; key files sit in a mode-700 directory on the host ([cron reference](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron)).
 - Run once at 09:00 KST. Each run re-collects recent days: AdMob the last three days, the Apple report for the latest published Pacific day, and the Play files for the current and previous month.
 - The scheduler runs only while the Hermes gateway is up. `hermes cron runs` and `hermes cron incidents` show failures.
-- `contabo.flying` did not resolve from the development Mac on 2026-11-23, so the host's Node, AWS CLI and Hermes versions are unverified. G-08 starts with that inspection.
+- The Hermes host was not reachable from the development Mac on 2026-11-23, so its Node, AWS CLI and Hermes versions are unverified. The Hermes workspace starts with that inspection.
 
 ## Access state (2026-11-23)
 
@@ -98,18 +98,17 @@ Each task with repository changes is one PR against `master`. Private data and i
 | ID | Outcome | Owned write scope | Depends on | Acceptance |
 | --- | --- | --- | --- | --- |
 | G-00 | **Done 2026-11-23.** The private bucket and the collector's IAM user exist. | AWS only; `sources.md` records names | AK's approval, 2026-11-23 | The bucket has public access blocked, versioning and a TLS-only policy. The collector's credentials read and write this bucket and are refused on `tw-config`. |
-| G-01 | The folder exists and repository rules know it. | `gtm/README.md`, `product.md`, `metrics.md`, `sources.md`, `log.md`, `.env.example`; `AGENTS.md` repository map; `docs/development/artifact-retention.md`; `scripts/check-artifact-policy.py` and its test; `.gitignore` | D2 | The checker link-checks `gtm/` and rejects a staged data file. A new agent finds the data location and every source's access requirement from `gtm/README.md`. |
-| G-02 | Daily public rating snapshots per store and storefront (KR, US, JP first). | `gtm/tools/store-public.*` | G-01 | Two runs on different days give a rating and rating-count change per store. A same-day re-run changes nothing. A parse failure records "not collected". |
-| G-03 | New and changed reviews from both stores, with the unanswered list. | `gtm/tools/reviews.*` | G-01 | A real run stores current reviews from both APIs. A second run reports only new or edited reviews. No reviewer name is stored. |
-| G-04 | Daily downloads per store. | `gtm/tools/downloads.*`, `metrics.md` | G-01; the Sales-role key; effective Play bucket access | Real reports from both stores are parsed into first-time downloads per day and country. A refused request names the missing role. |
-| G-05 | Daily ad earnings per app and platform. | `gtm/tools/ad-revenue.*`, `sources.md` | G-01 | A real report is stored with currency and timezone; the last three days are re-collected. A revoked token is recorded as not collected. |
-| G-06 | The daily brief in Korean on standard output and under `briefs/`. | `gtm/tools/brief.*`, `gtm/README.md` | G-02, G-03; extended by G-04 and G-05 | The brief lists each source's latest complete day, the change against the previous day and the seven-day average, new reviews, and every missing source with its reason. |
+| G-01 | The folder exists, repository rules know it, and `gtm/tools/check-access.mjs` verifies every source's access (AC5). | `gtm/README.md`, `product.md`, `metrics.md`, `sources.md`, `log.md`, `.env.example`; `AGENTS.md` repository map; `docs/development/artifact-retention.md`; `scripts/check-artifact-policy.py` and its test; `.gitignore` | D2 | The checker link-checks `gtm/` and rejects a staged data file. A new agent finds the data location and every source's access requirement from `gtm/README.md`. |
+| G-02 | **Owned by the Hermes workspace (AK, 2026-11-24); implementation location decided there.** Daily public rating snapshots per store and storefront (KR, US, JP first). | `gtm/tools/store-public.*` | G-01 | Two runs on different days give a rating and rating-count change per store. A same-day re-run changes nothing. A parse failure records "not collected". |
+| G-03 | **Owned by the Hermes workspace (AK, 2026-11-24); implementation location decided there.** New and changed reviews from both stores, with the unanswered list. | `gtm/tools/reviews.*` | G-01 | A real run stores current reviews from both APIs. A second run reports only new or edited reviews. No reviewer name is stored. |
+| G-04 | **Owned by the Hermes workspace (AK, 2026-11-24); implementation location decided there.** Daily downloads per store. | `gtm/tools/downloads.*`, `metrics.md` | G-01; the Sales-role key; effective Play bucket access | Real reports from both stores are parsed into first-time downloads per day and country. A refused request names the missing role. |
+| G-05 | **Owned by the Hermes workspace (AK, 2026-11-24); implementation location decided there.** Daily ad earnings per app and platform. | `gtm/tools/ad-revenue.*`, `sources.md` | G-01 | A real report is stored with currency and timezone; the last three days are re-collected. A revoked token is recorded as not collected. |
+| G-06 | **Owned by the Hermes workspace (AK, 2026-11-24); implementation location decided there.** The daily brief in Korean on standard output and under `briefs/`. | `gtm/tools/brief.*`, `gtm/README.md` | G-02, G-03; extended by G-04 and G-05 | The brief lists each source's latest complete day, the change against the previous day and the seven-day average, new reviews, and every missing source with its reason. |
 | G-07 | Listing state and research index. | `gtm/listing/README.md`, `gtm/research/README.md`, `log.md` | G-01 | Every link resolves under the artifact checker. The listing page states what is live and what is pending review per store, with the date observed. |
 | G-08 | The daily run on Hermes. **Owned by another workspace (AK, 2026-11-23);** this plan supplies the tools and the host requirements in `sources.md`. | Host changes; wrapper location decided there | G-00, G-06; host access | After host inspection, one manual `hermes cron run` stores records in S3 and delivers the brief; a forced failure produces an error alert. The schedule is enabled at 09:00 KST. |
 
-- **Ready frontier:** G-02, G-03 and G-05 once the first pull request (G-01 and G-07, task `gtm-g01`) is merged.
-- **Critical path:** G-01 → G-02, G-03, G-05 → G-06 → G-08.
-- **Parallel after G-01:** G-02, G-03, G-05 and G-07 have disjoint write scopes. G-04 waits for the key and the Play access.
+- **This repository:** G-00, G-01 and G-07 (task `gtm-g01`, PR #3146).
+- **Hermes workspace:** G-02 to G-06 and G-08, starting once the host passes `check-access.mjs`. The acceptance column stays the contract for that work.
 
 ## Open points
 
@@ -123,10 +122,12 @@ Each task with repository changes is one PR against `master`. Private data and i
 3. **Access failure.** The AdMob token is revoked. Ad earnings are recorded as not collected with the reason; the other sources are stored and reported, and the job still delivers the brief.
 4. **Explaining a change.** Downloads rise after a listing update. The brief's day matches an entry in `log.md`, and `listing/README.md` shows which listing was live.
 5. **Fresh worktree.** An agent in a new worktree without data access is told by the tool which variables and location are missing, and collects nothing partial.
+6. **Host setup.** The Hermes workspace copies the private files to the host and runs `check-access.mjs`. Every source prints `ok`; a missing variable prints `not configured`, a refused credential prints `refused` with a fixed reason, and no configured value appears in the output.
 
 ## Verification
 
-- `node --test gtm/tools/*.test.mjs` for parsing, idempotent storage, change detection and failure records.
+- This repository: `node --test gtm/tools/*.test.mjs` for the access check (statuses, no value in the output, redirects refused, isolated AWS profile), and one real run of `check-access.mjs`.
+- Hermes workspace: tests for parsing, idempotent storage, change detection and failure records of the collectors.
 - One real call per source and method before a task is reported complete, with status and row counts recorded; no secret, review body or figure in logs or PRs.
 - `python3 scripts/check-artifact-policy.py --staged` and its test suite for the link and path rules.
 

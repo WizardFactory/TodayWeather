@@ -6,7 +6,7 @@ Dated events that explain changes in downloads, earnings, ratings or reviews. Ne
 | --- | --- | --- | --- |
 | 2026-11-24 | Release | Google Play: version 2.0.1 (200010) published to production and open testing at 13:39 KST after managed publishing had held it. App Store: version 2.0.2 approved; phased release started 10:48 KST. | Play Console publishing overview; App Store Connect API |
 | 2026-11-24 | Listing | Six reordered Google Play full descriptions published. | Play Console publishing overview |
-| 2026-11-24 | Attribution | Audit: no store link used campaign values; GA4 had no web stream and no campaign events in 28 days; Google Ads campaigns paused, with the iOS Firebase conversion misconfigured because GA4 is not linked to Ads. | [Sources](sources.md#campaign-links) |
+| 2026-11-24 | Attribution | Audit: store links carried no campaign values, GA4 had no web stream, and the iOS Firebase conversion in Google Ads was misconfigured because GA4 was not linked to Ads. Campaign links and the GA4–Ads link were started the same day. | [Sources](sources.md#campaign-links) |
 | 2026-11-24 | Access | Google Play report files became readable by the service account. | [Sources](sources.md) |
 | 2026-11-23 | Access | AdMob API enabled and read-only reporting consent given; App Store key `tw_gtm_sales_reports` issued; Google Play service account granted read-only bulk report access; private bucket `todayweather-gtm` and its collector user created. | [Sources](sources.md) |
 | 2026-11-23 | Listing | App Store Korea showed version 2.0.1 with a 3.98 average from 846 ratings; Google Play Korea showed a 3.25 average from 831 ratings. First recorded values; no change can be derived yet. | [Store listing](listing/README.md) |

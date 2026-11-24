@@ -12,7 +12,10 @@
       ],
       "expected": "The reader knows the bucket, the private directory and its files, the variables and the permission each source relies on, without any secret value",
       "failure": "A link is broken or a source has no stated location: the artifact checker fails, or the document review records the gap",
-      "criteria": ["AC1", "AC4"]
+      "criteria": [
+        "AC1",
+        "AC4"
+      ]
     },
     {
       "id": "S2",
@@ -25,7 +28,9 @@
       ],
       "expected": "Both runs exit non-zero and name the offending path; a normal git add does not stage gtm/data/ because it is ignored",
       "failure": "The checker accepts either case: the regression tests fail",
-      "criteria": ["AC2"]
+      "criteria": [
+        "AC2"
+      ]
     },
     {
       "id": "S3",
@@ -38,7 +43,25 @@
       ],
       "expected": "No credential, account identifier, download count, ad statistic or review body appears; only public store values with dates",
       "failure": "A match is found: the value is removed before push and the scan is repeated",
-      "criteria": ["AC3"]
+      "criteria": [
+        "AC3"
+      ]
+    },
+    {
+      "id": "S4",
+      "user": "The Hermes workspace setting up the collection host",
+      "goal": "Confirm that every source answers with the copied credentials before building collectors",
+      "prerequisites": "The private GTM files copied to a mode-700 directory on the host, paths in gtm.env rewritten, Node and the AWS CLI installed",
+      "steps": [
+        "Load gtm.env into the environment",
+        "Run node gtm/tools/check-access.mjs",
+        "Fix every line that does not read ok and run it again"
+      ],
+      "expected": "Seven lines read ok and the exit code is 0; no configured value appears in the output",
+      "failure": "A refused or not configured line names the source and a fixed reason; the exit code is 1",
+      "criteria": [
+        "AC5"
+      ]
     }
   ]
 }

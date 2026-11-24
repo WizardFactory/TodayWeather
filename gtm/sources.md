@@ -95,6 +95,6 @@ The scheduled collection is built and run on the Hermes host from another worksp
 
 1. Copy to a mode-700 directory on the host: `gtm.env`, `aws-credentials`, the App Store `.p8` file, `admob-oauth-client.json`, `admob-oauth.json` and the Google Play service account key. Rewrite the paths in `gtm.env` for that host.
 2. Install Node 22.12 or later and the AWS CLI, and check out this repository.
-3. Run `set -a; . <dir>/gtm.env; set +a; node gtm/tools/check-access.mjs`. Every line must read `ok`. The check makes one read-only request per source and prints no value; a missing variable is shown as `not configured`.
+3. Run `set -a; . <dir>/gtm.env; set +a; node gtm/tools/check-access.mjs`. Every line must read `ok`. Each source gets the read its collector needs (for example the AdMob check generates a one-day report and the Play check reads one byte of the newest installs and ratings files). A missing variable is shown as `not configured (<names>)`, a failure as `refused (<fixed reason>)`; no configured value is printed.
 
 The host does not need the release signing material or the administrator AWS profile.

@@ -11,7 +11,7 @@ Go-to-market information for TodayWeather was spread over release notes, researc
 1. Create a `gtm` folder and manage the key information there; plan first.
 2. Private daily figures go to Amazon S3. The repository is public.
 3. Missing report access is obtained directly by the agent through Ego Lite. Done the same day: AdMob API and read-only consent, the App Store key with the "Sales and Reports" role, the Google Play read-only bulk report permission.
-4. The daily run executes on Hermes on the host `contabo.flying`, set up from another workspace.
+4. The daily run executes on the Hermes host, set up from another workspace.
 5. Scope follows the recommended first step, and locations must be recorded carefully.
 6. The dedicated bucket and its collector user are approved; the name was left to the agent (`todayweather-gtm`).
 7. A pull request is to be opened for the folder.
