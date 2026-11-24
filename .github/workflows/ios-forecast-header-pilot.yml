@@ -1,0 +1,69 @@
+name: iOS forecast header pilot
+run-name: iOS forecast header pilot ${{ inputs.ref || github.sha }}
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Full 40-character SHA at the dispatch ref
+        required: true
+        type: string
+  pull_request:
+    paths:
+      - ".github/workflows/ios-forecast-header-pilot.yml"
+      - "ios/tools/forecast-header-pilot/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('ios-forecast-pilot-pr-{0}', github.event.pull_request.number) || format('ios-forecast-pilot-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+  SIMULATOR: "platform=iOS Simulator,name=iPhone 17,OS=26.5"
+
+jobs:
+  selected:
+    name: Selected forecast header simulator checks
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify source and result checker
+        env:
+          REQUESTED: ${{ inputs.ref || github.sha }}
+        run: |
+          [[ "$REQUESTED" =~ ^[0-9a-f]{40}$ && "$REQUESTED" == "$GITHUB_SHA" ]]
+          test "$(git rev-parse HEAD)" = "$REQUESTED"
+          echo "Source commit $REQUESTED" >> "$GITHUB_STEP_SUMMARY"
+          xcodebuild -version >> "$GITHUB_STEP_SUMMARY"
+          echo "$SIMULATOR" >> "$GITHUB_STEP_SUMMARY"
+          python3 ios/tools/forecast-header-pilot/test_inventory.py
+      - name: Remove legacy directories
+        run: |
+          rm -rf client android tw.ios ta.ios applewatch
+          for d in client android tw.ios ta.ios applewatch; do test ! -e "$d"; done
+      - name: Run the pilot test selection and verify executed cases
+        working-directory: ios
+        run: bash tools/forecast-header-pilot/run.sh "$SIMULATOR" "$RUNNER_TEMP/forecast-header"
+      - name: Collect screenshot comparisons
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/forecast-header/screenshots"
+          find "$HOME/Library/Developer/CoreSimulator/Devices" -path '*/tmp/chart-compare/*' -name '*.png' \
+            -exec cp {} "$RUNNER_TEMP/forecast-header/screenshots/" \;
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: forecast-header-pilot-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/forecast-header/*.json
+            ${{ runner.temp }}/forecast-header/xcodebuild.log
+            ${{ runner.temp }}/forecast-header/selected.xcresult
+            ${{ runner.temp }}/forecast-header/screenshots
+          if-no-files-found: ignore
+          retention-days: 14

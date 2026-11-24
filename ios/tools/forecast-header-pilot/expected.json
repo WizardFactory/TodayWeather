@@ -1,0 +1,21 @@
+{
+  "WeatherScreenshotTests/captureFractionalWeatherHeader()": [],
+  "WeatherScreenshotTests/pageBlocksMatchTheCordovaPages(page:)": [
+    "\"kma-seoul-hourly\"",
+    "\"kma-seoul-hourly-expanded\"",
+    "\"kma-seoul-daily\"",
+    "\"vc-london-hourly\"",
+    "\"vc-london-daily\""
+  ],
+  "WeatherScreenshotTests/rankedForecastHeader(page:)": ["\"kma-seoul-hourly\"", "\"kma-seoul-daily\""],
+  "MatrixScreenshotTests/weatherPages(size:language:)": [
+    "\"375x667\", \"ko-KR\"",
+    "\"375x667\", \"en-US\"",
+    "\"393x852\", \"en-US\"",
+    "\"440x956\", \"ko-KR\"",
+    "\"440x956\", \"en-US\""
+  ],
+  "WeatherTabTests/rankedSummaryUsesTheWeatherRequestAndKeepsAirAccessible()": [],
+  "ForecastScopeTests/rankedSummaryExpiresAtSeoulMidnight()": [],
+  "ClockedDataTests/WeatherRequestTests/datedSummaryKeepsItsRequestWhenReopeningOffline()": []
+}
