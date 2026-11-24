@@ -76,17 +76,21 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
     }
 
     /**
-     * Writes the choice (`persistChoice`); when that fails it records a withdrawal beside the collection state ([DECLINED])
-     * first, so the region default cannot turn it back on even if the process ends here, and then removes the choice, so
-     * an old grant cannot survive.
+     * Writes the choice (`persistChoice`). When a withdrawal cannot be written it records it beside the collection state
+     * ([DECLINED]) first, so the region default cannot turn it back on even if the process ends here, and then removes the
+     * choice, so an old grant cannot survive. When a grant cannot be written the stored choice stays as it was, so a
+     * decline is never erased into "no choice" (the grant's collection state is not recorded, so an old grant is
+     * withdrawn at the next start).
      */
     fun write(value: Boolean): Boolean {
         if (choices.edit().putString(KEY, value.toString()).commit()) {
             if (runCatching { collection.contains(DECLINED) }.getOrDefault(true)) collection.edit().remove(DECLINED).commit()
             return true
         }
-        if (!value) collection.edit().putBoolean(DECLINED, true).commit()
-        choices.edit().remove(KEY).commit()
+        if (!value) {
+            collection.edit().putBoolean(DECLINED, true).commit()
+            choices.edit().remove(KEY).commit()
+        }
         Log.w(TAG, "collection storage_write_failed")
         return false
     }

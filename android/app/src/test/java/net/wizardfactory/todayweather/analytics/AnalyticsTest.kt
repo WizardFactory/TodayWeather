@@ -200,6 +200,21 @@ class AnalyticsTest {
         assertEquals(true, recordedFirst)
     }
 
+    /** A grant that cannot be written keeps the stored choice: a decline is not erased into "no choice" (CODEX-3178-8). */
+    @Test
+    fun aGrantThatCannotBeWrittenKeepsAStoredDecline() {
+        choices.edit().putString(ConsentStore.KEY, "false").commit()
+        val a = analytics(Sdk(), "KR")
+        choices.failPuts = true
+        assertFalse(a.setCollectionEnabled(true))
+        assertFalse(a.choice.value)
+        choices.failPuts = false
+        assertEquals("false", choices.getString(ConsentStore.KEY, null))
+        val restarted = Sdk()
+        assertFalse(analytics(restarted, "KR").choice.value)
+        assertEquals(collectionOff, restarted.calls)
+    }
+
     @Test
     fun anUnreadableChoiceDoesNotCollect() {
         choices.edit().putBoolean(ConsentStore.KEY, true).commit()
