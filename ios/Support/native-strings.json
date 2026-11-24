@@ -30,9 +30,9 @@
         "LOC_ANALYTICS_DETAIL_ON_BY_DEFAULT": "Zur Verbesserung der App erfasst Google Firebase Analytics die Nutzung der Bildschirme, Ergebnisse von Wetterabfragen sowie App-, Geräte- und Installationsinformationen. Eigene Ereignisse enthalten keinen tatsächlichen Standort, keine Adresse, keine Push-Tokens und keine Geräte-UUIDs. Die Nutzungsanalyse ist eingeschaltet, solange Sie sie nicht in diesem Menü ausschalten; das Wetter bleibt in jedem Fall verfügbar. Analysedaten dürfen nicht für Werbung verwendet werden. Werbung, Absturzdiagnose und Benachrichtigungen werden getrennt behandelt.",
         "LOC_ANALYTICS_TURN_OFF": "Ausschalten",
         "LOC_ANALYTICS_TURN_ON": "Einschalten",
-        "LOC_ANALYTICS_DETAIL": "Darf Google Firebase Analytics zur Verbesserung der App die Nutzung der Bildschirme, Ergebnisse von Wetterabfragen sowie App-, Geräte- und Installationsinformationen erfassen? Eigene Ereignisse enthalten keinen tatsächlichen Standort, keine Adresse, keine Push-Tokens und keine Geräte-UUIDs. Das Wetter bleibt auch ohne Zustimmung verfügbar, und Sie können die Zustimmung jederzeit in diesem Menü widerrufen. Analysedaten dürfen nicht für Werbung verwendet werden. Werbung, Absturzdiagnose und Benachrichtigungen werden getrennt behandelt.",
+        "LOC_ANALYTICS_DETAIL": "Dürfen wir zur Verbesserung der App mit Google Firebase Analytics die Nutzung der Bildschirme, Ergebnisse von Wetterabfragen sowie App-, Geräte- und Installationsinformationen erfassen? Eigene Ereignisse enthalten keinen tatsächlichen Standort, keine Adresse, keine Push-Tokens und keine Geräte-UUIDs. Das Wetter bleibt auch bei Ablehnung verfügbar. Sie können Ihre Einwilligung jederzeit in diesem Menü widerrufen. Die Nutzung der Analysedaten für Werbung ist nicht gestattet. Werbung, Absturzdiagnose und Benachrichtigungen werden getrennt behandelt.",
         "LOC_ANALYTICS_DENY": "Ablehnen / Widerrufen",
-        "LOC_ANALYTICS_ALLOW": "Zulassen"
+        "LOC_ANALYTICS_ALLOW": "Zustimmen"
     },
     "zh-CN": {
         "LOC_ANALYTICS_CHOICE": "使用情况分析",
@@ -41,9 +41,9 @@
         "LOC_ANALYTICS_DETAIL_ON_BY_DEFAULT": "为改进应用，Google Firebase Analytics 会收集页面使用情况、天气查询结果以及应用、设备和安装信息。自定义事件不包含实际位置、地址、推送令牌和设备 UUID。除非您在此菜单中关闭，否则使用情况分析保持开启；关闭后仍可查询天气。分析数据不得用于广告。广告、崩溃诊断和通知另行处理。",
         "LOC_ANALYTICS_TURN_OFF": "关闭",
         "LOC_ANALYTICS_TURN_ON": "开启",
-        "LOC_ANALYTICS_DETAIL": "是否允许 Google Firebase Analytics 收集页面使用情况、天气查询结果以及应用、设备和安装信息，以改进应用？自定义事件不包含实际位置、地址、推送令牌和设备 UUID。即使不同意也可以查询天气，并可随时在此菜单中撤回。分析数据不得用于广告。广告、崩溃诊断和通知另行处理。",
+        "LOC_ANALYTICS_DETAIL": "为改进应用，是否允许 Google Firebase Analytics 收集页面使用情况、天气查询结果以及应用、设备和安装信息？自定义事件不包含实际位置、地址、推送令牌和设备 UUID。拒绝后仍可查询天气。您可以随时在此菜单中撤回。分析数据不得用于广告。广告、崩溃诊断和通知另行处理。",
         "LOC_ANALYTICS_DENY": "拒绝 / 撤回",
-        "LOC_ANALYTICS_ALLOW": "允许"
+        "LOC_ANALYTICS_ALLOW": "同意"
     },
     "zh-TW": {
         "LOC_ANALYTICS_CHOICE": "使用情況分析",
@@ -52,8 +52,8 @@
         "LOC_ANALYTICS_DETAIL_ON_BY_DEFAULT": "為改進應用程式，Google Firebase Analytics 會收集頁面使用情況、天氣查詢結果以及應用程式、裝置和安裝資訊。自訂事件不包含實際位置、地址、推播權杖和裝置 UUID。除非您在此選單中關閉，否則使用情況分析會保持開啟；關閉後仍可查詢天氣。分析資料不得用於廣告。廣告、當機診斷和通知另行處理。",
         "LOC_ANALYTICS_TURN_OFF": "關閉",
         "LOC_ANALYTICS_TURN_ON": "開啟",
-        "LOC_ANALYTICS_DETAIL": "是否允許 Google Firebase Analytics 收集頁面使用情況、天氣查詢結果，以及應用程式、裝置和安裝資訊，以改進應用程式？自訂事件不包含實際位置、地址、推播權杖和裝置 UUID。即使不同意仍可查詢天氣，並可隨時在此選單中撤回。分析資料不得用於廣告。廣告、當機診斷和通知另行處理。",
+        "LOC_ANALYTICS_DETAIL": "為改進應用程式，是否允許 Google Firebase Analytics 收集頁面使用情況、天氣查詢結果以及應用程式、裝置和安裝資訊？自訂事件不包含實際位置、地址、推播權杖和裝置 UUID。拒絕後仍可查詢天氣。您可以隨時在此選單中撤回。分析資料不得用於廣告。廣告、當機診斷和通知另行處理。",
         "LOC_ANALYTICS_DENY": "拒絕 / 撤回",
-        "LOC_ANALYTICS_ALLOW": "允許"
+        "LOC_ANALYTICS_ALLOW": "同意"
     }
 }

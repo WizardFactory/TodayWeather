@@ -29,11 +29,11 @@
 "LOC_ALERT_DESCRIPTION" = "Der Aufmerksam informiert Sie, wenn es regnet oder schneit, oder Feinstaub stark wird. Sonst informiert er auch vorher, bevor sie passieren.";
 "LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED" = "Dieser Bezirk wurde schon hinzugefügt";
 "LOC_AMOUNT_OF_PRECIPITATION" = "Niederschlag";
-"LOC_ANALYTICS_ALLOW" = "Zulassen";
+"LOC_ANALYTICS_ALLOW" = "Zustimmen";
 "LOC_ANALYTICS_ALLOWED" = "An";
 "LOC_ANALYTICS_CHOICE" = "Nutzungsanalyse";
 "LOC_ANALYTICS_DENY" = "Ablehnen / Widerrufen";
-"LOC_ANALYTICS_DETAIL" = "Darf Google Firebase Analytics zur Verbesserung der App die Nutzung der Bildschirme, Ergebnisse von Wetterabfragen sowie App-, Geräte- und Installationsinformationen erfassen? Eigene Ereignisse enthalten keinen tatsächlichen Standort, keine Adresse, keine Push-Tokens und keine Geräte-UUIDs. Das Wetter bleibt auch ohne Zustimmung verfügbar, und Sie können die Zustimmung jederzeit in diesem Menü widerrufen. Analysedaten dürfen nicht für Werbung verwendet werden. Werbung, Absturzdiagnose und Benachrichtigungen werden getrennt behandelt.";
+"LOC_ANALYTICS_DETAIL" = "Dürfen wir zur Verbesserung der App mit Google Firebase Analytics die Nutzung der Bildschirme, Ergebnisse von Wetterabfragen sowie App-, Geräte- und Installationsinformationen erfassen? Eigene Ereignisse enthalten keinen tatsächlichen Standort, keine Adresse, keine Push-Tokens und keine Geräte-UUIDs. Das Wetter bleibt auch bei Ablehnung verfügbar. Sie können Ihre Einwilligung jederzeit in diesem Menü widerrufen. Die Nutzung der Analysedaten für Werbung ist nicht gestattet. Werbung, Absturzdiagnose und Benachrichtigungen werden getrennt behandelt.";
 "LOC_ANALYTICS_DETAIL_ON_BY_DEFAULT" = "Zur Verbesserung der App erfasst Google Firebase Analytics die Nutzung der Bildschirme, Ergebnisse von Wetterabfragen sowie App-, Geräte- und Installationsinformationen. Eigene Ereignisse enthalten keinen tatsächlichen Standort, keine Adresse, keine Push-Tokens und keine Geräte-UUIDs. Die Nutzungsanalyse ist eingeschaltet, solange Sie sie nicht in diesem Menü ausschalten; das Wetter bleibt in jedem Fall verfügbar. Analysedaten dürfen nicht für Werbung verwendet werden. Werbung, Absturzdiagnose und Benachrichtigungen werden getrennt behandelt.";
 "LOC_ANALYTICS_DISABLED" = "Aus";
 "LOC_ANALYTICS_TURN_OFF" = "Ausschalten";
