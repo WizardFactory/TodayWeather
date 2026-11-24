@@ -203,7 +203,16 @@ describe("web deep-link contract", () => {
     expect(appOpenHref("https://link.todayweather.ai/open", macUa, 0)).toBe(
       "https://link.todayweather.ai/open?fallback=store",
     );
-    expect(APP_STORE_URL).toBe("https://apps.apple.com/app/id1041700694");
+    // The web app's own store links carry its App Store and Google Play campaign.
+    expect(APP_STORE_URL).toBe(
+      "https://apps.apple.com/app/apple-store/id1041700694?pt=117919046&ct=webapp&mt=8",
+    );
+    expect(PLAY_STORE_URL).toBe(
+      "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather&referrer=utm_source%3Dapp.todayweather.ai%26utm_medium%3Dweb%26utm_campaign%3Dwebapp",
+    );
+    expect(new URL(PLAY_STORE_URL).searchParams.get("referrer")).toBe(
+      "utm_source=app.todayweather.ai&utm_medium=web&utm_campaign=webapp",
+    );
     expect(FIXED_APP_QR_URL).toBe(
       "https://link.todayweather.ai/open?fallback=store",
     );

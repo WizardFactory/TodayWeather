@@ -36,9 +36,11 @@ function handler(event) {
   }
 
   var PWA_ORIGIN = "https://app.todayweather.ai";
-  var APP_STORE_URL = "https://apps.apple.com/app/id1041700694";
+  // Store fallbacks carry the share-link campaign (App Store Connect `ct`, Google Play `referrer`).
+  var APP_STORE_URL =
+    "https://apps.apple.com/app/apple-store/id1041700694?pt=117919046&ct=sharelink&mt=8";
   var PLAY_STORE_URL =
-    "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather";
+    "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather&referrer=utm_source%3Dlink.todayweather.ai%26utm_medium%3Dshare%26utm_campaign%3Dsharelink";
   var qs = request.querystring || {};
   var headers = request.headers || {};
   var uaHeader = headers["user-agent"];
