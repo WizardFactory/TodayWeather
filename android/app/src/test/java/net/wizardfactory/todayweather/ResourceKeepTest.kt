@@ -39,8 +39,10 @@ class ResourceKeepTest {
         val call = Regex("""\bgetIdentifier\s*\(""")
         val lookups = File(appDir, "src").walkTopDown().filter { it.isFile && it.extension in setOf("kt", "java") }
             .filter { file -> file.relativeTo(appDir).invariantSeparatorsPath.let { it.startsWith("src/main/") || it.startsWith("src/release/") } }
-            .associate { it.name to call.findAll(it.readText()).count() }.filterValues { it > 0 }
+            .associate { it.relativeTo(appDir).invariantSeparatorsPath to call.findAll(it.readText()).count() }
+            .filterValues { it > 0 }
+        val loaders = "src/main/java/net/wizardfactory/todayweather/ui"
         assertEquals("a new lookup by name needs a keep rule in src/release/res/raw/keep.xml and a case here",
-            mapOf("ChartStrings.kt" to 1, "ForecastStrings.kt" to 1), lookups)
+            mapOf("$loaders/chart/ChartStrings.kt" to 1, "$loaders/forecast/ForecastStrings.kt" to 1), lookups)
     }
 }

@@ -23,11 +23,10 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 ANDROID=$(cd "$HERE/../.." && pwd)
 EXPORT=$(cd "$ANDROID/.." && pwd)
 refuse() { echo "no release build: $*" >&2; exit 1; }
-case "$*" in
-    "") EXCLUDE="" ;;
-    --without-crashlytics-upload) EXCLUDE=":app:uploadCrashlyticsMappingFileRelease" ;;
-    *) echo "usage: gradle-release.sh [--without-crashlytics-upload]" >&2; exit 2 ;;
-esac
+EXCLUDE=""
+if [ $# -eq 1 ] && [ "$1" = --without-crashlytics-upload ]; then EXCLUDE=":app:uploadCrashlyticsMappingFileRelease"
+elif [ $# -ne 0 ]; then echo "usage: gradle-release.sh [--without-crashlytics-upload]" >&2; exit 2
+fi
 [ -f "$EXPORT/CANDIDATE" ] && [ ! -e "$EXPORT/.git" ] || refuse "$EXPORT is not an export of export_candidate.py"
 GRADLE_HOME_DIR=${GRADLE_USER_HOME:-$HOME/.gradle}
 case "$GRADLE_HOME_DIR" in /*) ;; *) refuse "the Gradle user home must be an absolute path, not '$GRADLE_HOME_DIR'" ;; esac

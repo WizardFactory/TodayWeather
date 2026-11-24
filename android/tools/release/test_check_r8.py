@@ -135,6 +135,11 @@ class CheckR8Test(unittest.TestCase):
             self.assertEqual(status, 1, map_id)
             self.assertIn(f'FAIL mapping pg_map_id {map_id}, the APK\'s R8 code has {" ".join(sorted([APP_ID, other]))}', out)
 
+    def test_a_removed_class_needs_r8s_numbered_name(self):
+        status, out, _ = self.run_tool(MINIFIED, mapping(body=SHRUNK.replace(b'CLASS$$0:', b'CLASS$$suffix:')))
+        self.assertEqual(status, 1)
+        self.assertIn('FAIL R8 removed none of the app\'s classes', out)
+
     def test_fails_for_a_mapping_id_that_is_not_a_string(self):
         status, out, _ = self.run_tool({**MINIFIED, 'classes3.dex': dex(marker('R8', **{'pg-map-id': []}))})
         self.assertEqual(status, 1)

@@ -12,9 +12,9 @@ The check passes when
   pg_map_id, so the mapping covers all of the app's dex;
 - the mapping's content has the SHA-256 its header records (`# pg_map_hash: SHA-256 <hex>`: the lines after the
   header), so the file to upload to Play is complete;
-- R8 obfuscated and shrank the app's own classes (APP_PACKAGE): the mapping maps more of them to other names than
-  to their own, and maps some to `R8$$REMOVED$$CLASS$$<n>`, the name R8 9.x gives a class it removed. R8 run with
-  -dontobfuscate or -dontshrink writes neither.
+- R8 obfuscated and shrank the app's own classes (APP_PACKAGE): of the classes it kept, the mapping gives more a
+  new name than their own (R8 run with -dontobfuscate renames none), and it maps some to `R8$$REMOVED$$CLASS$$<n>`,
+  the name R8 9.x gives a class it removed (with -dontshrink it removes none).
 Prints one ok or FAIL line per check, and the mapping file's SHA-256 for the release notes. Status 1: a check
 failed; 2: usage or an unreadable file.
 """
@@ -28,7 +28,7 @@ MARKER = re.compile(rb"~~(D8|R8|L8)(\{[^}]*\})")
 DEX = re.compile(r"classes\d*\.dex")
 APP_PACKAGE = "net.wizardfactory.todayweather."
 CLASS_LINE = re.compile(rb"^(\S+) -> (\S+):\r?$", re.MULTILINE)
-REMOVED = "R8$$REMOVED$$CLASS$$"
+REMOVED = re.compile(r"R8\$\$REMOVED\$\$CLASS\$\$[0-9]+")
 
 
 def markers(data):
@@ -66,7 +66,7 @@ def own_classes(data):
         original, new = original.decode("utf-8", "replace"), new.decode("utf-8", "replace")
         if not original.startswith(APP_PACKAGE):
             continue
-        if new.startswith(REMOVED):
+        if REMOVED.fullmatch(new):
             removed += 1
         elif new == original:
             kept += 1
