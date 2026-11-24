@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { isDeepStrictEqual, parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
 import { AASA, ASSET_LINKS, LINK_HOST, associations } from "./deploy-deeplink-static.mjs";
 
 const base = `https://${LINK_HOST}`;
 const pwa = "https://app.todayweather.ai";
-const appStore = "https://apps.apple.com/app/id1041700694";
-const playStore = "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather";
+// The store fallbacks, with their share-link campaign, are the golden contract's.
+const { contract } = JSON.parse(readFileSync(new URL("../specs/deeplink.golden.json", import.meta.url), "utf8"));
+const { appStoreUrl: appStore, playStoreUrl: playStore } = contract;
 const iosUa = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1";
 const androidUa = "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36";
 const desktopUa = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36";

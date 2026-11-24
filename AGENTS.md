@@ -38,6 +38,7 @@ Use the [product lifecycle](docs/architecture/service-overview.md#product-lifecy
 | World response/cache | `server/controllers/worldWeather/controllerWorldWeather.js`, `dsf.controller.js`, `controllerAqi.js` |
 | WebApp (PWA and desktop) | `web/`, `packages/weather-core/` |
 | Native mobile clients | `ios/`, `android/` |
+| Go-to-market information | `gtm/README.md`; figures, review bodies and account identifiers stay outside Git ([locations](gtm/sources.md)) |
 | Historical Cordova requests and state | `client/www/js/service.weatherutil.js`, `service.weatherinfo.js`, `service.storage.js`, startup/tab controllers |
 | Historical platform builds | `client/gulpfile.js`, product package/config variants, `tw.ios/`, `ta.ios/`, `applewatch/` |
 

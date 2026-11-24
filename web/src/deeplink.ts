@@ -7,9 +7,11 @@ import {
 } from "@todayweather/core";
 
 export const LINK_ORIGIN = "https://link.todayweather.ai";
-export const APP_STORE_URL = "https://apps.apple.com/app/id1041700694";
+// Store links from the web app carry its campaign (App Store Connect `ct`, Google Play `referrer`).
+export const APP_STORE_URL =
+  "https://apps.apple.com/app/apple-store/id1041700694?pt=117919046&ct=webapp&mt=8";
 export const PLAY_STORE_URL =
-  "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather";
+  "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather&referrer=utm_source%3Dapp.todayweather.ai%26utm_medium%3Dweb%26utm_campaign%3Dwebapp";
 export const FIXED_APP_QR_URL = `${LINK_ORIGIN}/open?fallback=store`;
 const ANDROID_PACKAGE = "net.wizardfactory.todayweather";
 
