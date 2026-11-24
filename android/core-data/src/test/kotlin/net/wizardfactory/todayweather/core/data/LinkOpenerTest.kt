@@ -44,7 +44,7 @@ class LinkOpenerTest {
         val t = setup(started)
         t.preview.show(Place(false, false, "부산", location = Location(35.179, 129.076)))
         t.opener.open(DeepLinkTarget.Place("london", WeatherView.AIR, "pm10"))
-        assertNull(t.preview.place.value, "a saved place ends the preview")
+        assertEquals("부산", t.preview.place.value?.name, "the unsaved place opened earlier stays in the list")
         assertEquals(listOf("open 1"), t.calls)
         assertEquals(LinkRoute.Weather(WeatherView.AIR, "pm10", 1, null), t.opener.requests.value?.route)
     }
@@ -125,5 +125,29 @@ class LinkOpenerTest {
         t.saved.flow.value = started
         link.join()
         assertEquals(listOf("open 1"), t.calls)
+    }
+
+    /**
+     * #3180: a place chosen in the search shows without being saved, or selects the saved place within 0.01°. The
+     * search loads it and chooses the tab, so there is no reload here and no request for the screens.
+     */
+    @Test
+    fun aSearchResultShowsUnsavedOrSelectsTheSavedPlaceNearby() = runTest {
+        val t = setup(started)
+        t.opener.show(Place(false, false, "부산광역시", "부산광역시", "KR", Location(35.18, 129.08)))
+        assertEquals("부산광역시", t.preview.place.value?.name)
+        assertEquals(started, t.saved.flow.value, "nothing saved")
+        t.saved.change { it.copy(placeIndex = 0) }
+        t.opener.show(Place(false, false, "London", "London, UK", "GB", Location(51.51, -0.13)))
+        assertEquals("부산광역시", t.preview.place.value?.name, "the saved London is selected; the unsaved place stays")
+        assertEquals(false, t.preview.selected.value)
+        assertEquals(1, t.saved.flow.value!!.placeIndex)
+        // Another result replaces the unsaved place.
+        t.opener.show(Place(false, false, "대구광역시", "대구광역시", "KR", Location(35.87, 128.6)))
+        assertEquals("대구광역시", t.preview.place.value?.name)
+        assertEquals(true, t.preview.selected.value)
+        assertEquals(started.places, t.saved.flow.value!!.places)
+        assertEquals(emptyList(), t.calls)
+        assertNull(t.opener.requests.value)
     }
 }

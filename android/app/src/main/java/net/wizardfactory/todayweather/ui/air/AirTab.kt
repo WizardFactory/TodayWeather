@@ -1,5 +1,7 @@
 package net.wizardfactory.todayweather.ui.air
 
+import net.wizardfactory.todayweather.ui.forecast.HeaderSearch
+import net.wizardfactory.todayweather.ui.forecast.HeaderActions
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
@@ -97,21 +99,19 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
     return TabContent(
         title = page.title,
         refreshing = if (place != null && !place.disable) loadingSelected else null,
-        afterTitle = { colors ->
+        // As on the weather pages (#3180): the current position's glyph before the name, the search button after it.
+        beforeTitle = { colors ->
             if (page.currentPosition && !loadingSelected) {
                 // `switchToLocationSettings()` is not defined on S05: the glyph does nothing (A10).
                 val glyph = if (host.locationEnabled()) LOCATION_ON else LOCATION_OFF
                 Icon {
-                    OutlinedText(" $glyph", line(19.sp, TextUnit.Unspecified, colors.headerText, family = Glyphs.materialIcons), colors.headerOutline,
+                    OutlinedText("$glyph ", line(19.sp, TextUnit.Unspecified, colors.headerText, family = Glyphs.materialIcons), colors.headerOutline,
                         Modifier.testTag(WeatherTabTags.LOCATION))
                 }
             }
         },
-        actions = { colors ->
-            BarButton(if (page.hasPush) Glyphs.NOTIFICATIONS else Glyphs.NOTIFICATIONS_NONE, colors, host.onBell,
-                Modifier.testTag(WeatherTabTags.BELL), padding = 4.dp)
-            BarButton(Glyphs.SHARE, colors, host.onShare, Modifier.padding(end = 4.dp).testTag(WeatherTabTags.SHARE), padding = 4.dp)
-        },
+        afterTitle = { colors -> HeaderSearch(colors, host) },
+        actions = { colors -> HeaderActions(colors, host, page.hasPush) },
         page = {
             AirScreen(content, theme, onPrevious = host.onPrevious, onNext = host.onNext,
                 onCode = { c ->

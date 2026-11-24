@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A place a link.todayweather.ai link shows without saving it (specs/deeplink.md §6.2). Not generated from client/. -->
+<!-- A place shown without being saved (a search result or a link.todayweather.ai link) and the weather header's search button (#3180). Not generated from client/. -->
 <resources>
     <string name="link_add_favorite">즐겨찾기 추가</string>
-    <string name="link_preview_note">공유된 지역 · 저장되지 않음</string>
+    <string name="link_added_favorite">즐겨찾기에 추가했습니다</string>
+    <string name="header_search">지역 검색</string>
 </resources>

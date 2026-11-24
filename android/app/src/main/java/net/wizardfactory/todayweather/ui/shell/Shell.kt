@@ -174,8 +174,8 @@ class ShellNavigation(initial: Tab, menuOpen: Boolean = false) {
 fun rememberShellNavigation(startup: Tab): ShellNavigation = rememberSaveable(saver = ShellNavigation.Saver) { ShellNavigation(startup) }
 
 /**
- * What a tab shows: its page, and in the header bar its title with what follows it (the weather pages' location
- * glyph) and its buttons. [scrolled] is the page's scroll in dp: the photo theme's bar darkens with it.
+ * What a tab shows: its page, and in the header bar its title with what stands before it (the weather pages' location
+ * glyph), what follows it (their search button) and its buttons. [scrolled] is the page's scroll in dp: the photo theme's bar darkens with it.
  */
 class TabContent(
     val title: String = "",
@@ -183,6 +183,7 @@ class TabContent(
     val refreshing: Boolean? = null,
     /** A header of the tab's own in place of the title bar (S02's search field), given the colors and the menu's opener. */
     val header: (@Composable (ShellColors, () -> Unit) -> Unit)? = null,
+    val beforeTitle: @Composable RowScope.(ShellColors) -> Unit = {},
     val afterTitle: @Composable RowScope.(ShellColors) -> Unit = {},
     val actions: @Composable RowScope.(ShellColors) -> Unit = {},
     val scrolled: () -> Float = { 0f },
@@ -216,8 +217,6 @@ fun TodayWeatherShell(
     onTabTap: (Tab) -> Boolean = { false },
     overlay: @Composable BoxScope.() -> Unit = {},
     popups: @Composable BoxScope.() -> Unit = {},
-    /** A bar over the tab bar for the tab page shown (a linked place's Add to favorites); the pages over the tabs cover it. */
-    notice: (@Composable (ShellColors) -> Unit)? = null,
     content: @Composable (Tab) -> TabContent = { TabContent() },
 ) {
     val selected = navigation.selected
@@ -244,11 +243,11 @@ fun TodayWeatherShell(
                                 if (header != null) {
                                     header(colors) { navigation.menuOpen = true }
                                 } else {
-                                    HeaderBar(colors, tab.title, onMenu = { navigation.menuOpen = true }, afterTitle = { tab.afterTitle(this, colors) },
+                                    HeaderBar(colors, tab.title, onMenu = { navigation.menuOpen = true }, beforeTitle = { tab.beforeTitle(this, colors) },
+                                        afterTitle = { tab.afterTitle(this, colors) },
                                         scrolled = if (state.theme == Theme.PHOTO) tab.scrolled else ({ 0f })) { tab.actions(this, colors) }
                                 }
                             }
-                            notice?.invoke(colors)
                             TabBar(selected, colors) { tab ->
                                 if (!onTabTap(tab) && tab != selected) {
                                     navigation.selected = tab
@@ -317,13 +316,14 @@ fun HeaderBar(
     onMenu: () -> Unit,
     afterTitle: @Composable RowScope.() -> Unit = {},
     scrolled: () -> Float = { 0f },
+    beforeTitle: @Composable RowScope.() -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Layout(
         content = {
             BarButton(Glyphs.NAVICON, colors, onMenu, Modifier.testTag(ShellTags.MENU_BUTTON))
             Row { actions() }
-            BarTitle(title, colors, afterTitle = afterTitle)
+            BarTitle(title, colors, beforeTitle = beforeTitle, afterTitle = afterTitle)
         },
         modifier = Modifier.fillMaxWidth().height(HeaderHeight).background(colors.headerBar).drawBehind {
             val y = scrolled()
@@ -364,12 +364,18 @@ fun BarButton(glyph: String, colors: ShellColors, onClick: () -> Unit, modifier:
     }
 }
 
-/** `.bar .title` on Android: 19 sp, medium, on one line of 44 dp; what follows it is centered on the line. */
+/**
+ * `.bar .title` on Android: 19 sp, medium, on one line of 44 dp; what stands before and after it is centered on the
+ * line. A title too long for the bar gives way first, so the glyph and the button beside it keep their size.
+ */
 @Composable
-private fun BarTitle(title: String, colors: ShellColors, modifier: Modifier = Modifier, afterTitle: @Composable RowScope.() -> Unit = {}) {
+private fun BarTitle(title: String, colors: ShellColors, modifier: Modifier = Modifier, beforeTitle: @Composable RowScope.() -> Unit = {},
+                     afterTitle: @Composable RowScope.() -> Unit = {}) {
     FixedLine(44.dp, modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedText(title, line(19.sp, TextUnit.Unspecified, colors.headerText, FontWeight.Medium), colors.headerOutline)
+            beforeTitle()
+            OutlinedText(title, line(19.sp, TextUnit.Unspecified, colors.headerText, FontWeight.Medium), colors.headerOutline,
+                Modifier.weight(1f, fill = false))
             afterTitle()
         }
     }

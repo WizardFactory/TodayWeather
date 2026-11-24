@@ -373,7 +373,7 @@ class WeatherTabTest {
     fun theLocationGlyphFollowsTheLocationSetting() {
         location(on = false)
         show(places = listOf(here, london), index = 0)
-        assertEquals(setOf(" $LOCATION_OFF"), glyphs())
+        assertEquals(setOf("$LOCATION_OFF "), glyphs())
         location(on = true)
         rule.onNodeWithTag(ForecastTags.NEXT).performClick()
         rule.waitForIdle()
@@ -382,7 +382,7 @@ class WeatherTabTest {
         rule.onNodeWithTag(ForecastTags.NEXT).performClick()
         rule.waitForIdle()
         assertEquals(0, memory.current().placeIndex)
-        assertEquals(setOf(" $LOCATION_ON"), glyphs())
+        assertEquals(setOf("$LOCATION_ON "), glyphs())
     }
 
     /**

@@ -1,5 +1,14 @@
 package net.wizardfactory.todayweather.ui.forecast
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import net.wizardfactory.todayweather.ui.shell.ShellColors
 import android.content.Context
 import android.content.Intent
 import android.graphics.Point
@@ -102,11 +111,45 @@ class WeatherTabHost(
     /** `switchToLocationSettings`: only acts when location is off. */
     val onLocationGlyph: () -> Unit = {},
     val locationEnabled: () -> Boolean = { true },
+    /** The search button beside the place name (#3180): it opens S02's search. */
+    val onSearch: () -> Unit = {},
+    /** True while the selected place is shown without being saved: a star stands in the bell's position. */
+    val unsaved: () -> Boolean = { false },
+    /** The star: the shown place is saved. */
+    val onStar: () -> Unit = {},
 )
+
+/**
+ * The header's parts the weather and air pages share (#3180): the search button after the place name, and at the right
+ * the bell of a saved place or the outline star of a place shown without being saved, then share.
+ */
+@Composable
+internal fun HeaderSearch(colors: ShellColors, host: WeatherTabHost) {
+    val label = stringResource(R.string.header_search)
+    Box(Modifier.padding(start = 6.dp).size(width = 36.dp, height = 44.dp).alpha(0.87f)
+        .clickable(onClick = host.onSearch, role = Role.Button).semantics { contentDescription = label }.testTag(WeatherTabTags.SEARCH),
+        contentAlignment = Alignment.Center) {
+        Icon { OutlinedText(Glyphs.SEARCH, line(22.sp, TextUnit.Unspecified, colors.headerText, family = Glyphs.ionicons), colors.headerOutline) }
+    }
+}
+
+@Composable
+internal fun RowScope.HeaderActions(colors: ShellColors, host: WeatherTabHost, hasPush: Boolean) {
+    if (host.unsaved()) {
+        val label = stringResource(R.string.link_add_favorite)
+        BarButton(Glyphs.STAR_OUTLINE, colors, host.onStar, Modifier.semantics { contentDescription = label }.testTag(WeatherTabTags.STAR), padding = 4.dp)
+    } else {
+        BarButton(if (hasPush) Glyphs.NOTIFICATIONS else Glyphs.NOTIFICATIONS_NONE, colors, host.onBell,
+            Modifier.testTag(WeatherTabTags.BELL), padding = 4.dp)
+    }
+    BarButton(Glyphs.SHARE, colors, host.onShare, Modifier.padding(end = 4.dp).testTag(WeatherTabTags.SHARE), padding = 4.dp)
+}
 
 object WeatherTabTags {
     const val LOCATION = "weather-location"
     const val BELL = "weather-bell"
+    const val STAR = "weather-star"
+    const val SEARCH = "weather-search"
     const val SHARE = "weather-share"
     const val POLLEN_DIALOG = "weather-pollen-dialog"
     const val SOURCE_DIALOG = "weather-source-dialog"
@@ -207,20 +250,18 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
     return TabContent(
         title = page.title,
         refreshing = if (place != null && !place.disable) loadingSelected else null,
-        afterTitle = { colors ->
+        // The current position's glyph stands before the name (#3180), the search button after it.
+        beforeTitle = { colors ->
             if (page.currentPosition && !loadingSelected) {
                 val glyph = if (host.locationEnabled()) LOCATION_ON else LOCATION_OFF
                 Icon {
-                    OutlinedText(" $glyph", line(19.sp, TextUnit.Unspecified, colors.headerText, family = Glyphs.materialIcons), colors.headerOutline,
+                    OutlinedText("$glyph ", line(19.sp, TextUnit.Unspecified, colors.headerText, family = Glyphs.materialIcons), colors.headerOutline,
                         Modifier.clickable(onClick = host.onLocationGlyph).testTag(WeatherTabTags.LOCATION))
                 }
             }
         },
-        actions = { colors ->
-            BarButton(if (page.hasPush) Glyphs.NOTIFICATIONS else Glyphs.NOTIFICATIONS_NONE, colors, host.onBell,
-                Modifier.testTag(WeatherTabTags.BELL), padding = 4.dp)
-            BarButton(Glyphs.SHARE, colors, host.onShare, Modifier.padding(end = 4.dp).testTag(WeatherTabTags.SHARE), padding = 4.dp)
-        },
+        afterTitle = { colors -> HeaderSearch(colors, host) },
+        actions = { colors -> HeaderActions(colors, host, page.hasPush) },
         scrolled = { scroll.value / density },
         page = {
             CompositionLocalProvider(LocalForecastChartImages provides images) {

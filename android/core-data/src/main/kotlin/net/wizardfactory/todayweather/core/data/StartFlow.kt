@@ -88,19 +88,26 @@ class StartFlow(
      * A chosen Places prediction: named by [PredictionName], geocoded by [query] (S01: its full text,
      * `getGeoInfoByAddr(description)`; S02: its terms joined by commas); a failed geocode shows nothing.
      */
-    suspend fun addPrediction(fullText: String, firstMatch: Int?, word: String, query: String = fullText): Outcome {
-        val name = PredictionName.of(fullText, firstMatch, word)
-        val geoInfo = geocode.byAddress(query, languages()) ?: return Outcome.None
-        return add(GeocodeClient.place(geoInfo, currentPosition = false).copy(name = name))
-    }
-
-    /** S02's find-by-location row: the geocoded position added as an ordinary place with its name. */
-    suspend fun addGeoInfo(geoInfo: JsonObject): Outcome = add(GeocodeClient.place(geoInfo, currentPosition = false))
+    suspend fun addPrediction(fullText: String, firstMatch: Int?, word: String, query: String = fullText): Outcome =
+        add(predictionPlace(fullText, firstMatch, word, query) ?: return Outcome.None)
 
     /** A chosen bundled town, with the address and name SearchCtrl builds; no geocode request. */
-    suspend fun addTown(town: Town): Outcome {
+    suspend fun addTown(town: Town): Outcome = add(townPlace(town))
+
+    /** The place of a chosen Places prediction, named and geocoded as [addPrediction] does; null when the geocode failed. */
+    suspend fun predictionPlace(fullText: String, firstMatch: Int?, word: String, query: String = fullText): Place? {
+        val name = PredictionName.of(fullText, firstMatch, word)
+        val geoInfo = geocode.byAddress(query, languages()) ?: return null
+        return GeocodeClient.place(geoInfo, currentPosition = false).copy(name = name)
+    }
+
+    /** S02's find-by-location row: the geocoded position as an ordinary place with its name. */
+    fun geoInfoPlace(geoInfo: JsonObject): Place = GeocodeClient.place(geoInfo, currentPosition = false)
+
+    /** The place of a bundled town: the address and name SearchCtrl builds, and its coordinates. */
+    fun townPlace(town: Town): Place {
         val info = town.placeInfo()
-        return add(Place(false, false, info.name, info.address, info.country, Location(info.lat, info.long)))
+        return Place(false, false, info.name, info.address, info.country, Location(info.lat, info.long))
     }
 
     /** `saveCity` then `addCity`: an existing place, or a body that does not convert, is "already added". */

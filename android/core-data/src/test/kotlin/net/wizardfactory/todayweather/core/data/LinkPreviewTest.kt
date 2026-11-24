@@ -14,8 +14,10 @@ import net.wizardfactory.todayweather.core.storage.Place
 import net.wizardfactory.todayweather.core.storage.startShows
 
 /**
- * A place a `link.todayweather.ai` link opened without saving it (specs/deeplink.md §6.2): shown and loaded as the
- * selected place, never written to the saved places until Add to favorites.
+ * A place opened without saving it, by a search result or a `link.todayweather.ai` link (#3180, specs/deeplink.md
+ * §6.2): shown and loaded as the last place of the list, never written to the saved places until its star adds it.
+ * One such place is kept: it stays while the user moves to saved places and back, and goes when another replaces it
+ * or the app starts again.
  */
 class LinkPreviewTest {
     private class Memory(value: AppState) : StateAccess {
@@ -59,17 +61,48 @@ class LinkPreviewTest {
         assertEquals(1, saved.value.placeIndex, "the saved selection stays for the return")
     }
 
+    /** #3180, AK's choice 2: a swipe to a saved place keeps the unsaved one, and a swipe back shows it again. */
     @Test
-    fun selectingASavedPlaceEndsThePreview() = runTest {
+    fun movingToASavedPlaceKeepsTheUnsavedOneAndMovingBackSelectsIt() = runTest {
         val saved = Memory(started)
         val preview = LinkPreview(saved)
         preview.show(seoul)
+        assertTrue(preview.selected.value)
         // A swipe, a widget link or a notification tap selects a saved place.
         preview.change { it.copy(placeIndex = 0) }
-        assertNull(preview.place.value)
+        assertEquals(seoul, preview.place.value, "it stays in the list")
+        assertFalse(preview.selected.value)
         assertEquals(0, saved.value.placeIndex)
         assertEquals(started.places, saved.value.places)
-        assertEquals(saved.value, preview.current())
+        assertEquals(listOf(current, london, seoul), preview.current()!!.places)
+        assertEquals(0, preview.current()!!.placeIndex)
+        // What a screen draws from the collected flows equals what the session reads.
+        assertEquals(preview.current(), LinkPreview.overlay(saved.value, preview.place.value, preview.selected.value))
+        // A response for the saved place selected now is saved, and the unsaved place's own fields stay in memory.
+        preview.change { s -> s.copy(places = s.places.mapIndexed { i, p -> if (i == 0) p.copy(photo = "a.jpg") else p }) }
+        assertEquals("a.jpg", saved.value.places[0].photo)
+        assertEquals(seoul, preview.place.value)
+        // The swipe back: the last place of the list.
+        preview.change { it.copy(placeIndex = 2) }
+        assertTrue(preview.selected.value)
+        assertEquals(2, preview.current()!!.placeIndex)
+        assertEquals(0, saved.value.placeIndex, "the saved selection is the one before it")
+    }
+
+    @Test
+    fun anotherPlaceReplacesTheUnsavedOneAndANewStartHasNone() = runTest {
+        val saved = Memory(started)
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        preview.change { it.copy(placeIndex = 0) }
+        val busan = Place(false, false, "부산", location = Location(35.179, 129.076))
+        preview.show(busan)
+        assertEquals(busan, preview.place.value, "one unsaved place: the new one replaces it")
+        assertTrue(preview.selected.value)
+        assertEquals(listOf(current, london, busan), preview.current()!!.places)
+        assertEquals(started.places, saved.value.places)
+        // The app started again: nothing was saved, so nothing is left.
+        assertEquals(saved.value, LinkPreview(saved).current())
     }
 
     @Test
@@ -80,6 +113,19 @@ class LinkPreviewTest {
         preview.clear()
         assertEquals(started, preview.current())
         assertEquals(started, saved.value)
+        assertFalse(preview.selected.value)
+    }
+
+    /** The star on a saved place does nothing; on the unsaved place moved away from, nothing either. */
+    @Test
+    fun addAppliesOnlyWhileTheUnsavedPlaceIsSelected() = runTest {
+        val saved = Memory(started)
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        preview.change { it.copy(placeIndex = 1) }
+        assertNull(preview.add())
+        assertEquals(started, saved.value)
+        assertEquals(seoul, preview.place.value)
     }
 
     @Test

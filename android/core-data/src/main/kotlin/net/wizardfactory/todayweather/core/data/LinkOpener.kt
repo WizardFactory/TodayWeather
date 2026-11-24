@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import net.wizardfactory.todayweather.core.domain.share.DeepLinkTarget
 import net.wizardfactory.todayweather.core.storage.AppState
+import net.wizardfactory.todayweather.core.storage.Place
 import net.wizardfactory.todayweather.core.storage.startShows
 
 /** A link for the screens to apply once: [id] tells the same link opened twice apart. */
@@ -14,7 +15,7 @@ data class LinkRequest(val id: Long, val route: LinkRoute)
 /**
  * Applies `link.todayweather.ai` links in order (specs/deeplink.md §6.2) over the saved [state], which is null until it
  * has been read after the migration. A saved place within 0.01° is selected and loaded ([openPlace], `reloadEvent
- * 'deeplink'`); another place shows as a [preview] and loads ([reload]). On the start page (S01) every place link is a
+ * 'deeplink'`); another place shows as a [preview] and loads ([reload]), replacing an unsaved place shown before. On the start page (S01) every place link is a
  * preview, which covers S01 without closing it, and page links and `/open` are ignored (§6.2.3 "defer or ignore"), so
  * no link waits and none holds back the next. An unknown catalog city changes nothing. The screens get each applied
  * link, `/open` included, as the [requests] value (menus and pages close, then the tab or the page opens) and report
@@ -45,7 +46,7 @@ class LinkOpener(
                     preview.show(place)
                     reload()
                 } else {
-                    preview.clear()
+                    // The saved place is selected; an unsaved place opened earlier stays in the list.
                     openPlace(route.index!!)
                 }
             }
@@ -54,6 +55,17 @@ class LinkOpener(
             queue.addLast(LinkRequest(++next, route))
             pending.value = queue.first()
         }
+    }
+
+    /**
+     * A place chosen in the search (#3180): the saved place within 0.01° is selected, else the place shows without
+     * being saved. The search loads it and chooses the tab (`goPage`), so nothing is asked of the screens here.
+     */
+    fun show(place: Place) {
+        val saved = state.value ?: return
+        val index = LinkRoutes.nearbySaved(saved, place)
+        if (index < 0) return preview.show(place)
+        preview.change { it.copy(placeIndex = index) }
     }
 
     /** The screens applied the request [id], the oldest one: the next follows. Another id changes nothing. */

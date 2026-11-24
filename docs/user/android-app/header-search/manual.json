@@ -1,0 +1,34 @@
+{
+  "title": "TodayWeather for Android · Search from the header and unsaved places",
+  "scenario": "Look up a place from a weather screen without adding it to your saved places, then keep it if you want. The images are the native Android screens rendered under Robolectric SDK 34 with the Seoul weather fixture; the place names are examples.",
+  "steps": [
+    {
+      "title": "Find the search button beside the place name",
+      "instruction": "On 시간별날씨 (Hourly), 일별날씨 (Daily) or 대기정보 (Air), look at the top bar. The place name is in the middle with a magnifier button after it. For your current position a location icon stands before the name. At the right, a saved place shows the bell for its alarms, then the share button.",
+      "screenshot": "saved-place.png",
+      "caption": "A saved place: the magnifier after the name, and the bell and share at the right.",
+      "expected": "The bell is filled when the place has alarms and outlined when it has none."
+    },
+    {
+      "title": "Search for a place",
+      "instruction": "Tap the magnifier. The same search as on 즐겨찾기 (Locations) opens with the keyboard ready. Type a name and tap a result. To go back without choosing, tap 취소 or press Back.",
+      "screenshot": "search.png",
+      "caption": "The search with results for 부산.",
+      "expected": "취소 or Back returns to the screen you came from."
+    },
+    {
+      "title": "Look at the place without saving it",
+      "instruction": "The place opens on the screen you searched from. It is not saved: an outline star stands where the bell was. You can swipe or use the arrows to go to your saved places and come back to it. A link someone shared (link.todayweather.ai) opens a place the same way.",
+      "screenshot": "unsaved-place.png",
+      "caption": "A place that is not saved: the star in place of the bell.",
+      "expected": "Only one unsaved place is kept. Another search result or shared link replaces it, and it is gone after the app is closed and opened again. It is not in the 즐겨찾기 list and has no alarms or widget."
+    },
+    {
+      "title": "Save it with the star",
+      "instruction": "Tap the star to add the place to your saved places. There is no confirmation; a short message says 즐겨찾기에 추가했습니다.",
+      "screenshot": "added-place.png",
+      "caption": "After the star: the bell is back and the place is saved.",
+      "expected": "The place is the last of your saved places and stays after a restart. Remove it in 즐겨찾기 with 편집."
+    }
+  ]
+}

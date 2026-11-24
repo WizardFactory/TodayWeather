@@ -58,7 +58,7 @@ class PlacesPageTest {
     }
 
     private class Setup(val state: Memory, val page: PlacesPage, val requests: MutableList<String>, val removed: MutableList<Int>,
-                        val events: MutableList<String>, val repository: WeatherRepository)
+                        val events: MutableList<String>, val repository: WeatherRepository, val opened: MutableList<Place>)
 
     private fun TestScope.setup(places: List<Place>, device: Device = Device(true, PermissionStatus.GRANTED), index: Int = 1,
                                 records: List<JsonObject> = emptyList(), weather: (String) -> String = { seoulBody }): Setup {
@@ -78,8 +78,10 @@ class PlacesPageTest {
         val repository = WeatherRepository("https://server.test.invalid", null, http, { testScheduler.currentTime }, StandardTestDispatcher(testScheduler))
         val session = WeatherSession(repository, backgroundScope, state, { listOf("ko-KR") }, { null })
         val flow = StartFlow(state, repository, GeocodeClient("https://server.test.invalid", http), device, { listOf("ko-KR") }, telemetry)
-        val page = PlacesPage(state, repository, session, flow, device, backgroundScope, { removed += it }, telemetry = telemetry)
-        return Setup(state, page, requests, removed, events, repository)
+        val opened = mutableListOf<Place>()
+        val page = PlacesPage(state, repository, session, flow, device, backgroundScope, { removed += it }, telemetry = telemetry,
+            openPlace = { opened += it })
+        return Setup(state, page, requests, removed, events, repository, opened)
     }
 
     @Test
@@ -180,39 +182,48 @@ class PlacesPageTest {
         assertNull(failing.page.popup.value)
     }
 
+    /** #3180: a search result opens without being saved; the star of the weather header saves it. */
     @Test
-    fun findByLocationGivesARowThatAddsAnOrdinaryPlace() = runTest {
+    fun findByLocationGivesARowThatOpensAnOrdinaryPlaceWithoutSavingIt() = runTest {
         val t = setup(listOf(Place.currentPositionPlaceholder(), seoul))
-        val added = mutableListOf<Unit>()
-        backgroundScope.launch { t.page.added.collect { added += it } }
+        val before = t.state.value
+        val opened = mutableListOf<Unit>()
+        backgroundScope.launch { t.page.opened.collect { opened += it } }
         t.page.findByLocation()
         runCurrent()
         assertEquals(JsonPrimitive("회현동"), t.page.found.value!!["name"])
-        t.page.addFound()
+        t.page.openFound()
         runCurrent()
-        val place = t.state.value.places.last()
+        val place = t.opened.single()
         assertFalse(place.currentPosition)
+        assertFalse(place.disable)
         assertEquals("회현동", place.name)
-        assertEquals(2, t.state.value.placeIndex, "the new place is selected")
-        assertEquals(1, added.size)
+        assertEquals(before, t.state.value, "nothing is saved or selected")
+        assertEquals(1, opened.size)
+        assertEquals(emptyList(), t.events, "no favorite was added")
     }
 
     @Test
-    fun aPredictionIsGeocodedByItsTermsAndATownByItsCoordinates() = runTest {
+    fun aPredictionIsGeocodedByItsTermsAndATownOpensByItsCoordinates() = runTest {
         val t = setup(listOf(Place.currentPositionPlaceholder(), seoul))
-        t.page.addPrediction("London, UK", 0, "Lon")
+        val before = t.state.value
+        t.page.openPrediction("London, UK", 0, "Lon")
         runCurrent()
         assertTrue("/geocode/v000903/addr/London,UK" in t.requests)
-        assertEquals("London", t.state.value.places.last().name)
+        assertEquals("London", t.opened.last().name)
         t.requests.clear()
-        t.page.addTown(Town("부산광역시", "", "", 35.18, 129.08))
+        val busan = Town("부산광역시", "", "", 35.18, 129.08)
+        t.page.openTown(busan)
         runCurrent()
-        assertEquals(listOf("/weather/v000903/coord/35.18,129.08"), t.requests)
-        assertEquals("부산광역시", t.state.value.places.last().name)
-        // The same town again: O09, already added.
-        t.page.addTown(Town("부산광역시", "", "", 35.18, 129.08))
+        assertEquals(emptyList(), t.requests, "the page asks for no weather: the opened place loads as the selected one")
+        assertEquals("부산광역시", t.opened.last().name)
+        assertEquals(Location(35.18, 129.08), t.opened.last().location)
+        // The same town again opens again: nothing was added, so nothing is "already added".
+        t.page.openTown(busan)
         runCurrent()
-        assertEquals(StartFlow.Outcome.Alert(StartFlow.ALREADY_ADDED), t.page.popup.value)
+        assertEquals(3, t.opened.size)
+        assertNull(t.page.popup.value)
+        assertEquals(before, t.state.value)
     }
 
     @Test

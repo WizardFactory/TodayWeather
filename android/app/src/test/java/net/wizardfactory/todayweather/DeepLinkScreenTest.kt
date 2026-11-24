@@ -1,5 +1,19 @@
 package net.wizardfactory.todayweather
 
+import net.wizardfactory.todayweather.core.data.GeocodeClient
+import net.wizardfactory.todayweather.core.data.LocationAccess
+import net.wizardfactory.todayweather.core.data.PlacesPage
+import net.wizardfactory.todayweather.core.data.StartFlow
+import net.wizardfactory.todayweather.core.domain.start.PermissionStatus
+import net.wizardfactory.todayweather.core.domain.start.TownSearch
+import net.wizardfactory.todayweather.search.BundledTowns
+import net.wizardfactory.todayweather.ui.places.PlacesHost
+import net.wizardfactory.todayweather.ui.places.PlacesTags
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.unit.dp
+import kotlin.test.assertTrue
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,7 +56,6 @@ import net.wizardfactory.todayweather.core.storage.UnitSettings
 import net.wizardfactory.todayweather.ui.forecast.PhotoLoader
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
-import net.wizardfactory.todayweather.ui.link.LinkPreviewTags
 import net.wizardfactory.todayweather.ui.nation.NationTags
 import net.wizardfactory.todayweather.ui.shell.MenuRow
 import net.wizardfactory.todayweather.ui.settings.SettingsTags
@@ -72,6 +85,15 @@ abstract class DeepLinkScreens {
 
     @After fun stop() = scope.cancel()
 
+    /** No location service: the search's find-by-location row is not used here. */
+    private object NoLocation : LocationAccess {
+        override fun enabled() = false
+        override fun status() = PermissionStatus.NOT_REQUESTED
+        override suspend fun request() = PermissionStatus.NOT_REQUESTED
+        override suspend fun position(): Location? = null
+        override suspend fun requestHighAccuracy() = false
+    }
+
     protected lateinit var memory: Memory
     protected lateinit var preview: LinkPreview
     private lateinit var opener: LinkOpener
@@ -83,7 +105,8 @@ abstract class DeepLinkScreens {
         memory = Memory(AppState(places = places, placeIndex = 0, units = UnitSettings.defaults("KR"),
             cordovaExtras = mapOf("startVersion" to JsonPrimitive(1))))
         preview = LinkPreview(memory)
-        val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { _, _ -> seoulBody }, io = Dispatchers.Unconfined)
+        val http = HttpGet { _, _ -> seoulBody }
+        val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, preview, { listOf("ko-KR") }, { null })
         opener = LinkOpener(memory.flow, preview, openPlace = { session.openPlace(it.toDouble()) },
             reload = { session.reload(WeatherSession.Sender.DEEPLINK) })
@@ -96,9 +119,14 @@ abstract class DeepLinkScreens {
             val retry by session.retry.collectAsState()
             val context = LocalContext.current
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
-            AppContent(preview.overlay(saved!!), entries, loading, retry, session, host, "test", onExit = {},
-                link = link, onLinkHandled = opener::handled, preview = shown != null, onAddPreview = { preview.add() },
-                onLeavePreview = preview::clear, share = { view, pollutant -> shared += view to pollutant })
+            val selected by preview.selected.collectAsState()
+            // S02's search over the bundled towns; a chosen result goes where the app sends it (LinkOpener.show).
+            val places = PlacesHost(null, { TownSearch(BundledTowns.load(context)) }) { s ->
+                PlacesPage(memory, repository, session, StartFlow(memory, repository, GeocodeClient("https://server.test.invalid", http), NoLocation,
+                    { listOf("ko-KR") }), NoLocation, s, removeAlarms = {}, openPlace = opener::show)
+            }
+            AppContent(LinkPreview.overlay(saved!!, shown, selected), entries, loading, retry, session, host, "test", onExit = {}, places = places,
+                link = link, onLinkHandled = opener::handled, preview = shown != null, onAddPreview = { preview.add() }, share = { view, pollutant -> shared += view to pollutant })
         }
         session.reload(WeatherSession.Sender.INIT)
         rule.waitForIdle()
@@ -112,8 +140,8 @@ abstract class DeepLinkScreens {
 
 /**
  * `link.todayweather.ai` links on the open tabs (#3096, specs/deeplink.md §6.2): the menu and the pages over the tabs
- * close, then the link's tab opens on a saved place within 0.01° or on a linked place not saved, with Add to favorites
- * over the tab bar; the Locations tab ends that preview; a page link opens S10, S11 or S12.
+ * close, then the link's tab opens on a saved place within 0.01° or on a linked place not saved, with a star in the
+ * bell's position that saves it (#3180); the Locations tab ends that preview; a page link opens S10, S11 or S12.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
@@ -124,13 +152,15 @@ class DeepLinkScreenTest : DeepLinkScreens() {
         open("https://link.todayweather.ai/loc?lat=37.383&lon=127.119&name=%EB%B6%84%EB%8B%B9%EA%B5%AC&view=daily")
         rule.onNodeWithTag(ShellTags.page(Tab.DAILY)).assertExists()
         rule.onNodeWithText("분당구").assertExists()
-        rule.onNodeWithTag(LinkPreviewTags.BAR).assertExists()
+        rule.onNodeWithTag(WeatherTabTags.STAR).assertExists()
+        rule.onNodeWithTag(WeatherTabTags.BELL).assertDoesNotExist()
         assertEquals(listOf("회현동"), memory.current()!!.places.map { it.name }, "nothing saved")
-        rule.onNodeWithTag(LinkPreviewTags.ADD).performClick()
+        rule.onNodeWithTag(WeatherTabTags.STAR).performClick()
         rule.waitForIdle()
         assertEquals(listOf("회현동", "분당구"), memory.current()!!.places.map { it.name })
         assertEquals(1, memory.current()!!.placeIndex)
-        rule.onNodeWithTag(LinkPreviewTags.BAR).assertDoesNotExist()
+        rule.onNodeWithTag(WeatherTabTags.STAR).assertDoesNotExist()
+        rule.onNodeWithTag(WeatherTabTags.BELL).assertExists()
         rule.onNodeWithText("분당구").assertExists()
     }
 
@@ -141,18 +171,37 @@ class DeepLinkScreenTest : DeepLinkScreens() {
         assertEquals(1, memory.current()!!.placeIndex)
         assertNull(preview.place.value)
         rule.onNodeWithTag(ShellTags.page(Tab.AIR)).assertExists()
-        rule.onNodeWithTag(LinkPreviewTags.BAR).assertDoesNotExist()
+        rule.onNodeWithTag(WeatherTabTags.STAR).assertDoesNotExist()
     }
 
+    /**
+     * #3180, AK's choice 2: the unsaved place is the last place of the list. An arrow to a saved place shows the bell,
+     * the arrow back shows the unsaved place and its star again, and the Locations tab keeps it without listing it.
+     */
     @Test
-    fun theLocationsTabEndsThePreview() {
+    fun theUnsavedPlaceStaysWhileMovingToSavedPlacesAndTabs() {
         show(listOf(hoehyeon))
-        open("https://link.todayweather.ai/place/busan")
-        rule.onNodeWithTag(LinkPreviewTags.BAR).assertExists()
+        open("https://link.todayweather.ai/air/busan")
+        rule.onNodeWithTag(WeatherTabTags.STAR).assertExists()
+        rule.onNodeWithTag(AirTags.NEXT).performClick()
+        rule.waitForIdle()
+        assertEquals("부산", preview.place.value?.name)
+        assertEquals(0, memory.current()!!.placeIndex)
+        rule.onNodeWithTag(WeatherTabTags.BELL).assertExists()
+        rule.onNodeWithTag(WeatherTabTags.STAR).assertDoesNotExist()
+        rule.onNodeWithTag(AirTags.PREVIOUS).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(WeatherTabTags.STAR).assertExists()
         rule.onNodeWithTag(ShellTags.tab(Tab.LOCATIONS)).performClick()
         rule.waitForIdle()
-        assertNull(preview.place.value)
-        rule.onNodeWithTag(LinkPreviewTags.BAR).assertDoesNotExist()
+        assertEquals("부산", preview.place.value?.name)
+        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(WeatherTabTags.STAR).assertExists()
+        assertEquals(listOf("회현동"), memory.current()!!.places.map { it.name })
+        // Another link replaces it.
+        open("https://link.todayweather.ai/place/daegu")
+        assertEquals("대구", preview.place.value?.name)
         assertEquals(listOf("회현동"), memory.current()!!.places.map { it.name })
     }
 
@@ -206,7 +255,38 @@ class DeepLinkScreenTest : DeepLinkScreens() {
 }
 
 /**
- * The user-manual captures of a shared link (docs/user/android-app/shared-links): the same screens rendered with native
+ * The header's fit, measured with real glyph widths (native graphics), as the other fit tests are.
+ */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [34], qualifiers = "ko-rKR-w320dp-h568dp-xhdpi", fontScale = 1.3f)
+class HeaderFitTest : DeepLinkScreens() {
+    /**
+     * #3180: at 320 dp with a 1.3 font scale and a long name, the header keeps every control whole and apart: menu,
+     * the search button after the name, the star and share. The name gives way with an ellipsis.
+     */
+    @Test
+    fun theHeaderControlsFitANarrowWindowWithALongName() {
+        show(listOf(hoehyeon))
+        open("https://link.todayweather.ai/loc?lat=37.383&lon=127.119&name=%EA%B2%BD%EA%B8%B0%EB%8F%84%20%EC%84%B1%EB%82%A8%EC%8B%9C%20%EB%B6%84%EB%8B%B9%EA%B5%AC%20%EC%A0%95%EC%9E%90%EC%9D%BC%EB%A1%9C%20%EB%B6%84%EB%8B%B9%EB%82%B4%EA%B3%A1%EB%A1%9C%20%EA%B8%B4%20%EC%9D%B4%EB%A6%84")
+        val width = rule.onRoot().getUnclippedBoundsInRoot().right
+        val menu = rule.onNodeWithTag(ShellTags.MENU_BUTTON).getUnclippedBoundsInRoot()
+        val search = rule.onNodeWithTag(WeatherTabTags.SEARCH).getUnclippedBoundsInRoot()
+        val star = rule.onNodeWithTag(WeatherTabTags.STAR).getUnclippedBoundsInRoot()
+        val share = rule.onNodeWithTag(WeatherTabTags.SHARE).getUnclippedBoundsInRoot()
+        for (control in listOf(rule.onNodeWithTag(ShellTags.MENU_BUTTON), rule.onNodeWithTag(WeatherTabTags.SEARCH),
+            rule.onNodeWithTag(WeatherTabTags.STAR), rule.onNodeWithTag(WeatherTabTags.SHARE))) control.assertIsDisplayed()
+        assertTrue(menu.left >= 0.dp && share.right <= width, "inside the window: $menu $share of $width")
+        assertTrue(menu.right <= search.left, "the name and its search button start after the menu: $menu $search")
+        assertTrue(search.right <= star.left, "the search button ends before the star: $search $star")
+        assertTrue(star.right <= share.left + 1.dp, "the star ends before share: $star $share")
+        // The search button keeps its touch size (36 × 44 dp) though the name is cut.
+        assertTrue(search.right - search.left >= 36.dp && search.bottom - search.top >= 44.dp, "touch size: $search")
+    }
+}
+
+/**
+ * The user-manual captures of the header search and an unsaved place (docs/user/android-app/header-search), rendered with native
  * graphics, written to build/deeplink-manual for the manual tool.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -221,14 +301,26 @@ class DeepLinkManualCaptureTest : DeepLinkScreens() {
         File(out, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
+    /** The manual's screens: the header of a saved place, the search it opens, a result shown unsaved, and after its star. */
     @Test
-    fun captureTheSharedPlaceAndItsAdd() {
+    fun captureTheSearchAndTheUnsavedPlace() {
         show(listOf(hoehyeon))
-        open("https://link.todayweather.ai/loc?lat=37.383&lon=127.119&name=%EB%B6%84%EB%8B%B9%EA%B5%AC&view=daily")
-        rule.onNodeWithTag(LinkPreviewTags.BAR).assertExists()
-        capture("shared-place")
-        rule.onNodeWithTag(LinkPreviewTags.ADD).performClick()
-        rule.onNodeWithTag(LinkPreviewTags.BAR).assertDoesNotExist()
+        rule.onNodeWithTag(WeatherTabTags.BELL).assertExists()
+        capture("saved-place")
+        rule.onNodeWithTag(WeatherTabTags.SEARCH).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(PlacesTags.INPUT).performTextInput("부산")
+        rule.waitForIdle()
+        rule.onNodeWithTag(PlacesTags.town(0)).assertExists()
+        capture("search")
+        rule.onNodeWithTag(PlacesTags.town(0)).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(WeatherTabTags.STAR).assertExists()
+        capture("unsaved-place")
+        rule.onNodeWithTag(WeatherTabTags.STAR).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(WeatherTabTags.STAR).assertDoesNotExist()
+        rule.onNodeWithTag(WeatherTabTags.BELL).assertExists()
         capture("added-place")
     }
 }

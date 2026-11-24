@@ -1,0 +1,49 @@
+{
+  "capture": {
+    "test": "DeepLinkManualCaptureTest",
+    "runner": "Robolectric SDK 34, GraphicsMode NATIVE",
+    "qualifiers": "ko-rKR-w384dp-h832dp-xhdpi",
+    "theme": "light",
+    "date": "2026-11-24",
+    "font_for_pdf": "WenQuanYi Zen Hei (wqy-zenhei.ttc), not distributed"
+  },
+  "screenshots": {
+    "saved-place.png": {
+      "sha256": "ab5723353193fa6c8113f0e13c463e90a2f41edea60b2eb1f67502e89e0d56d7",
+      "size": [
+        768,
+        1664
+      ]
+    },
+    "search.png": {
+      "sha256": "20a3cb6831c8ce86fbd564fb8881995c09b6cf5d1ba78b457c1cfd2a9fcaed3e",
+      "size": [
+        768,
+        1664
+      ]
+    },
+    "unsaved-place.png": {
+      "sha256": "0de167f1ce3a622aedec5786e755d35b30fbf92eef8e06062dc7e6683705340e",
+      "size": [
+        768,
+        1664
+      ]
+    },
+    "added-place.png": {
+      "sha256": "e6df08a0dd2b0df56e99b9ac8985e2118fa815684ec2ac9baaefec3cc2c1af3f",
+      "size": [
+        768,
+        1664
+      ]
+    }
+  },
+  "manual_sha256": "7069c06e415f5b6a2b90d560014622802c2b10d381372e2ff78b361ec89e917d",
+  "pdf_sha256": "8ee7c92bc27df7d27fcd9bee3c525ff4476dd4e8cd3697f7644888d97c39d9d3",
+  "sources": {
+    "android/app/src/test/java/net/wizardfactory/todayweather/DeepLinkScreenTest.kt": "d6b52ddcb510debc34b218775a6da1c5f93be954be514188f19fe1c764e46fa0",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherTab.kt": "84874c0769d69635cd98f74cd6b5f8e48f4a9bf4c07f0688ee6d56b1d247b9d1",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/places/PlacesTab.kt": "ffa3910d60c7bba027f7d7c2d2906f7fd6c11f3a9f39f8be4c7fdae401fbcd35",
+    "android/app/src/main/res/values-ko/link_strings.xml": "c2fc9a1217ae640f5429a3b111beda25fb391a2adc9b64dd43cd5f405686727e",
+    "android/core-domain/src/test/resources/corpus/inputs/kma-seoul.json": "75b92bbcfca72d79438021b4245c4efab4502f5954ba991d3b8c9e70d9578b17"
+  }
+}

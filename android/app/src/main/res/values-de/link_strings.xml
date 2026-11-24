@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A place a link.todayweather.ai link shows without saving it (specs/deeplink.md §6.2). Not generated from client/. -->
+<!-- A place shown without being saved (a search result or a link.todayweather.ai link) and the weather header's search button (#3180). Not generated from client/. -->
 <resources>
     <string name="link_add_favorite">Zu Favoriten hinzufügen</string>
-    <string name="link_preview_note">Geteilter Ort, nicht gespeichert</string>
+    <string name="link_added_favorite">Zu den Favoriten hinzugefügt</string>
+    <string name="header_search">Orte suchen</string>
 </resources>
