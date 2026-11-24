@@ -158,12 +158,12 @@ class HandBackTest {
     }
 
     /**
-     * Without a choice here the region default applies (analytics default-on, 2026-11-24), so a withdrawal made in a
-     * fallback build that claimed the state is kept as this app's choice. Under a native marker the suite's `"false"` may
-     * be a restored backup's (the suite is backed up, this app's choice is not), so it is not adopted.
+     * Without a choice here the region default applies (analytics default-on, 2026-11-24) and no suite choice is adopted:
+     * the suite is backed up while this app's choice is not, so a restore (with a native or a fallback build's marker)
+     * must leave the region default (CODEX-3178-2).
      */
     @Test
-    fun aWithdrawalInTheFallbackBuildHoldsWhenNothingWasChosenHere() {
+    fun withoutAChoiceHereNoSuiteChoiceIsAdopted() {
         val consent = ConsentStore(context)
         val choices = context.getSharedPreferences(ConsentStore.CHOICE_FILE, Context.MODE_PRIVATE)
         fun start(marker: String?, choice: String?): String? {
@@ -177,8 +177,8 @@ class HandBackTest {
         }
         val claim = """{"schema":1,"generation":4,"writer":"cordova","complete":true,"keys":[]}"""
         val own = CordovaHandBack.marker(5, CordovaHandBack.NATIVE)
-        assertEquals("claimed there", "false", start(claim, "false"))
-        assertNull("under a native marker it may be a restored backup's choice: the region default applies", start(own, "false"))
+        assertNull("a fallback build's claim may be restored from a backup", start(claim, "false"))
+        assertNull("a native marker may be restored from a backup", start(own, "false"))
         assertNull("a grant there is not carried over: the region default applies", start(claim, "true"))
         assertNull("no choice there", start(claim, null))
         assertNull("nothing handed over: no fallback choice to keep", start(null, "false"))

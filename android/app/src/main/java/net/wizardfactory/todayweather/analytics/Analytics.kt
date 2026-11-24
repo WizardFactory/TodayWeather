@@ -63,7 +63,8 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
      * and is written now; a grant the collection state does not confirm is withdrawn and written so.
      */
     fun startChoice(): String? {
-        if (runCatching { collection.getBoolean(DECLINED, false) }.getOrDefault(false)) {
+        // A record that cannot be read counts as a withdrawal: any state the start cannot read leaves collection off.
+        if (runCatching { collection.getBoolean(DECLINED, false) }.getOrDefault(true)) {
             write(false)
             return "false"
         }
@@ -75,16 +76,17 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
     }
 
     /**
-     * Writes the choice (`persistChoice`); when that fails it removes the choice, so an old grant cannot survive, and
-     * records a withdrawal beside the collection state ([DECLINED]), so the region default cannot turn it back on.
+     * Writes the choice (`persistChoice`); when that fails it records a withdrawal beside the collection state ([DECLINED])
+     * first, so the region default cannot turn it back on even if the process ends here, and then removes the choice, so
+     * an old grant cannot survive.
      */
     fun write(value: Boolean): Boolean {
         if (choices.edit().putString(KEY, value.toString()).commit()) {
             if (runCatching { collection.contains(DECLINED) }.getOrDefault(true)) collection.edit().remove(DECLINED).commit()
             return true
         }
-        choices.edit().remove(KEY).commit()
         if (!value) collection.edit().putBoolean(DECLINED, true).commit()
+        choices.edit().remove(KEY).commit()
         Log.w(TAG, "collection storage_write_failed")
         return false
     }

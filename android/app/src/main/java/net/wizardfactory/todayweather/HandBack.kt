@@ -72,25 +72,17 @@ class HandBackWriter(private val suite: SharedPreferences, private val consent: 
  * there is not carried over, as the first migration carries none. Runs before the choice applies ([EarlyStartProvider]);
  * each write of the choice is handed back at once ([HandBackWriter.watchConsent]), so a grant here is in the suite first.
  *
- * Without a choice here the region default applies (analytics default-on, 2026-11-24), so a withdrawal made in a
- * fallback build that claimed the state (a `cordova` marker) is kept as this app's choice; a write that fails is recorded
- * as a pending withdrawal ([ConsentStore.write]). Under a native marker a `"false"` without a choice here is not
- * adopted: the suite is backed up while this app's choice is not, so after a restore it may be the old device's choice,
- * and a restore leaves the region default (as does a fallback build that could not claim the state).
+ * Without a choice here the region default applies (analytics default-on, 2026-11-24) and nothing is adopted: the suite
+ * is backed up while this app's choice is not, so a suite choice cannot tell a fallback build's withdrawal on this
+ * device from an old device's choice after a restore, and a restore must leave the region default.
  */
 object HandBackConsent {
     fun beforeStart(context: Context) {
         val store = ConsentStore(context)
-        val stored = store.storedChoice()
-        if (stored != "true" && stored != null) return
+        if (store.storedChoice() != "true") return
         val suite = context.getSharedPreferences(CordovaMigration.SUITE, Context.MODE_PRIVATE)
-        val marker = CordovaHandBack.parse(runCatching { suite.getString(CordovaHandBack.MARKER, null) }.getOrNull()) ?: return
-        val there = runCatching { suite.getString(CordovaHandBack.CONSENT, null) }.getOrNull()
-        if (stored == null) {
-            if (marker.writer == CordovaHandBack.CORDOVA && there == "false") store.write(false)
-            return
-        }
-        if (there == "true") return
+        if (CordovaHandBack.parse(runCatching { suite.getString(CordovaHandBack.MARKER, null) }.getOrNull()) == null) return
+        if (runCatching { suite.getString(CordovaHandBack.CONSENT, null) }.getOrNull() == "true") return
         store.write(false)
     }
 }

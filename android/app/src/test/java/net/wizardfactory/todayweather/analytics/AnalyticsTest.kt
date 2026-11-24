@@ -177,6 +177,30 @@ class AnalyticsTest {
     }
 
     @Test
+    fun anUnreadablePendingWithdrawalDoesNotCollect() {
+        for (region in listOf("DE", "KR")) {
+            choices.edit().putString(ConsentStore.KEY, "true").commit()
+            collection.edit().putBoolean(ConsentStore.ENABLED, true).putString(ConsentStore.DECLINED, "true").commit()
+            assertFalse(analytics(Sdk(), region).choice.value, "a stale grant ($region)")
+            choices.edit().remove(ConsentStore.KEY).commit()
+            collection.edit().putString(ConsentStore.DECLINED, "true").commit()
+            assertFalse(analytics(Sdk(), region).choice.value, "no choice ($region)")
+        }
+    }
+
+    /** The process may end between the two writes of a failed withdrawal: the withdrawal is on disk before the removal. */
+    @Test
+    fun aFailedWithdrawalIsRecordedBeforeTheChoiceIsRemoved() {
+        val a = analytics(Sdk(), "KR")
+        assertTrue(a.setCollectionEnabled(true))
+        var recordedFirst: Boolean? = null
+        choices.failPuts = true
+        choices.beforeRemoval = { recordedFirst = collection.getBoolean(ConsentStore.DECLINED, false) }
+        assertFalse(a.setCollectionEnabled(false))
+        assertEquals(true, recordedFirst)
+    }
+
+    @Test
     fun anUnreadableChoiceDoesNotCollect() {
         choices.edit().putBoolean(ConsentStore.KEY, true).commit()
         val sdk = Sdk()
@@ -335,6 +359,9 @@ class AnalyticsTest {
 
         /** Only writes of a value fail; a removal succeeds. */
         var failPuts = false
+
+        /** Runs before a removal is committed while [failPuts] is set. */
+        var beforeRemoval: (() -> Unit)? = null
         override fun edit(): SharedPreferences.Editor = when {
             fail -> Failing(real.edit())
             failPuts -> object : SharedPreferences.Editor by real.edit() {
@@ -342,7 +369,11 @@ class AnalyticsTest {
                 private var put = false
                 override fun putString(key: String?, value: String?) = also { put = true }
                 override fun remove(key: String?) = also { staged.remove(key) }
-                override fun commit() = !put && staged.commit()
+                override fun commit(): Boolean {
+                    if (put) return false
+                    beforeRemoval?.invoke()
+                    return staged.commit()
+                }
             }
             else -> real.edit()
         }
