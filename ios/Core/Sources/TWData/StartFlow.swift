@@ -220,8 +220,8 @@ public final class StartFlow {
             if let location = city.location { updated.location = location }
             return updated
         }
-        let own = place.location
-        if (own == nil || own?.lat == 0), let found = city.location, found.lat != 0 { updated.location = found }
+        let own = WeatherRequests.usesCoordinates(lat: place.location?.lat, address: place.address)
+        if !own, let found = city.location, found.lat != 0 { updated.location = found }
         return updated
     }
 }
