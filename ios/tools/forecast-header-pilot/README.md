@@ -23,6 +23,6 @@ Run the missing, duplicate and skipped case tests with `python3 tools/forecast-h
 
 ## Ranked summary reference images
 
-The six `ranked-summary-*.png` files in `TodayWeatherTests/ForecastReference` capture the native Korean summary box on iOS 26.5 with Xcode 27.2. The fixture has a dated summary with four authored lines and an expected two-line rendering. Hourly and daily modes are captured at 375, 393 and 440 points. These are native references for the ranked summary. The existing weather matrix retains its Korean and English comparison coverage.
+The six `ranked-summary-*.png` files in `TodayWeatherTests/RankedForecastReference` capture the native Korean summary box on iOS 26.5 with Xcode 27.2. The fixture has a dated summary with four authored lines and an expected two-line rendering. Hourly and daily modes are captured at 375, 393 and 440 points. These are native references for the ranked summary. The existing weather matrix retains its Korean and English comparison coverage.
 
 Regenerate these images only for an explained visual change. Run the test in an isolated checkout and export the actual render as a PNG attachment in place of the reference comparison, then review the images and restore the comparison before committing. Keep the size-specific names and fixture date. Run both workflows for comparison after refreshing a reference.

@@ -24,7 +24,7 @@ on:
       - "ios/TodayWeatherTests/WeatherScreenshotTests.swift"
       - "ios/TodayWeatherTests/WeatherTabTests.swift"
       - "ios/TodayWeatherTests/MatrixScreenshotTests.swift"
-      - "ios/TodayWeatherTests/ForecastReference/ranked-summary-*.png"
+      - "ios/TodayWeatherTests/RankedForecastReference/ranked-summary-*.png"
       - "ios/Core/Tests/TWDomainTests/ForecastScopeTests.swift"
       - "ios/Core/Tests/TWDataTests/WeatherRequestTests.swift"
       - "ios/TodayWeather.xcodeproj/xcshareddata/xcschemes/TodayWeather.xcscheme"
