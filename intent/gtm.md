@@ -24,7 +24,7 @@ Go-to-market information for TodayWeather was spread over release notes, researc
 ## Authority and endpoint
 
 - First pull request (task `gtm-g01`): endpoint `pr`. It adds documents and the checker rule; it changes no account, store or production state. Merge is AK's decision.
-- Collector pull requests follow under #3145 and need AK's go.
+- Collectors, the brief and the schedule are built in the Hermes workspace (amendment of 2026-11-24).
 - Credentials, identifiers, figures and review bodies never enter Git, issues or pull requests.
 
 ## Acceptance criteria for `gtm-g01`
@@ -43,4 +43,3 @@ AK decided after the attribution audit:
 - The pull request is completed now. Collectors, the brief and the schedule are built on the Hermes host from another workspace ("셋업만": this repository supplies the access, locations and documents that work needs, not tools).
 - An App Store Connect Admin key is issued so the ongoing analytics report request can be created.
 - Campaign values in store links, Android code shrinking, analytics on by default with the matching privacy text (#2660), the landing analytics tag and a new advertising campaign proceed as separate tasks. Store country availability is handled in its own issue.
-

@@ -84,7 +84,7 @@ gtm/
 
 `gtm/` links to existing material and does not move it: [store listing texts and screenshots](../client/fastlane/metadata), the [store release runbook](../docs/operations/cordova-store-release.md), the [policy and disclosure evidence](../docs/operations/store-policy-evidence.md), the [store voice research](../docs/evidence/research/landing-store-voice-2026-11-21.md), the [market comparison](../docs/evidence/research/mobile-markets-2026-11-20/README.md), the [focus cities](../docs/operations/mobile-focus-cities.md) and the [landing plan](landing.md).
 
-Collectors, built in the Hermes workspace, reuse the existing variable names (`TW_ASC_KEY_ID`, `TW_ASC_ISSUER_ID`, `TW_ASC_KEY_FILE`, `TW_PLAY_JSON_KEY`) and add `TW_GTM_DATA_DIR`, `TW_GTM_S3_URI`, `TW_ASC_VENDOR_NUMBER`, `TW_PLAY_REPORT_BUCKET`, `TW_ADMOB_PUBLISHER_ID` and `TW_ADMOB_OAUTH_FILE`. Tools have no dry-run or mock mode; tests use in-test doubles, and each source is verified once against the real service.
+Collectors, built in the Hermes workspace, use the variables in [`gtm/.env.example`](../gtm/.env.example): the App Store sales key (`TW_ASC_SALES_KEY_ID`, `TW_ASC_SALES_KEY_FILE`, `TW_ASC_ISSUER_ID`; the release key is refused for sales reports), `TW_PLAY_JSON_KEY`, `TW_GTM_DATA_DIR`, `TW_GTM_S3_URI`, `TW_ASC_VENDOR_NUMBER`, `TW_PLAY_REPORT_BUCKET`, `TW_ADMOB_PUBLISHER_ID` and `TW_ADMOB_OAUTH_FILE`. Tools have no dry-run or mock mode; tests use in-test doubles, and each source is verified once against the real service.
 
 ## Record contract
 
@@ -104,7 +104,7 @@ Each task with repository changes is one PR against `master`. Private data and i
 | G-05 | **Owned by the Hermes workspace (AK, 2026-11-24); implementation location decided there.** Daily ad earnings per app and platform. | Hermes workspace, `sources.md` | G-01 | A real report is stored with currency and timezone; the last three days are re-collected. A revoked token is recorded as not collected. |
 | G-06 | **Owned by the Hermes workspace (AK, 2026-11-24); implementation location decided there.** The daily brief in Korean on standard output and under `briefs/`. | Hermes workspace, `gtm/README.md` | G-02, G-03; extended by G-04 and G-05 | The brief lists each source's latest complete day, the change against the previous day and the seven-day average, new reviews, and every missing source with its reason. |
 | G-07 | Listing state and research index. | `gtm/listing/README.md`, `gtm/research/README.md`, `log.md` | G-01 | Every link resolves under the artifact checker. The listing page states what is live and what is pending review per store, with the date observed. |
-| G-08 | The daily run on Hermes. **Owned by another workspace (AK, 2026-11-23);** this plan supplies the tools and the host requirements in `sources.md`. | Host changes; wrapper location decided there | G-00, G-06; host access | After host inspection, one manual `hermes cron run` stores records in S3 and delivers the brief; a forced failure produces an error alert. The schedule is enabled at 09:00 KST. |
+| G-08 | The daily run on Hermes. **Owned by the Hermes workspace (AK, 2026-11-23 and 2026-11-24);** this repository supplies the access and the host requirements in `sources.md`. | Host changes; wrapper location decided there | G-00, G-06; host access | After host inspection, one manual `hermes cron run` stores records in S3 and delivers the brief; a forced failure produces an error alert. The schedule is enabled at 09:00 KST. |
 
 - **This repository:** G-00, G-01 and G-07 (task `gtm-g01`, PR #3146).
 - **Hermes workspace:** G-02 to G-06 and G-08, starting from the host setup in `gtm/sources.md`. The acceptance column stays the contract for that work.
@@ -120,7 +120,7 @@ Each task with repository changes is one PR against `master`. Private data and i
 2. **Scheduled run.** The 09:00 KST Hermes job collects every configured source, stores records in S3 and delivers the brief. Running it again the same day changes nothing.
 3. **Access failure.** The AdMob token is revoked. Ad earnings are recorded as not collected with the reason; the other sources are stored and reported, and the job still delivers the brief.
 4. **Explaining a change.** Downloads rise after a listing update. The brief's day matches an entry in `log.md`, and `listing/README.md` shows which listing was live.
-5. **Fresh worktree.** An agent in a new worktree without data access is told by the tool which variables and location are missing, and collects nothing partial.
+5. **Fresh host.** A collector run without data access names the missing variables and location from `gtm/.env.example` and collects nothing partial.
 6. **Host setup.** The Hermes workspace copies the private files listed in `gtm/sources.md` to the host. Its first collector run shows each source as collected or not collected with a reason, without printing any configured value.
 
 ## Verification

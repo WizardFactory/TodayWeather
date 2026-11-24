@@ -91,7 +91,7 @@ As of 2026-11-24 no link used campaign values, so both stores reported only orga
 
 ## Running on another host
 
-The scheduled collection is built and run on the Hermes host from another workspace (AK, 2026-11-24). This repository supplies the access check and the documents; it does not run collectors.
+The scheduled collection is built and run on the Hermes host from another workspace (AK, 2026-11-24). This repository supplies the access, the locations and these documents; it contains no collector or check tool.
 
 1. Copy to a mode-700 directory on the host: `gtm.env`, `aws-credentials`, the App Store `.p8` file, `admob-oauth-client.json`, `admob-oauth.json` and the Google Play service account key. Rewrite the paths in `gtm.env` for that host.
 2. Install what the collectors need (the AWS CLI for the bucket).

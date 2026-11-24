@@ -28,7 +28,7 @@ The brief reports, per source, the latest complete day with its date, the change
 
 ## Tools
 
-Collectors and the brief are built in the Hermes workspace (AK, 2026-11-24). They read the variables named in `gtm/.env.example`, have no dry-run or mock mode, use in-test doubles in tests, and verify each source once against the real service. They read variables named in `gtm/.env.example`. They have no dry-run or mock mode: tests use in-test doubles, and each source and method is verified once against the real service.
+Collectors and the brief are built in the Hermes workspace (AK, 2026-11-24). They read the variables named in `gtm/.env.example`, have no dry-run or mock mode, use in-test doubles in tests, and verify each source once against the real service.
 
 ## Acceptance
 
