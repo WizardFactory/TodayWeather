@@ -115,25 +115,30 @@ struct HandBackConsentTests {
         #expect(start(own, "false") == ("false", false), "withdrawn there while that build could not read the hand-back")
         #expect(start(claim, nil) == ("false", false), "no choice there: off")
         #expect(start(claim, "true", granted: false) == (nil, false), "a grant there is not carried over")
-        // Without a choice here the region decides (2026-11-24), so a withdrawal there is adopted as this app's choice.
-        #expect(start(claim, "false", granted: false) == ("false", false), "no choice here: the withdrawal there is written")
-        #expect(start(claim, "false", granted: false, region: "KR") == ("false", false), "and holds where the default is on")
-        #expect(start(own, "false", granted: false, region: "KR") == ("false", false))
+        #expect(start(claim, "false", granted: false) == (nil, false), "no grant here: nothing is written")
+        // Without a choice here the region decides (2026-11-24) and no suite choice is adopted (the suite is backed up, the
+        // choice file is not): a withdrawal there while this app had no choice is not carried back (known limitation).
+        #expect(start(claim, "false", granted: false, region: "KR") == (nil, true), "the known limitation: the default")
+        #expect(start(own, "false", granted: false, region: "KR") == (nil, true), "a restored suite: the default")
         #expect(start(claim, "true", granted: false, region: "KR") == (nil, true), "a grant there is not carried over: the default")
+        #expect(start(claim, "false", region: "KR") == ("false", false), "a grant here withdrawn there holds in Korea too")
         #expect(start(claim, nil, granted: false, region: "KR") == (nil, true), "no choice anywhere: the default")
         #expect(start(nil, "false", granted: false, region: "KR") == (nil, true),
                 "nothing handed over yet: the Cordova choice does not carry over")
     }
 
-    /// No choice here, the fallback build withdrew, and the withdrawal cannot be written: it holds for this run
-    /// (`ChoiceOverride`), so collection stays off where the default is on, and the hand-back says "false".
-    @Test func aWithdrawalThereThatCannotBeWrittenHereHoldsForTheRun() {
+    /// A grant here, the fallback build withdrew, and the withdrawal cannot be written but the old grant can be removed
+    /// (CODEX-3187-5): where the default is on, the removal alone would turn collection on; the withdrawal holds for this
+    /// run (`ChoiceOverride`), so collection never starts, and the hand-back says "false".
+    @Test func aWithdrawalThatCannotBeWrittenHoldsForTheRunWhereTheDefaultIsOn() {
         let f = Fixture()
+        _ = f.files.writeChoice(true)
+        _ = f.files.writeCollection(true)
         f.suite.set(#"{"schema":1,"generation":4,"writer":"cordova","complete":true,"keys":[]}"#, forKey: CordovaHandBack.marker)
         f.suite.set("false", forKey: CordovaHandBack.consentKey)
         f.failing.failWrites = true
         f.records.beforeStart()
-        #expect(f.files.readChoice() == nil)
+        #expect(f.files.readChoice() == nil, "the old grant is removed")
         let sdk = Sdk()
         let analytics = UsageAnalytics(sdk: sdk, records: f.records, trafficType: "development", region: "KR")
         analytics.start()
@@ -158,7 +163,7 @@ struct HandBackConsentTests {
     }
 
     /// A grant here, the fallback build withdrew (CODEX-IN17-1). The withdrawal cannot be written: the choice is removed,
-    /// as the Android `ConsentStore.write` removes it, and collection stays off.
+    /// as the Android `ConsentStore.write` removes it, collection stays off and this run hands back the withdrawal.
     @Test func aWithdrawalThatCannotBeWrittenRemovesTheChoice() {
         let f = Fixture()
         _ = f.files.writeChoice(true)
@@ -174,7 +179,7 @@ struct HandBackConsentTests {
         #expect(!analytics.choice)
         #expect(!sdk.collection.contains(true), "collection never on: \(sdk.collection)")
         f.writer.write(Self.state)
-        #expect(f.handedChoice == nil, "handed back as no choice")
+        #expect(f.handedChoice == "false", "the withdrawal holds for this run")
     }
 
     /// As above, and the removal fails too: the stored grant stays on disk, but this run neither applies nor hands it back,

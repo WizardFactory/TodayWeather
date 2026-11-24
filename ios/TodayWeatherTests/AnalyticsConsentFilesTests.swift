@@ -22,7 +22,30 @@ struct AnalyticsConsentFilesTests {
         #expect(files.removeChoice() && files.readChoice() == nil)
         #expect(files.removeChoice(), "removing a missing choice succeeds")
         try Data("yes".utf8).write(to: dir.appendingPathComponent("analytics-choice"))
-        #expect(files.readChoice() == nil, "anything but true or false is no choice")
+        #expect(files.readChoice() == "yes", "other content is a stored record, not a missing choice")
+    }
+
+    /// A stored decline whose file cannot be read must not turn into the region default (CODEX-3187-3): only a missing
+    /// file is no choice; any other unreadable or unexpected record leaves collection off, also in Korea.
+    @Test(arguments: ["false", "yes"])
+    func anUnreadableOrUnexpectedChoiceLeavesCollectionOff(content: String) throws {
+        let dir = directory()
+        let choiceFile = dir.appendingPathComponent("analytics-choice")
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: choiceFile.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        let files = AnalyticsConsentFiles(directory: dir)
+        #expect(files.writeCollection(true))
+        try Data(content.utf8).write(to: choiceFile)
+        if content == "false" {
+            try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: choiceFile.path)
+            #expect(files.readChoice() == AnalyticsConsentFiles.unreadable)
+        }
+        let sdk = PrivacyRowsTests.Sdk()
+        let analytics = UsageAnalytics(sdk: sdk, records: files, trafficType: "development", region: "KR")
+        analytics.start()
+        #expect(!analytics.choice && sdk.calls == ["collection false", "consent false"], "\(sdk.calls)")
     }
 
     @Test func aWriteThatFailsIsReportedAndTheGrantIsWithdrawn() throws {

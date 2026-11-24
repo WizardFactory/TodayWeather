@@ -135,13 +135,31 @@ struct ImportedClientAssetsTests {
             }
             let record = try #require(records.first { $0.output == "\(Self.resourcesPrefix)\(lproj).lproj/Localizable.strings" })
             #expect(record.native_source == "ios/Support/native-strings.json" && record.native_sha256 == nativeHash, "\(code)")
-            #expect(record.native_overrides == ["LOC_ANALYTICS_ALLOWED", "LOC_ANALYTICS_CHOICE", "LOC_ANALYTICS_DISABLED"],
+            // The client catalogs of de, zh-CN and zh-TW carry the consent popup in English; the native texts translate it.
+            let consent = ["de", "zh-CN", "zh-TW"].contains(code) ? ["LOC_ANALYTICS_ALLOW", "LOC_ANALYTICS_DENY", "LOC_ANALYTICS_DETAIL"] : []
+            #expect(record.native_overrides == (consent + ["LOC_ANALYTICS_ALLOWED", "LOC_ANALYTICS_CHOICE", "LOC_ANALYTICS_DISABLED"]).sorted(),
                     "\(code): the client keys the native texts replace")
         }
         let ko = try #require(TWResources.strings(catalog: "ko"))
         #expect(ko.localizedString(forKey: "LOC_ANALYTICS_CHOICE", value: nil, table: nil) == "이용 통계")
         #expect(ko.localizedString(forKey: "LOC_ANALYTICS_DETAIL", value: nil, table: nil).hasSuffix("별도로 처리됩니다."),
                 "the client's consent text stays for the opt-in regions")
+    }
+
+    /// Both analytics popups and the row are in every app language (AK, 2026-11-24): no catalog but English shows the
+    /// English text of a key, as the client's de, zh-CN and zh-TW catalogs did for the consent popup.
+    @Test func theAnalyticsTextsAreTranslatedInEveryLanguage() throws {
+        let keys = ["LOC_ANALYTICS_CHOICE", "LOC_ANALYTICS_ALLOWED", "LOC_ANALYTICS_DISABLED", "LOC_ANALYTICS_DETAIL",
+                    "LOC_ANALYTICS_DENY", "LOC_ANALYTICS_ALLOW", "LOC_ANALYTICS_DETAIL_ON_BY_DEFAULT", "LOC_ANALYTICS_TURN_OFF",
+                    "LOC_ANALYTICS_TURN_ON"]
+        let en = try #require(TWResources.strings(catalog: "en"))
+        for (code, _) in TWResources.catalogs where code != "en" {
+            let strings = try #require(TWResources.strings(catalog: code))
+            for key in keys {
+                let text = strings.localizedString(forKey: key, value: "<missing>", table: nil)
+                #expect(text != "<missing>" && text != en.localizedString(forKey: key, value: nil, table: nil), "\(code) \(key)")
+            }
+        }
     }
 
     @Test func townListIsAJSONList() throws {

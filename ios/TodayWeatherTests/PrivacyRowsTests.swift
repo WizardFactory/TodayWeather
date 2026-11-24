@@ -80,7 +80,7 @@ struct PrivacyRowsTests {
         #expect(popup.buttons.map(\.text) == ["거부 / 철회", "동의"])
         s.shell.tapPopupButton(1)
         #expect(s.shell.analyticsAllowed && s.records.choice == "true")
-        #expect(s.sdk.calls.suffix(3) == ["collection false", "consent true", "collection true"])
+        #expect(s.sdk.calls.suffix(4) == ["collection false", "consent false", "consent true", "collection true"])
         #expect(s.shell.popups.isEmpty)
 
         s.shell.chooseMenuRow(.analytics)
@@ -97,7 +97,7 @@ struct PrivacyRowsTests {
         let catalog = Catalog(code: code)
         #expect(s.shell.analyticsAllowed)
         #expect(s.records.choice == nil && s.records.collection)
-        #expect(s.sdk.calls == ["collection false", "consent true", "collection true"])
+        #expect(s.sdk.calls == ["collection false", "consent false", "consent true", "collection true"])
         s.shell.openMenu()
         s.shell.chooseMenuRow(.analytics)
         let popup = try #require(s.shell.popups.first)
@@ -105,7 +105,7 @@ struct PrivacyRowsTests {
         #expect(popup.buttons.map(\.text) == [catalog("LOC_ANALYTICS_TURN_OFF"), catalog("LOC_ANALYTICS_TURN_ON")])
         if code == "ko" {
             #expect(popup.title == "이용 통계" && popup.buttons.map(\.text) == ["끄기", "켜기"])
-            #expect(popup.lines[0].contains("이 메뉴에서 끄지 않는 한 켜져 있습니다."))
+            #expect(popup.lines[0].contains("이 메뉴에서 끄지 않는 한 켜져 있으며"))
         }
         s.shell.tapPopupButton(0)
         #expect(!s.shell.analyticsAllowed && s.records.choice == "false" && !s.records.collection)
@@ -115,7 +115,7 @@ struct PrivacyRowsTests {
         s.shell.chooseMenuRow(.analytics)
         s.shell.tapPopupButton(1)
         #expect(s.shell.analyticsAllowed && s.records.choice == "true")
-        #expect(s.sdk.calls.suffix(3) == ["collection false", "consent true", "collection true"])
+        #expect(s.sdk.calls.suffix(4) == ["collection false", "consent false", "consent true", "collection true"])
     }
 
     /// A stored "false" stays off in Korea; a stored grant stays on in Germany.

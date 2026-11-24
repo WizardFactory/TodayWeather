@@ -114,14 +114,4 @@ public enum HandBackConsent {
         guard CordovaHandBack.parse(suite.object(forKey: CordovaHandBack.marker) as? String) != nil else { return true }
         return (suite.object(forKey: CordovaHandBack.consentKey) as? String) == "true"
     }
-
-    /// A withdrawal made in a fallback build, which a start without a stored choice adopts (2026-11-24: without a stored
-    /// choice the region decides, so the old "no choice means off" no longer keeps that withdrawal): the suite says
-    /// `"false"` once anything was handed over. A native hand-back without a choice removes the key, so `"false"` there
-    /// comes from the fallback build (a choice there, or a grant it withdrew). Before anything was handed over the
-    /// Cordova choice does not carry over.
-    public static func withdrawnThere(in suite: any HandBackSuite) -> Bool {
-        guard CordovaHandBack.parse(suite.object(forKey: CordovaHandBack.marker) as? String) != nil else { return false }
-        return (suite.object(forKey: CordovaHandBack.consentKey) as? String) == "false"
-    }
 }

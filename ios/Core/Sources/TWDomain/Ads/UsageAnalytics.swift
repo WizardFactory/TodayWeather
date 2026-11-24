@@ -83,13 +83,19 @@ public final class UsageAnalytics {
         _ = applyCollection(choice, stored: stored)
     }
 
-    /// The choice of the dialog (`setCollectionEnabled`): collection stops at once, the choice is written, then
-    /// applied. False when it could not be fully applied (`LOC_PRIVACY_SAVE_FAILED`); the choice is then off.
+    /// The choice of the dialog (`setCollectionEnabled`): collection stops at once and every consent type is denied
+    /// before any file is written, then the choice is written and applied. False when it could not be fully applied
+    /// (`LOC_PRIVACY_SAVE_FAILED`); collection is then off for this run. A grant that cannot be written keeps the stored
+    /// choice as it was (a decline is never erased); a withdrawal that cannot be written removes the old choice, so no
+    /// grant survives. Accepted residual (2026-11-24): if neither can be persisted, the next start finds no choice and the
+    /// region default applies again.
     @discardableResult
     public func setCollectionEnabled(_ value: Bool) -> Bool {
         enabled = false
         pendingScreen = nil
-        let saved = writeChoice(value)
+        sdk.setCollectionEnabled(false)
+        sdk.setConsent(analytics: false)
+        let saved = value ? writeGrant() : writeChoice(false)
         setChoice(saved && value)
         return applyCollection(choice, stored: true) && saved
     }
@@ -137,25 +143,34 @@ public final class UsageAnalytics {
         return true
     }
 
-    /// The choice at the start and whether it was stored; a grant the collection state does not confirm is withdrawn and
-    /// written so. Without a stored choice the region decides, and nothing is written.
+    /// The choice at the start and whether it was stored: only a readable stored "true" that the collection state confirms
+    /// collects (an unconfirmed grant is withdrawn and written so); any other stored record, readable or not, leaves
+    /// collection off. Without a stored choice the region decides, and nothing is written.
     private func startChoice() -> (value: Bool, stored: Bool) {
         switch records.readChoice() {
+        case nil:
+            return (collectsByDefault, false)
         case "true":
             if records.readCollection() { return (true, true) }
             _ = writeChoice(false)
             return (false, true)
-        case "false":
-            return (false, true)
         default:
-            return (collectsByDefault, false)
+            return (false, true)
         }
     }
 
-    /// Writes the choice (`persistChoice`); when that fails it removes the choice, so an old grant cannot survive.
+    /// Writes a withdrawal (`persistChoice`); when that fails it removes the choice, so an old grant cannot survive.
     private func writeChoice(_ value: Bool) -> Bool {
         if records.writeChoice(value) { return true }
         if !records.removeChoice() { log("collection storage_remove_failed") }
+        log("collection storage_write_failed")
+        return false
+    }
+
+    /// Writes a grant; when that fails the stored choice stays as it was, so a stored decline is never erased into "no
+    /// choice" (and with it into the region default).
+    private func writeGrant() -> Bool {
+        if records.writeChoice(true) { return true }
         log("collection storage_write_failed")
         return false
     }
@@ -166,30 +181,31 @@ public final class UsageAnalytics {
         onChoiceChange(value)
     }
 
-    /// Collection off, the consent mode, then collection on for a grant; a failure leaves everything off. A failed stored
-    /// grant is withdrawn and written so; a failed default writes no choice, so the next start tries the default again.
+    /// Collection off and every consent type denied before any file is written; for a grant the collection state is
+    /// recorded first, and only then are analytics storage granted and collection enabled. A failure leaves everything
+    /// off without the SDK ever collecting. A failed stored grant is withdrawn and written so; a failed default writes no
+    /// choice, so the next start tries the default again.
     private func applyCollection(_ value: Bool, stored: Bool) -> Bool {
         enabled = false
         lastScreen = nil
         sentTrackingStatus = nil
         sdk.setCollectionEnabled(false)
-        _ = records.writeCollection(false)
-        sdk.setConsent(analytics: value)
+        sdk.setConsent(analytics: false)
         guard value else {
+            _ = records.writeCollection(false)
             log("collection disabled")
             return true
         }
-        sdk.setCollectionEnabled(true)
         guard records.writeCollection(true) else {
             setChoice(false)
             pendingScreen = nil
+            _ = records.writeCollection(false)
             if stored { _ = writeChoice(false) }
             log("collection write_failed")
-            sdk.setCollectionEnabled(false)
-            _ = records.writeCollection(false)
-            sdk.setConsent(analytics: false)
             return false
         }
+        sdk.setConsent(analytics: true)
+        sdk.setCollectionEnabled(true)
         enabled = true
         log(stored ? "collection enabled" : "collection enabled region_default")
         applyTrackingStatus()

@@ -79,23 +79,20 @@ final class HandBackConsentRecords: AnalyticsConsentRecords {
     /// Before the first hand-back of the process and before the stored choice applies (`UsageAnalytics.start`): a grant
     /// stands only while the suite says `"true"` once anything was handed over, so a withdrawal made in a fallback build
     /// holds and a grant made there is not carried over.
-    /// A withdrawal that cannot be written removes the choice, as the Android `ConsentStore.write` does; one that can be
-    /// neither written nor removed holds for this run (`ChoiceOverride`), so collection stays off and the hand-back says
-    /// `"false"`.
+    /// A withdrawal that cannot be written removes the old grant, as the Android `ConsentStore.write` does, and holds for
+    /// this run (`ChoiceOverride`), so collection stays off and the hand-back says `"false"`; since an absent choice means
+    /// the region default (2026-11-24), the removal alone would turn collection on (CODEX-3187-5). If the withdrawal still
+    /// cannot be written, the next start finds no choice and the region default applies (the accepted residual of
+    /// `specs/ios-native.md`).
     ///
-    /// Without a stored choice the device region decides (2026-11-24), so "no choice" no longer means off: a withdrawal
-    /// made in the fallback build (`HandBackConsent.withdrawnThere`) is written here as this app's choice; when it cannot
-    /// be written it holds for this run, and the suite still holds it at the next start.
+    /// Without a stored choice here no suite choice is adopted (`specs/analytics-default-on.md`): the suite is backed up
+    /// and the choice file is not, so after a restore an old device's value could not be told apart from a fallback
+    /// build's. A withdrawal made in a fallback build while this app had no stored choice is therefore not carried back
+    /// (as a grant made there is not), and the region default applies: a known limitation of the rollback path.
     func beforeStart() {
-        guard let suite else { return }
-        switch readChoice() {
-        case "true" where !HandBackConsent.grantStands(in: suite):
-            if writeChoice(false) || removeChoice() { return }
-        case nil where HandBackConsent.withdrawnThere(in: suite):
-            if writeChoice(false) { return }
-        default:
-            return
-        }
+        guard readChoice() == "true", let suite, !HandBackConsent.grantStands(in: suite) else { return }
+        if writeChoice(false) { return }
+        _ = removeChoice()
         override.value = "false"
         handBack?.rewrite()
     }
@@ -103,7 +100,7 @@ final class HandBackConsentRecords: AnalyticsConsentRecords {
 
 
 /// A withdrawal of the analytics choice that holds for this run only (CODEX-IN17-1): set when a withdrawal the suite asks
-/// for can be neither written nor removed, so the grant on disk is neither applied nor handed back; cleared by the next
+/// for cannot be written (2026-11-24: also when the old grant could be removed), so no grant is applied or handed back; cleared by the next
 /// choice that is written or removed. Read by the hand-back writer off the main actor.
 final class ChoiceOverride: @unchecked Sendable {
     private let lock = NSLock()

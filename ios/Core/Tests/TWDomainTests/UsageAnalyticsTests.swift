@@ -39,8 +39,8 @@ struct UsageAnalyticsTests {
         analytics.start()
         #expect(analytics.collectsByDefault)
         #expect(analytics.choice && changes == [true])
-        #expect(sdk.calls == ["collection false", "consent true", "collection true"],
-                "collection stops first; the consent mode is set before collection starts")
+        #expect(sdk.calls == ["collection false", "consent false", "consent true", "collection true"],
+                "everything off first; analytics storage and collection only after the collection state is recorded")
         #expect(records.choice == nil, "the default is not written as a choice")
         #expect(records.collection, "the collection state is recorded")
         analytics.screen("tab.forecast")
@@ -84,7 +84,7 @@ struct UsageAnalyticsTests {
         analytics.start()
         sdk.calls.removeAll()
         #expect(analytics.setCollectionEnabled(false))
-        #expect(sdk.calls == ["collection false", "consent false"])
+        #expect(sdk.calls == ["collection false", "consent false", "collection false", "consent false"])
         #expect(!analytics.choice && records.choice == "false" && !records.collection)
         #expect(!analytics.track("favorite_change", ["action": .text("add")]))
 
@@ -101,7 +101,7 @@ struct UsageAnalyticsTests {
         records.failCollectionWrites = true
         let (analytics, sdk, _) = make(records, region: "KR")
         analytics.start()
-        #expect(sdk.calls == ["collection false", "consent true", "collection true", "collection false", "consent false"])
+        #expect(sdk.calls == ["collection false", "consent false"], "the SDK never collects: \(sdk.calls)")
         #expect(!analytics.choice && records.choice == nil)
         #expect(!analytics.track("favorite_change", ["action": .text("add")]))
         analytics.screen("tab.forecast")
@@ -113,6 +113,67 @@ struct UsageAnalyticsTests {
         #expect(restarted.choice && restartedSdk.collectionEnabled == true && records.choice == nil)
     }
 
+    /// The SDK is off and every consent type denied before any file is written, and collection starts only after the
+    /// collection state is recorded (`specs/analytics-default-on.md`, order of writes).
+    @Test func theSdkStopsBeforeAnyWriteAndStartsAfterTheRecord() {
+        let records = MemoryRecords()
+        let (analytics, sdk, _) = make(records, region: "KR")
+        records.journal = { sdk.calls.append($0) }
+        analytics.start()
+        #expect(sdk.calls == ["collection false", "consent false", "write collection true", "consent true", "collection true"])
+        sdk.calls.removeAll()
+        #expect(analytics.setCollectionEnabled(false))
+        #expect(sdk.calls == ["collection false", "consent false", "write choice false", "collection false", "consent false",
+                              "write collection false"])
+        sdk.calls.removeAll()
+        #expect(analytics.setCollectionEnabled(true))
+        #expect(sdk.calls == ["collection false", "consent false", "write choice true", "collection false", "consent false",
+                              "write collection true", "consent true", "collection true"])
+    }
+
+    /// A grant that cannot be written keeps a stored decline, so it is not erased into the region default.
+    @Test func aFailedGrantKeepsTheStoredChoice() {
+        let records = MemoryRecords()
+        records.choice = "false"
+        let (analytics, sdk, _) = make(records, region: "KR")
+        analytics.start()
+        records.failChoiceWrites = true
+        #expect(!analytics.setCollectionEnabled(true), "LOC_PRIVACY_SAVE_FAILED")
+        #expect(!analytics.choice && records.choice == "false" && sdk.collectionEnabled == false)
+        records.failChoiceWrites = false
+        let (restarted, restartedSdk, _) = make(records, region: "KR")
+        restarted.start()
+        #expect(!restarted.choice && restartedSdk.collectionEnabled == false, "still declined after a restart")
+    }
+
+    /// Only a readable stored "true" collects: any other stored record (a value the app never writes, or one the files
+    /// could not read) leaves collection off, also where the default is on, and nothing is rewritten.
+    @Test(arguments: ["", "yes", "TRUE", "unreadable"])
+    func anUnexpectedRecordLeavesCollectionOff(stored: String) {
+        let records = MemoryRecords()
+        records.choice = stored
+        records.collection = true
+        let (analytics, sdk, _) = make(records, region: "KR")
+        analytics.start()
+        #expect(!analytics.choice && sdk.calls == ["collection false", "consent false"])
+        #expect(records.choice == stored)
+    }
+
+    /// Accepted residual (coordinator, 2026-11-24): a withdrawal that cannot be written stops collection for this run and
+    /// removes the old grant; if it still cannot be written, the next start finds no choice and the region default applies.
+    @Test func aWithdrawalThatCannotBeWrittenIsOffForTheRunOnly() {
+        let records = MemoryRecords()
+        let (analytics, sdk, _) = make(records, region: "KR")
+        analytics.start()
+        records.failChoiceWrites = true
+        #expect(!analytics.setCollectionEnabled(false), "LOC_PRIVACY_SAVE_FAILED")
+        #expect(!analytics.choice && sdk.collectionEnabled == false && records.choice == nil && !records.collection)
+        #expect(!analytics.track("favorite_change", ["action": .text("add")]))
+        let (restarted, restartedSdk, _) = make(records, region: "KR")
+        restarted.start()
+        #expect(restarted.choice && restartedSdk.collectionEnabled == true, "the documented residual: the default again")
+    }
+
     @Test func grantEnablesCollectionWithAnalyticsStorageOnly() throws {
         let (analytics, sdk, records) = make()
         analytics.start()
@@ -120,7 +181,7 @@ struct UsageAnalyticsTests {
         var changes: [Bool] = []
         analytics.onChoiceChange = { changes.append($0) }
         #expect(analytics.setCollectionEnabled(true))
-        #expect(sdk.calls == ["collection false", "consent true", "collection true"],
+        #expect(sdk.calls == ["collection false", "consent false", "collection false", "consent false", "consent true", "collection true"],
                 "collection stops first; the consent mode is set before collection starts")
         #expect(analytics.choice && changes == [true])
         #expect(records.choice == "true" && records.collection)
@@ -138,7 +199,7 @@ struct UsageAnalyticsTests {
         analytics.setCollectionEnabled(true)
         sdk.calls.removeAll()
         #expect(analytics.setCollectionEnabled(false))
-        #expect(sdk.calls == ["collection false", "consent false"])
+        #expect(sdk.calls == ["collection false", "consent false", "collection false", "consent false"])
         #expect(!analytics.track("favorite_change", ["action": .text("remove")]))
         #expect(records.choice == "false" && !records.collection)
 
@@ -188,7 +249,7 @@ struct UsageAnalyticsTests {
         records.failCollectionWrites = true
         sdk.calls.removeAll()
         #expect(!analytics.setCollectionEnabled(true))
-        #expect(sdk.calls == ["collection false", "consent true", "collection true", "collection false", "consent false"])
+        #expect(sdk.calls == ["collection false", "consent false", "collection false", "consent false"], "the SDK never collects")
         #expect(!analytics.choice && records.choice == "false")
         #expect(!analytics.track("favorite_change", ["action": .text("add")]))
     }
