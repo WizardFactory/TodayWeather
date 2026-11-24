@@ -97,6 +97,12 @@ public final class UsageAnalytics {
         sdk.setConsent(analytics: false)
         let saved = value ? writeGrant() : writeChoice(false)
         setChoice(saved && value)
+        // A failed grant leaves both records as they were (CODEX-3187-4): off for this run, nothing rewritten.
+        if value && !saved {
+            lastScreen = nil
+            sentTrackingStatus = nil
+            return false
+        }
         return applyCollection(choice, stored: true) && saved
     }
 

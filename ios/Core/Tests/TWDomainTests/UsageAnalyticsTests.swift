@@ -146,6 +146,25 @@ struct UsageAnalyticsTests {
         #expect(!restarted.choice && restartedSdk.collectionEnabled == false, "still declined after a restart")
     }
 
+    /// A grant made again that cannot be written leaves the earlier grant and its collection record as they were
+    /// (CODEX-3187-4): off for this run, on again at the next start.
+    @Test func aFailedGrantKeepsAnEarlierGrant() {
+        let records = MemoryRecords()
+        records.choice = "true"
+        records.collection = true
+        let (analytics, sdk, _) = make(records, region: "DE")
+        analytics.start()
+        records.failChoiceWrites = true
+        #expect(!analytics.setCollectionEnabled(true), "LOC_PRIVACY_SAVE_FAILED")
+        #expect(!analytics.choice && sdk.collectionEnabled == false)
+        #expect(!analytics.track("favorite_change", ["action": .text("add")]))
+        #expect(records.choice == "true" && records.collection, "both records untouched")
+        records.failChoiceWrites = false
+        let (restarted, restartedSdk, _) = make(records, region: "DE")
+        restarted.start()
+        #expect(restarted.choice && restartedSdk.collectionEnabled == true)
+    }
+
     /// Only a readable stored "true" collects: any other stored record (a value the app never writes, or one the files
     /// could not read) leaves collection off, also where the default is on, and nothing is rewritten.
     @Test(arguments: ["", "yes", "TRUE", "unreadable"])

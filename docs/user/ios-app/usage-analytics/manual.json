@@ -1,6 +1,6 @@
 {
   "title": "TodayWeather for iOS · Usage analytics",
-  "scenario": "Read whether usage analytics is on and change it from the side menu. Whether it starts on depends on the Region in iOS Settings (General > Language & Region): outside the European Economic Area, the United Kingdom and Switzerland it is on until you turn it off; there it stays off until you agree. The Korean screens come from the app's shell in a test on an iOS 26.5 simulator (402×874 pt), with no Firebase project.",
+  "scenario": "Read whether usage analytics is on and change it from the side menu. Until you choose, the Region in iOS Settings (General > Language & Region) decides: outside the European Economic Area (with its territories such as Martinique), the United Kingdom and Switzerland it is on until you turn it off; there, and when no known region is set, it stays off until you agree. Your choice in this menu always wins over the region. The Korean screens come from the app's shell in a test on an iOS 26.5 simulator (402×874 pt), with no Firebase project.",
   "steps": [
     {
       "title": "Find the row in Korea",
