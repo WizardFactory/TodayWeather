@@ -381,7 +381,7 @@ struct WindowSizeReader: UIViewRepresentable {
 
 /// `.main-box`: the temperature with its unit sign (`vertical-align: super`) and the sky image side by side, then the
 /// summary lines (21 pt on 24 pt lines, centered, wrapping as WebKit wraps them).
-private struct MainBox: View {
+struct MainBox: View {
     let page: ForecastPage
     let metrics: ChartMetrics
     let theme: Theme

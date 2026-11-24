@@ -231,7 +231,8 @@ struct WeatherRequestTests {
         defer { try? FileManager.default.removeItem(at: dir) }
         let original = try #require(try JSONValue.parse(WeatherFixtures.body("kma-seoul")).objectValue)
         let current = try #require(original["current"]?.objectValue)
-        let marked = current.setting("summary", "calendar").setting("summaryForDate", "2026-02-04")
+        let marked = current.setting("summary", "입춘").setting("summaryForDate", "2026-02-04")
+            .setting("summaryWeather", "흐림")
         let body = Data(JSONValue.object(original.setting("current", .object(marked))).jsonText.utf8)
         let clock = VirtualClock()
         let http = ScriptedWeatherHTTP(clock: clock) { _ in .answer(0, body) }
@@ -246,7 +247,17 @@ struct WeatherRequestTests {
         }
         var fahrenheit = koreanUnits
         fahrenheit.temperatureUnit = "F"
-        #expect(summary(seoul, koreanUnits, "ko") == "calendar")
+        #expect(summary(seoul, koreanUnits, "ko") == "입춘")
+        let request = WeatherRepository.summaryRequest(seoul, koreanUnits, "ko")
+        let restored = cityRecord(seoul, cached, summaryRequest: request)
+        let midnight = try #require(ISO8601DateFormatter().date(from: "2026-02-04T15:00:00Z"))
+        var scope = ForecastScope(type: .short, metrics: ChartMetrics(bodyWidth: 375, bodyHeight: 667),
+                                  fahrenheit: false, photoTheme: false,
+                                  yesterday: YesterdayText(same: "", than: ""), expandShortChart: false)
+        scope.apply(restored, hasPush: false, now: midnight.addingTimeInterval(-1))
+        #expect(scope.summary?.stringValue == "입춘")
+        scope.apply(restored, hasPush: false, now: midnight)
+        #expect(scope.summary?.stringValue == "흐림")
         #expect(summary(seoul, koreanUnits, "en") == nil)
         #expect(summary(seoul, fahrenheit, "ko") == nil)
         #expect(summary(london, koreanUnits, "ko") == nil)
