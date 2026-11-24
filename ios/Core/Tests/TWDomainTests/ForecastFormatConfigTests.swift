@@ -5,7 +5,7 @@ import TWDomain
 struct ForecastFormatConfigTests {
     @Test func newFormatsReportImpressionsAndFailuresOnlyAfterOptIn() {
         let sdk = FakeAnalyticsSdk()
-        let analytics = UsageAnalytics(sdk: sdk, records: MemoryRecords(), trafficType: "development")
+        let analytics = UsageAnalytics(sdk: sdk, records: MemoryRecords(), trafficType: "development", region: "DE")
         analytics.start()
         for allowed in [false, true, false] {
             _ = analytics.setCollectionEnabled(allowed)

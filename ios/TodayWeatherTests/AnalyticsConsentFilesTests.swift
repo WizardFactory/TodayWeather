@@ -41,11 +41,38 @@ struct AnalyticsConsentFilesTests {
         // the collection state was written; here neither was, so the start corroboration is what remains.
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dir.path)
         let sdk = PrivacyRowsTests.Sdk()
-        let analytics = UsageAnalytics(sdk: sdk, records: files, trafficType: "development")
+        let analytics = UsageAnalytics(sdk: sdk, records: files, trafficType: "development", region: "DE")
         analytics.start()
         #expect(analytics.choice)
         try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: dir.path)
         #expect(!analytics.setCollectionEnabled(false))
         #expect(!analytics.choice && sdk.calls.suffix(2) == ["collection false", "consent false"])
+    }
+
+    /// The region's default (on in Korea, 2026-11-24) records the collection state but no choice file, so the choice file
+    /// still means the user chose; where it cannot record the collection state everything stays off, and still no choice
+    /// is written.
+    @Test func theRegionDefaultWritesNoChoiceFile() throws {
+        let dir = directory()
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        let choiceFile = dir.appendingPathComponent("analytics-choice")
+        let files = AnalyticsConsentFiles(directory: dir)
+        let sdk = PrivacyRowsTests.Sdk()
+        let analytics = UsageAnalytics(sdk: sdk, records: files, trafficType: "development", region: "KR")
+        analytics.start()
+        #expect(analytics.choice && files.readCollection())
+        #expect(!FileManager.default.fileExists(atPath: choiceFile.path))
+
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? FileManager.default.removeItem(at: dir.appendingPathComponent("analytics-collection"))
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: dir.path)
+        let failing = PrivacyRowsTests.Sdk()
+        let restarted = UsageAnalytics(sdk: failing, records: files, trafficType: "development", region: "KR")
+        restarted.start()
+        #expect(!restarted.choice && failing.calls.suffix(2) == ["collection false", "consent false"])
+        #expect(!FileManager.default.fileExists(atPath: choiceFile.path))
     }
 }

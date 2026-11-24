@@ -62,6 +62,9 @@ xcrun simctl shutdown "$UDID" 2>/dev/null || true
 xcrun simctl erase "$UDID"
 xcrun simctl boot "$UDID"
 xcrun simctl bootstatus "$UDID" -b > /dev/null
+# An opt-in region (the United Kingdom): without a stored choice the native app's usage analytics is on by default
+# elsewhere (2026-11-24); the checks below expect it off until the choices the test makes.
+xcrun simctl spawn "$UDID" defaults write -g AppleLocale -string en_GB
 containers() {
     DATA=$(xcrun simctl get_app_container "$UDID" $BUNDLE data)
     SHARED=$(xcrun simctl get_app_container "$UDID" $BUNDLE $GROUP)

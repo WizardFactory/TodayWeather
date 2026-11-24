@@ -82,9 +82,20 @@ final class HandBackConsentRecords: AnalyticsConsentRecords {
     /// A withdrawal that cannot be written removes the choice, as the Android `ConsentStore.write` does; one that can be
     /// neither written nor removed holds for this run (`ChoiceOverride`), so collection stays off and the hand-back says
     /// `"false"`.
+    ///
+    /// Without a stored choice the device region decides (2026-11-24), so "no choice" no longer means off: a withdrawal
+    /// made in the fallback build (`HandBackConsent.withdrawnThere`) is written here as this app's choice; when it cannot
+    /// be written it holds for this run, and the suite still holds it at the next start.
     func beforeStart() {
-        guard readChoice() == "true", let suite, !HandBackConsent.grantStands(in: suite) else { return }
-        if writeChoice(false) || removeChoice() { return }
+        guard let suite else { return }
+        switch readChoice() {
+        case "true" where !HandBackConsent.grantStands(in: suite):
+            if writeChoice(false) || removeChoice() { return }
+        case nil where HandBackConsent.withdrawnThere(in: suite):
+            if writeChoice(false) { return }
+        default:
+            return
+        }
         override.value = "false"
         handBack?.rewrite()
     }

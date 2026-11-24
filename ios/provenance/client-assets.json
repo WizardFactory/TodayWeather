@@ -25,20 +25,34 @@
    "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
    "source_sha256": "d87e5f95b8ca0543e3715aea8d9588cd2b53aa504701e377941f397251670cdd",
    "output": "Core/Sources/TWResources/Client/de.lproj/Localizable.strings",
-   "output_sha256": "8a46d8f34692d5cf4e252274caed6ee3435db0d313b0c3afd3763fa0afabac65",
+   "output_sha256": "cefe9f1ef6f905a54e61a5d019aa9c9bd391fdb66aec120e7f059d465db2f46d",
    "tracking_source": "client/resources/ios/tracking-settings/strings.json",
    "tracking_commit": "c0f9c6aca8d89ced1f8db96897d02f6978a0095d",
-   "tracking_sha256": "b32c89d8c097e131c17140ca725da7ab071fe5407fb3755bf48686c08b249649"
+   "tracking_sha256": "b32c89d8c097e131c17140ca725da7ab071fe5407fb3755bf48686c08b249649",
+   "native_source": "ios/Support/native-strings.json",
+   "native_sha256": "4108453419f27a386b152498ae4931a74379110e288c75cb582b966a61663f66",
+   "native_overrides": [
+    "LOC_ANALYTICS_ALLOWED",
+    "LOC_ANALYTICS_CHOICE",
+    "LOC_ANALYTICS_DISABLED"
+   ]
   },
   {
    "source": "client/www/locales/en.json",
    "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
    "source_sha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
    "output": "Core/Sources/TWResources/Client/en.lproj/Localizable.strings",
-   "output_sha256": "3492d99d20ffcb83fe14842530678b53e3d1a8bcc67a3f954f8f19148af4392a",
+   "output_sha256": "adbd6a4fc756f3267362e98fa07845f552fb7f8b196baf217b81da2613a663e8",
    "tracking_source": "client/resources/ios/tracking-settings/strings.json",
    "tracking_commit": "c0f9c6aca8d89ced1f8db96897d02f6978a0095d",
-   "tracking_sha256": "b32c89d8c097e131c17140ca725da7ab071fe5407fb3755bf48686c08b249649"
+   "tracking_sha256": "b32c89d8c097e131c17140ca725da7ab071fe5407fb3755bf48686c08b249649",
+   "native_source": "ios/Support/native-strings.json",
+   "native_sha256": "4108453419f27a386b152498ae4931a74379110e288c75cb582b966a61663f66",
+   "native_overrides": [
+    "LOC_ANALYTICS_ALLOWED",
+    "LOC_ANALYTICS_CHOICE",
+    "LOC_ANALYTICS_DISABLED"
+   ]
   },
   {
    "source": "client/www/fonts/MaterialIcons-Regular.ttf",
@@ -2458,40 +2472,68 @@
    "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
    "source_sha256": "704c22f73085f7bd217c5ac19fac2fb6863940f9b4d6905ef51790d52457e63b",
    "output": "Core/Sources/TWResources/Client/ja.lproj/Localizable.strings",
-   "output_sha256": "d593390fd7a3e46ec049b0968819dc26914d2ceea83caa3f24a9382e7754b895",
+   "output_sha256": "9d81b8b5cdfe7b0555c847ed31fbdd22839cde4791a9f6cbac5c08c1ff1927c1",
    "tracking_source": "client/resources/ios/tracking-settings/strings.json",
    "tracking_commit": "c0f9c6aca8d89ced1f8db96897d02f6978a0095d",
-   "tracking_sha256": "b32c89d8c097e131c17140ca725da7ab071fe5407fb3755bf48686c08b249649"
+   "tracking_sha256": "b32c89d8c097e131c17140ca725da7ab071fe5407fb3755bf48686c08b249649",
+   "native_source": "ios/Support/native-strings.json",
+   "native_sha256": "4108453419f27a386b152498ae4931a74379110e288c75cb582b966a61663f66",
+   "native_overrides": [
+    "LOC_ANALYTICS_ALLOWED",
+    "LOC_ANALYTICS_CHOICE",
+    "LOC_ANALYTICS_DISABLED"
+   ]
   },
   {
    "source": "client/www/locales/ko.json",
    "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
    "source_sha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
    "output": "Core/Sources/TWResources/Client/ko.lproj/Localizable.strings",
-   "output_sha256": "285da233a29e9e852b0588c1306e2a4d7565e846697cf64b3603086ae8583da7",
+   "output_sha256": "083943f1cda0cda06c7627ebaeb9dd74632feb9153a53f4b9dea53595c704501",
    "tracking_source": "client/resources/ios/tracking-settings/strings.json",
    "tracking_commit": "c0f9c6aca8d89ced1f8db96897d02f6978a0095d",
-   "tracking_sha256": "b32c89d8c097e131c17140ca725da7ab071fe5407fb3755bf48686c08b249649"
+   "tracking_sha256": "b32c89d8c097e131c17140ca725da7ab071fe5407fb3755bf48686c08b249649",
+   "native_source": "ios/Support/native-strings.json",
+   "native_sha256": "4108453419f27a386b152498ae4931a74379110e288c75cb582b966a61663f66",
+   "native_overrides": [
+    "LOC_ANALYTICS_ALLOWED",
+    "LOC_ANALYTICS_CHOICE",
+    "LOC_ANALYTICS_DISABLED"
+   ]
   },
   {
    "source": "client/www/locales/zh-CN.json",
    "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
    "source_sha256": "05f74f251cb93017af9ecf1a3a952036414c826ba89c1500219e25d6c3b575ba",
    "output": "Core/Sources/TWResources/Client/zh-Hans.lproj/Localizable.strings",
-   "output_sha256": "0a24de815358345fd473b2cfb3bc4a8f39e6c2e8c4465c01989d72a04ad9e236",
+   "output_sha256": "0c43c9f205c12643a6d254e9c9f859f82052a986046c041dc37df3a86163b799",
    "tracking_source": "client/resources/ios/tracking-settings/strings.json",
    "tracking_commit": "c0f9c6aca8d89ced1f8db96897d02f6978a0095d",
-   "tracking_sha256": "b32c89d8c097e131c17140ca725da7ab071fe5407fb3755bf48686c08b249649"
+   "tracking_sha256": "b32c89d8c097e131c17140ca725da7ab071fe5407fb3755bf48686c08b249649",
+   "native_source": "ios/Support/native-strings.json",
+   "native_sha256": "4108453419f27a386b152498ae4931a74379110e288c75cb582b966a61663f66",
+   "native_overrides": [
+    "LOC_ANALYTICS_ALLOWED",
+    "LOC_ANALYTICS_CHOICE",
+    "LOC_ANALYTICS_DISABLED"
+   ]
   },
   {
    "source": "client/www/locales/zh-TW.json",
    "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
    "source_sha256": "fb4ad905f6afdfafca79b204415532a6429a5f4ab1d3897e2d61c749da43adae",
    "output": "Core/Sources/TWResources/Client/zh-Hant.lproj/Localizable.strings",
-   "output_sha256": "eaaee89b9e0d0b62fd82a3f9d454e1a2d5add809bd817d25932e22db7afcf11b",
+   "output_sha256": "49424920eda10ae53b3157ef76daefdfdaf2acb245b83b02cb6bca4d23057d89",
    "tracking_source": "client/resources/ios/tracking-settings/strings.json",
    "tracking_commit": "c0f9c6aca8d89ced1f8db96897d02f6978a0095d",
-   "tracking_sha256": "b32c89d8c097e131c17140ca725da7ab071fe5407fb3755bf48686c08b249649"
+   "tracking_sha256": "b32c89d8c097e131c17140ca725da7ab071fe5407fb3755bf48686c08b249649",
+   "native_source": "ios/Support/native-strings.json",
+   "native_sha256": "4108453419f27a386b152498ae4931a74379110e288c75cb582b966a61663f66",
+   "native_overrides": [
+    "LOC_ANALYTICS_ALLOWED",
+    "LOC_ANALYTICS_CHOICE",
+    "LOC_ANALYTICS_DISABLED"
+   ]
   },
   {
    "source": "client/tw.resources/icon.png",

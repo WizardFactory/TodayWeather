@@ -2,7 +2,9 @@ import FirebaseAnalytics
 import FirebaseCore
 import Foundation
 
-/// Analytics is off until the user opts in (IN-15); a Cordova opt-in does not carry over (#2948).
+/// Nothing is collected before `UsageAnalytics` applies the stored choice or, without one, the device region's default
+/// (IN-15; on by default outside the EEA, the United Kingdom and Switzerland since 2026-11-24); a Cordova opt-in does not
+/// carry over (#2948).
 ///
 /// The Cordova opt-in left the SDK's persisted collection flag on (standard `UserDefaults`
 /// `/google/measurement/measurement_enabled_state`), which overrides the `Info.plist` default

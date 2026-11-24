@@ -4,22 +4,113 @@ import TWDomain
 
 /// The usage analytics consent (#2964 AC1, V22): grant, withdrawal and failed writes, the start's corroboration, screens
 /// and the `att_status` property. Ported from the Android `AnalyticsTest` (AN-15) with the iOS user property of #2945.
+/// Without a stored choice the device region decides (AK, 2026-11-24; `specs/analytics-default-on.md`): on outside the
+/// EEA, the United Kingdom and Switzerland, off until the user opts in there and for an unknown region. The tests of the
+/// choice itself run in an opt-in region (DE).
 @MainActor
 struct UsageAnalyticsTests {
-    func make(_ records: MemoryRecords = MemoryRecords()) -> (UsageAnalytics, FakeAnalyticsSdk, MemoryRecords) {
+    func make(_ records: MemoryRecords = MemoryRecords(),
+              region: String? = "DE") -> (UsageAnalytics, FakeAnalyticsSdk, MemoryRecords) {
         let sdk = FakeAnalyticsSdk()
-        return (UsageAnalytics(sdk: sdk, records: records, trafficType: "development"), sdk, records)
+        return (UsageAnalytics(sdk: sdk, records: records, trafficType: "development", region: region), sdk, records)
     }
 
-    @Test func offUntilTheUserOptsIn() {
-        let (analytics, sdk, records) = make()
+    /// In the EEA, the United Kingdom, Switzerland and an unknown region: off until the user opts in.
+    @Test(arguments: ["DE", "FR", "GB", "CH", "NO", nil, "", "150"] as [String?])
+    func offUntilTheUserOptsInWhereConsentIsAsked(region: String?) {
+        let (analytics, sdk, records) = make(region: region)
         analytics.start()
+        #expect(!analytics.collectsByDefault)
         #expect(!analytics.choice)
         #expect(sdk.calls == ["collection false", "consent false"])
         #expect(!analytics.track("favorite_change", ["action": .text("add")]))
         analytics.screen("tab.forecast")
         #expect(sdk.events.isEmpty)
         #expect(records.choice == nil, "no choice is written without the user")
+    }
+
+    /// Elsewhere collection starts without a stored choice, with analytics storage only, and writes no choice: a stored
+    /// value keeps meaning that the user chose.
+    @Test(arguments: ["KR", "US", "JP"])
+    func onByDefaultElsewhere(region: String) throws {
+        let (analytics, sdk, records) = make(region: region)
+        var changes: [Bool] = []
+        analytics.onChoiceChange = { changes.append($0) }
+        analytics.start()
+        #expect(analytics.collectsByDefault)
+        #expect(analytics.choice && changes == [true])
+        #expect(sdk.calls == ["collection false", "consent true", "collection true"],
+                "collection stops first; the consent mode is set before collection starts")
+        #expect(records.choice == nil, "the default is not written as a choice")
+        #expect(records.collection, "the collection state is recorded")
+        analytics.screen("tab.forecast")
+        #expect(analytics.track("favorite_change", ["action": .text("add")]))
+        #expect(sdk.events.map(\.name) == ["screen_view", "favorite_change"])
+
+        // Again at the next start, still without a choice.
+        let (restarted, restartedSdk, _) = make(records, region: region)
+        restarted.start()
+        #expect(restarted.choice && restartedSdk.collectionEnabled == true && records.choice == nil)
+    }
+
+    /// A stored choice wins over the region: "false" stays off where the default is on, "true" stays on where it is off.
+    @Test func aStoredChoiceWinsOverTheRegion() {
+        let declined = MemoryRecords()
+        declined.choice = "false"
+        let (off, offSdk, _) = make(declined, region: "KR")
+        off.start()
+        #expect(!off.choice && offSdk.calls == ["collection false", "consent false"])
+        #expect(declined.choice == "false")
+
+        let granted = MemoryRecords()
+        granted.choice = "true"
+        granted.collection = true
+        let (on, onSdk, _) = make(granted, region: "DE")
+        on.start()
+        #expect(on.choice && onSdk.collectionEnabled == true)
+
+        // An unconfirmed grant is withdrawn and written so, also where the default is on.
+        let half = MemoryRecords()
+        half.choice = "true"
+        let (other, otherSdk, _) = make(half, region: "KR")
+        other.start()
+        #expect(!other.choice && otherSdk.collectionEnabled == false && half.choice == "false")
+    }
+
+    /// Turned off on the menu where the default is on: "false" is written and holds after a restart.
+    @Test func turningTheDefaultOffHolds() {
+        let records = MemoryRecords()
+        let (analytics, sdk, _) = make(records, region: "KR")
+        analytics.start()
+        sdk.calls.removeAll()
+        #expect(analytics.setCollectionEnabled(false))
+        #expect(sdk.calls == ["collection false", "consent false"])
+        #expect(!analytics.choice && records.choice == "false" && !records.collection)
+        #expect(!analytics.track("favorite_change", ["action": .text("add")]))
+
+        let (restarted, restartedSdk, _) = make(records, region: "KR")
+        restarted.start()
+        #expect(!restarted.choice && restartedSdk.collectionEnabled == false)
+        #expect(restarted.setCollectionEnabled(true) && records.choice == "true", "on again writes true")
+    }
+
+    /// The collection state cannot be recorded while the default applies: everything stays off and still no choice is
+    /// written, so the next start tries the default again.
+    @Test func aFailedDefaultLeavesEverythingOffAndWritesNoChoice() {
+        let records = MemoryRecords()
+        records.failCollectionWrites = true
+        let (analytics, sdk, _) = make(records, region: "KR")
+        analytics.start()
+        #expect(sdk.calls == ["collection false", "consent true", "collection true", "collection false", "consent false"])
+        #expect(!analytics.choice && records.choice == nil)
+        #expect(!analytics.track("favorite_change", ["action": .text("add")]))
+        analytics.screen("tab.forecast")
+        #expect(sdk.events.isEmpty)
+
+        records.failCollectionWrites = false
+        let (restarted, restartedSdk, _) = make(records, region: "KR")
+        restarted.start()
+        #expect(restarted.choice && restartedSdk.collectionEnabled == true && records.choice == nil)
     }
 
     @Test func grantEnablesCollectionWithAnalyticsStorageOnly() throws {

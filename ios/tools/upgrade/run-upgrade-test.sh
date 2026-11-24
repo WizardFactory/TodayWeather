@@ -62,6 +62,9 @@ xcrun simctl shutdown "$UDID" 2>/dev/null || true
 xcrun simctl erase "$UDID"
 xcrun simctl boot "$UDID"
 xcrun simctl bootstatus "$UDID" -b > /dev/null
+# An opt-in region (the United Kingdom): without a stored choice the native app's usage analytics is on by default
+# elsewhere (2026-11-24), so the R7 check (off although the Cordova build opted in) needs a region that asks first.
+xcrun simctl spawn "$UDID" defaults write -g AppleLocale -string en_GB
 
 log "install the Cordova test build with the seed script"
 cp -R "$CORDOVA_APP" "$OUT/Cordova.app"

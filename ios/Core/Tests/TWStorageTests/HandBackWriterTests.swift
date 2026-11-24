@@ -330,6 +330,28 @@ struct HandBackWriterTests {
         #expect(!stands(claim, nil), "no choice there: off")
         #expect(!stands(claim, true), "a boolean is not the choice Monetization writes")
     }
+
+    /// Without a stored choice here the region default applies (2026-11-24), so a withdrawal made in a fallback build must
+    /// be adopted as this app's choice: the suite says `"false"` once anything was handed over. A native hand-back without
+    /// a choice removes the key, so `"false"` there comes from the fallback build (a choice, or a grant it withdrew).
+    @Test func aWithdrawalInTheFallbackBuildIsAdoptedWithoutAChoiceHere() {
+        let claim = #"{"schema":1,"generation":4,"writer":"cordova","complete":true,"keys":[]}"#
+        let own = CordovaHandBack.markerText(generation: 5, writer: CordovaHandBack.native)
+        let incomplete = CordovaHandBack.markerText(generation: 6, writer: CordovaHandBack.native, complete: false)
+        func withdrawn(_ marker: String?, _ choice: Any?) -> Bool {
+            var values: [String: Any] = [:]
+            values[CordovaHandBack.marker] = marker
+            values[CordovaHandBack.consentKey] = choice
+            return HandBackConsent.withdrawnThere(in: SuiteDouble(values))
+        }
+        #expect(withdrawn(claim, "false"), "withdrawn in the fallback build")
+        #expect(withdrawn(own, "false"), "withdrawn there while that build could not read the hand-back")
+        #expect(withdrawn(incomplete, "false"), "withdrawn there while a hand-back was being written")
+        #expect(!withdrawn(nil, "false"), "nothing handed over yet: the Cordova choice does not carry over")
+        #expect(!withdrawn(claim, "true"), "a grant there is not carried over")
+        #expect(!withdrawn(claim, nil), "no choice there")
+        #expect(!withdrawn(claim, false), "a boolean is not the choice Monetization writes")
+    }
 }
 
 final class Box<T>: @unchecked Sendable {

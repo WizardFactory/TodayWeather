@@ -39,8 +39,8 @@ final class ShellModel {
     let locale: ShellLocale
     let version: String
 
-    /// The analytics choice the menu shows (`Monetization.getCollectionChoice()`); off until the user opts in. IN-15
-    /// keeps it.
+    /// Whether analytics is on, which the menu shows (`Monetization.getCollectionChoice()`): the stored choice, else the
+    /// device region's default (2026-11-24). IN-15 keeps it.
     var analyticsAllowed = false
     var trackingStatus: TrackingStatus = .unavailable
 

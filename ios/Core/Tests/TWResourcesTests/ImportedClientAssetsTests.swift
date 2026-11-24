@@ -112,6 +112,38 @@ struct ImportedClientAssetsTests {
         }
     }
 
+    /// The native app's own texts (`ios/Support/native-strings.json`, 2026-11-24 usage analytics) are in every catalog,
+    /// over the client's texts of the same keys, and the provenance names them: a re-run of the import tool keeps them.
+    @Test func everyCatalogCarriesTheNativeStrings() throws {
+        let native = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: Self.iosDir
+            .appendingPathComponent("Support/native-strings.json"))) as? [String: [String: String]])
+        #expect(Set(native.keys) == Set(TWResources.catalogs.map(\.code)))
+        struct Strings: Decodable {
+            let output: String
+            let native_source: String?
+            let native_sha256: String?
+            let native_overrides: [String]?
+        }
+        struct Files: Decodable { let files: [Strings] }
+        let records = try JSONDecoder().decode(Files.self, from: Data(contentsOf: Self.iosDir
+            .appendingPathComponent("provenance/client-assets.json"))).files
+        let nativeHash = try sha256(Self.iosDir.appendingPathComponent("Support/native-strings.json"))
+        for (code, lproj) in TWResources.catalogs {
+            let strings = try #require(TWResources.strings(catalog: code))
+            for (key, text) in try #require(native[code]) {
+                #expect(strings.localizedString(forKey: key, value: "<missing>", table: nil) == text, "\(code) \(key)")
+            }
+            let record = try #require(records.first { $0.output == "\(Self.resourcesPrefix)\(lproj).lproj/Localizable.strings" })
+            #expect(record.native_source == "ios/Support/native-strings.json" && record.native_sha256 == nativeHash, "\(code)")
+            #expect(record.native_overrides == ["LOC_ANALYTICS_ALLOWED", "LOC_ANALYTICS_CHOICE", "LOC_ANALYTICS_DISABLED"],
+                    "\(code): the client keys the native texts replace")
+        }
+        let ko = try #require(TWResources.strings(catalog: "ko"))
+        #expect(ko.localizedString(forKey: "LOC_ANALYTICS_CHOICE", value: nil, table: nil) == "이용 통계")
+        #expect(ko.localizedString(forKey: "LOC_ANALYTICS_DETAIL", value: nil, table: nil).hasSuffix("별도로 처리됩니다."),
+                "the client's consent text stays for the opt-in regions")
+    }
+
     @Test func townListIsAJSONList() throws {
         let url = try #require(TWResources.url("data/towns.json"))
         let towns = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [Any]
