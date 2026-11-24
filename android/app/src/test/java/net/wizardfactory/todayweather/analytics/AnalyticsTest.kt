@@ -230,6 +230,49 @@ class AnalyticsTest {
         }
     }
 
+    /**
+     * Android's SharedPreferences load a file they cannot parse as an empty map, which would read as "no choice"; the
+     * store reads the files as the framework loads them (a backup first) and leaves collection off (CODEX-3178-12).
+     */
+    @Test
+    fun aDamagedPreferenceFileDoesNotCollect() {
+        val dir = kotlin.io.path.createTempDirectory("prefs").toFile()
+        fun start(region: String) = Analytics(Sdk(), ConsentStore(choices, collection, dir), "development") { region }.also { it.start() }
+        assertTrue(start("KR").choice.value, "no files: the region default")
+        for (name in listOf(ConsentStore.CHOICE_FILE, ConsentStore.COLLECTION_FILE)) {
+            val file = java.io.File(dir, "$name.xml")
+            file.writeText("<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n    <string name=\"twAnalyticsConsentV1\">fal")
+            assertFalse(start("KR").choice.value, "a truncated $name")
+            file.delete()
+            java.io.File(dir, "$name.xml.bak").writeText("<map><boolean")
+            java.io.File(dir, "$name.xml").writeText("<map />")
+            assertFalse(start("KR").choice.value, "a damaged backup of $name, which the framework loads first")
+            java.io.File(dir, "$name.xml.bak").delete()
+            assertTrue(start("KR").choice.value, "a valid empty $name")
+            file.delete()
+        }
+    }
+
+    /**
+     * A failed commit still changes SharedPreferences' memory and notifies listeners; the hand-back takes the choice as
+     * it is on disk, the backup first (CODEX-3178-13).
+     */
+    @Test
+    fun theConfirmedChoiceIsTheOneOnDisk() {
+        val dir = kotlin.io.path.createTempDirectory("prefs").toFile()
+        val store = ConsentStore(choices, collection, dir)
+        choices.edit().putString(ConsentStore.KEY, "true").commit()
+        assertEquals(null, store.confirmedChoice(), "nothing on disk")
+        val xml = { v: String -> "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n    <string name=\"twAnalyticsConsentV1\">$v</string>\n</map>\n" }
+        java.io.File(dir, "${ConsentStore.CHOICE_FILE}.xml").writeText(xml("false"))
+        assertEquals("false", store.confirmedChoice())
+        java.io.File(dir, "${ConsentStore.CHOICE_FILE}.xml").delete()
+        java.io.File(dir, "${ConsentStore.CHOICE_FILE}.xml.bak").writeText(xml("false"))
+        assertEquals("false", store.confirmedChoice(), "a failed write leaves the old file as the backup")
+        java.io.File(dir, "${ConsentStore.CHOICE_FILE}.xml.bak").writeText("<map")
+        assertEquals(null, store.confirmedChoice(), "an unreadable file hands back no choice")
+    }
+
     @Test
     fun anUnreadableChoiceDoesNotCollect() {
         choices.edit().putBoolean(ConsentStore.KEY, true).commit()

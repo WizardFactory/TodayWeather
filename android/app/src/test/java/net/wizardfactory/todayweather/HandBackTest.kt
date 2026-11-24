@@ -123,6 +123,18 @@ class HandBackTest {
         assertEquals(listOf(null, "서울"), cities())
     }
 
+    /** The app's writer hands back the choice as written to disk (CODEX-3178-13), through the real preference files. */
+    @Test
+    fun theAppsWriterHandsBackTheWrittenChoice() {
+        val writer = HandBackWriter.of(context)
+        writer.watchConsent(context.getSharedPreferences(ConsentStore.CHOICE_FILE, Context.MODE_PRIVATE)) { it() }
+        writer.write(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1))
+        ConsentStore(context).write(true)
+        assertEquals("true", suite.getString(CordovaHandBack.CONSENT, null))
+        ConsentStore(context).write(false)
+        assertEquals("false", suite.getString(CordovaHandBack.CONSENT, null))
+    }
+
     @Test
     fun aGrantStandsAtTheStartOnlyWhileTheSuiteSaysTrue() {
         val consent = ConsentStore(context)

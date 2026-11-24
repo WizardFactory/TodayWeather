@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
+import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
 import com.google.firebase.analytics.FirebaseAnalytics
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,10 +54,16 @@ class FirebaseAnalyticsSdk(private val context: Context) : AnalyticsSdk {
  * collection state ([DECLINED]) and counts as `"false"` at the next start. When neither can be written and the process
  * ends, the next start has no choice and the region default may apply (an accepted residual, specs/analytics-default-on.md).
  */
-class ConsentStore(private val choices: SharedPreferences, private val collection: SharedPreferences) {
+class ConsentStore(
+    private val choices: SharedPreferences,
+    private val collection: SharedPreferences,
+    /** The preference files' directory, read as the framework loads them ([PrefsFile]); null skips those checks. */
+    private val dir: File? = null,
+) {
     constructor(context: Context) : this(
         context.getSharedPreferences(CHOICE_FILE, Context.MODE_PRIVATE),
         context.getSharedPreferences(COLLECTION_FILE, Context.MODE_PRIVATE),
+        File(context.dataDir, "shared_prefs"),
     )
 
     /**
@@ -64,6 +72,8 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
      * and is written now; a grant the collection state does not confirm is withdrawn and written so.
      */
     fun startChoice(): String? {
+        // SharedPreferences load a file they cannot parse as an empty map: such a file is unreadable, not "no choice".
+        if (dir != null && (PrefsFile(dir, CHOICE_FILE).unreadable() || PrefsFile(dir, COLLECTION_FILE).unreadable())) return UNREADABLE
         // A record that cannot be read counts as a withdrawal: any state the start cannot read leaves collection off.
         if (runCatching { collection.getBoolean(DECLINED, false) }.getOrDefault(true)) {
             write(false)
@@ -99,6 +109,15 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
 
     /** The stored choice as written (`"true"`, `"false"` or none), for the hand-back (AN-17). */
     fun storedChoice(): String? = runCatching { choices.getString(KEY, null) }.getOrNull()
+
+    /**
+     * The choice as it is on disk, for the hand-back (AN-17): a failed `commit()` still changes the preferences' memory
+     * and notifies listeners, so a grant that was not written must not be handed back. None when unreadable.
+     */
+    fun confirmedChoice(): String? {
+        val files = dir ?: return storedChoice()
+        return runCatching { PrefsFile(files, CHOICE_FILE).strings()?.get(KEY) }.getOrNull()
+    }
 
     /** The collection state after the SDK calls (the flag the plugin persisted). */
     fun recordCollection(enabled: Boolean): Boolean = collection.edit().putBoolean(ENABLED, enabled).commit()
@@ -260,3 +279,23 @@ class Analytics(
 }
 
 private const val TAG = "TwAnalytics"
+
+/**
+ * A preference file as `SharedPreferencesImpl` loads it: the backup (`.bak`, left by a write that did not finish) first,
+ * then the file. Reading it tells a damaged file, which the framework would load as an empty map, from a missing one.
+ */
+internal class PrefsFile(private val dir: File, private val name: String) {
+    private fun file() = File(dir, "$name.xml.bak").takeIf { it.exists() } ?: File(dir, "$name.xml")
+
+    /** The string values, or null when there is no file; throws when the file cannot be parsed. */
+    fun strings(): Map<String, String>? {
+        val file = file()
+        if (!file.exists()) return null
+        val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
+        check(doc.documentElement.tagName == "map") { "not a preference file" }
+        val nodes = doc.getElementsByTagName("string")
+        return (0 until nodes.length).associate { nodes.item(it).attributes.getNamedItem("name").nodeValue to nodes.item(it).textContent }
+    }
+
+    fun unreadable(): Boolean = runCatching { strings() }.isFailure
+}
