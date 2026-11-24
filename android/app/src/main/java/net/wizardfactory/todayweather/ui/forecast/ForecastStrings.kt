@@ -13,7 +13,10 @@ import net.wizardfactory.todayweather.core.domain.settings.SettingLists
  * - the settings pages, and the menu's values and popup;
  * - the nationwide and warning pages.
  */
-fun forecastTexts(context: Context): ChartTexts = ChartTexts((ForecastPage.KEYS + AirPage.KEYS + SettingLists.KEYS + NationPages.KEYS).distinct().mapNotNull { key ->
+fun forecastTexts(context: Context): ChartTexts = ChartTexts(forecastKeys().mapNotNull { key ->
     val id = context.resources.getIdentifier(key, "string", context.packageName)
     if (id == 0) null else key to context.getString(id)
 }.toMap())
+
+/** Looked up by name: res/raw/keep.xml keeps them in the shrunk release (ResourceKeepTest). */
+internal fun forecastKeys(): List<String> = (ForecastPage.KEYS + AirPage.KEYS + SettingLists.KEYS + NationPages.KEYS).distinct()

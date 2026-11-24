@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The release build's resource shrinker removes resources that no code or resource names. chartTexts and
+     forecastTexts look up the imported Cordova catalog (client_strings.xml) by key with getIdentifier, from key lists
+     such as ForecastPage.KEYS, so every LOC_* string stays. The build reads this file and does not package it. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@string/LOC_*" />

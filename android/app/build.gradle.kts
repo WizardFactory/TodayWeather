@@ -70,6 +70,13 @@ android {
             buildConfigField("boolean", "RELEASE_ADS", "false")
         }
         release {
+            // R8 shrinks, optimizes and obfuscates the release (Play's DEX optimization check) and removes unused
+            // resources. It writes build/outputs/mapping/release/mapping.txt, which the release keeps and uploads to
+            // Play (docs/operations/android-release.md, step 4). The libraries bring their own rules;
+            // proguard-rules.pro holds only what this app's code needs.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             manifestPlaceholders["admobAppId"] = admobAppId.ifBlank { sampleAppId }
             buildConfigField("String", "NATIVE_AD_UNIT", "\"$admobNative\"")
             buildConfigField("String", "INTERSTITIAL_AD_UNIT", "\"$admobInterstitial\"")
