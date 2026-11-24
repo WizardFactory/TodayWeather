@@ -11,7 +11,7 @@
   "heightDifference": 0
  },
  "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
- "why": "Four-size Korean/English menu choice states and analytics popup. Inspected both narrow-language popups and the wide English menu overlay: body line breaks, popup extent and buttons match; residuals are glyph rasterization/advances. Historical margins retained; every compared height matches. Privacy fit and behavior tests remain separate. 2026-11-15 (#2990): menu cases re-measured after the privacy rows moved to the end of the side menu; native and Cordova show the same rows, the residuals are glyph rasterization.",
+ "why": "Four-size Korean/English menu choice states and analytics popup. Inspected both narrow-language popups and the wide English menu overlay: body line breaks, popup extent and buttons match; residuals are glyph rasterization/advances. Historical margins retained; every compared height matches. Privacy fit and behavior tests remain separate. 2026-11-15 (#2990): menu cases re-measured after the privacy rows moved to the end of the side menu; native and Cordova show the same rows, the residuals are glyph rasterization. 2026-11-24 (analytics default-on, B34): failing cases re-measured after the native menu row became 이용 통계 · 꺼짐 / 켜짐 (Usage analytics · Off / On) and the popup title 이용 통계, native texts the Cordova captures (선택적 이용 통계 · 꺼짐 / 동의함) cannot show; the added residual is that row's and title's text.",
  "cases": {
   "ko-KR/menu-off": {
    "heightDifference": 0,
@@ -20,28 +20,28 @@
   },
   "ko-KR/analytics-popup": {
    "heightDifference": 0,
-   "strong": 0.011877,
-   "mean": 4.486
+   "strong": 0.014356,
+   "mean": 4.704
   },
   "ko-KR/menu-allowed": {
    "heightDifference": 0,
-   "strong": 0.00824,
-   "mean": 2.118
+   "strong": 0.009934,
+   "mean": 2.288
   },
   "en-US/menu-off": {
    "heightDifference": 0,
-   "strong": 0.005866,
-   "mean": 1.591
+   "strong": 0.007927,
+   "mean": 1.851
   },
   "en-US/analytics-popup": {
    "heightDifference": 0,
-   "strong": 0.002942,
-   "mean": 1.519
+   "strong": 0.004312,
+   "mean": 1.867
   },
   "en-US/menu-allowed": {
    "heightDifference": 0,
-   "strong": 0.006237,
-   "mean": 1.663
+   "strong": 0.00831,
+   "mean": 1.905
   }
  }
 }

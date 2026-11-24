@@ -49,17 +49,22 @@ adb install -r "$APP/debug/app-debug.apk"
 adb install -r "$APP/androidTest/debug/app-debug-androidTest.apk"
 SEEDED=$(base64 < "$OUT/seeded.json" | tr -d '\n')
 RUNNER=$PKG.test/$PKG.TestRunner
-adb shell am instrument -w -e seeded "$SEEDED" -e token "$TOKEN" -e class $PKG.CordovaUpgradeTest#firstStartMigratesTheCordovaState $RUNNER | tee "$OUT/first-start.txt"
+adb shell am instrument -w -e seeded "$SEEDED" -e token "$TOKEN" -e analyticsRegion DE -e class $PKG.CordovaUpgradeTest#firstStartMigratesTheCordovaState $RUNNER | tee "$OUT/first-start.txt"
 adb shell am force-stop $PKG
-adb shell am instrument -w -e seeded "$SEEDED" -e token "$TOKEN" -e class $PKG.CordovaUpgradeTest#afterRestartNothingChangesAndAnalyticsStaysOff $RUNNER | tee "$OUT/after-restart.txt"
+adb shell am instrument -w -e seeded "$SEEDED" -e token "$TOKEN" -e analyticsRegion DE -e class $PKG.CordovaUpgradeTest#afterRestartNothingChangesAndAnalyticsStaysOff $RUNNER | tee "$OUT/after-restart.txt"
 # A token delivered without an app open; the process ends while its PUT is in flight, and the next
 # process completes the stored work (PushTokenWorkTest).
-adb shell am instrument -w -e previous "$TOKEN" -e transport hold -e class $PKG.PushTokenWorkTest#tokenWorkIsInterruptedWithItsRequestInFlight $RUNNER | tee "$OUT/token-work-interrupted.txt"
-adb shell am instrument -w -e previous "$TOKEN" -e class $PKG.PushTokenWorkTest#tokenWorkCompletesAfterTheProcessEnded $RUNNER | tee "$OUT/token-work-completed.txt"
+adb shell am instrument -w -e previous "$TOKEN" -e transport hold -e analyticsRegion DE -e class $PKG.PushTokenWorkTest#tokenWorkIsInterruptedWithItsRequestInFlight $RUNNER | tee "$OUT/token-work-interrupted.txt"
+adb shell am instrument -w -e previous "$TOKEN" -e analyticsRegion DE -e class $PKG.PushTokenWorkTest#tokenWorkCompletesAfterTheProcessEnded $RUNNER | tee "$OUT/token-work-completed.txt"
 # Entry intents that arrive while the migration runs are handled after it (EntryIntentTest, #2886 AC4).
-adb shell am instrument -w -e migration hold -e class $PKG.EntryIntentTest $RUNNER | tee "$OUT/entry-intents.txt"
+adb shell am instrument -w -e migration hold -e analyticsRegion DE -e class $PKG.EntryIntentTest $RUNNER | tee "$OUT/entry-intents.txt"
+# The instrumented starts above pass the opt-in region DE (`analyticsRegion`): outside the opt-in regions usage analytics
+# is on by default (analytics default-on, 2026-11-24), so the emulator's region must not decide whether a Cordova opt-in
+# carries over. Their log is the one checked for events.
+adb logcat -d > "$OUT/logcat-instrumented.txt"
 # The home-screen shortcut of the Cordova app: the launcher's intent for the same component opens the native
-# activity. Opened outside the instrumentation, the app finds no network (offline) for its start registration.
+# activity. Opened outside the instrumentation, the app finds no network (offline) for its start registration; it
+# collects as the emulator's region decides, and nothing is uploaded.
 adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER $PKG | tail -1 > "$OUT/launcher.txt"
 adb shell am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n $PKG/.MainActivity | tee "$OUT/shortcut.txt"
 sleep 2
@@ -77,7 +82,7 @@ grep -q "^OK (1 test)" "$OUT/entry-intents.txt"
 grep -qx "$PKG/.MainActivity" "$OUT/launcher.txt"
 grep -q "^Status: ok" "$OUT/shortcut.txt"
 grep -q "$PKG/.MainActivity" "$OUT/shortcut-resumed.txt"
-EVENTS=$(grep -c "Logging event" "$OUT/logcat.txt" || true)
+EVENTS=$(grep -c "Logging event" "$OUT/logcat-instrumented.txt" || true)
 echo "analytics events logged after the update: $EVENTS"
 test "$EVENTS" -eq 0
 echo "upgrade test passed; evidence in $OUT"

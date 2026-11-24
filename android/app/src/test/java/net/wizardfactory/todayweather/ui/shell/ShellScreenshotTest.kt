@@ -249,7 +249,7 @@ abstract class ShellScreenshotTest(private val lang: String, private val region:
             Theme.PHOTO -> R.string.LOC_WEATHER_PHOTO_THEME
             Theme.OLD -> R.string.LOC_OLD_THEME
         }),
-        MenuRow.ANALYTICS to stringResource(R.string.LOC_ANALYTICS_DISABLED),
+        MenuRow.ANALYTICS to stringResource(R.string.analytics_off),
     ))
 
     private fun JsonObject.int(a: String, b: String) = this[a]!!.jsonObject[b]!!.jsonPrimitive.content.toInt()

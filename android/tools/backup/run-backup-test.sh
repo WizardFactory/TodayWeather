@@ -97,7 +97,7 @@ native_restore() {
     adb uninstall $PKG >/dev/null
     adb install "$APP/debug/app-debug.apk" >/dev/null
     restore restore-native$1
-    check backup-native-check$1 -e backup native -e token token-b -e class $PKG.BackupRestoreTest#nativeBackupRestoresThePolicy
+    check backup-native-check$1 -e backup native -e token token-b -e analyticsRegion DE -e class $PKG.BackupRestoreTest#nativeBackupRestoresThePolicy
 }
 
 # 3. A Cordova 1.1.1 backup restored into this build; $1 names the pass's files.

@@ -65,10 +65,9 @@ class PrivacyGeometryTest {
             Box(Modifier.size(384.dp, 762.dp).testTag(ROOT)) {
                 SideMenu(ShellState(Theme.LIGHT, region, Tab.HOURLY, "1.1.2", mapOf(MenuRow.STARTUP_PAGE to texts["LOC_HOURLY_FORECAST"],
                     MenuRow.REFRESH_INTERVAL to texts["LOC_MANUAL"], MenuRow.THEME to texts["LOC_LIGHT_THEME"],
-                    MenuRow.ANALYTICS to stringResource(R.string.LOC_ANALYTICS_DISABLED)))) {}
-                IonicPopup(stringResource(R.string.LOC_ANALYTICS_CHOICE), listOf(stringResource(R.string.LOC_ANALYTICS_DETAIL)),
-                    listOf(PopupButton(stringResource(R.string.LOC_ANALYTICS_DENY)) {}, PopupButton(stringResource(R.string.LOC_ANALYTICS_ALLOW)) {}),
-                    onBack = {})
+                    MenuRow.ANALYTICS to stringResource(R.string.analytics_off)))) {}
+                // The Cordova capture is the consent popup the opt-in regions keep (analytics default-on, 2026-11-24).
+                AnalyticsPopup(optIn = true, onChoose = {}, onBack = {})
             }
         }
         rule.onNodeWithTag(ShellTags.row(MenuRow.entries.last())).performScrollTo().performTouchInput { swipeUp() } // the end of the menu, as captured

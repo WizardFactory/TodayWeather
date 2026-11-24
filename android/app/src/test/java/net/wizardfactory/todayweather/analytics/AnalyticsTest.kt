@@ -12,9 +12,11 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The usage analytics opt-in of the Cordova build (`Monetization`, #2894 AC1, V22): collection only after an explicit
- * grant, with analytics storage granted and advertising denied; a withdrawal that stops collection at once; failed
- * writes that never leave a grant behind; the start's corroboration of a stored grant; the event schema and the screens.
+ * The usage analytics choice (`Monetization`, #2894 AC1, V22), on by default outside the opt-in regions (AK 2026-11-24,
+ * specs/analytics-default-on.md): in an opt-in region (here DE) collection only after an explicit grant, with analytics
+ * storage granted and advertising denied; elsewhere (here KR) collection from the start without a stored choice; a stored
+ * choice wins over the region; a withdrawal that stops collection at once; failed writes that never leave a grant behind;
+ * the start's corroboration of a stored grant; the event schema and the screens.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -39,7 +41,11 @@ class AnalyticsTest {
         }
     }
 
-    private fun analytics(sdk: Sdk) = Analytics(sdk, ConsentStore(choices, collection), "development").also { it.start() }
+    private fun analytics(sdk: Sdk, region: String? = "DE") =
+        Analytics(sdk, ConsentStore(choices, collection), "development") { region }.also { it.start() }
+
+    private val collectionOn = listOf("collection false", "analytics storage granted", "collection true")
+    private val collectionOff = listOf("collection false", "analytics storage denied")
 
     private val fetch = mapOf("outcome" to "success", "duration_ms" to 120)
 
@@ -52,6 +58,140 @@ class AnalyticsTest {
         assertFalse(a.track("weather_fetch", fetch))
         a.screen("tab.forecast")
         assertTrue(sdk.events.isEmpty())
+    }
+
+    @Test
+    fun aFreshInstallOutsideTheOptInRegionsCollectsWithoutStoringAChoice() {
+        for (region in listOf("KR", "US", "JP")) {
+            val sdk = Sdk()
+            val a = analytics(sdk, region)
+            assertEquals(collectionOn, sdk.calls, region)
+            assertTrue(a.choice.value, region)
+            assertTrue(a.track("weather_fetch", fetch), region)
+            a.screen("tab.forecast")
+            assertEquals(listOf("weather_fetch", "screen_view"), sdk.events.map { it.first }, region)
+            assertEquals(null, choices.getString(ConsentStore.KEY, null), "the default writes no choice")
+            assertTrue(collection.getBoolean(ConsentStore.ENABLED, false), "the collection state is recorded")
+        }
+    }
+
+    @Test
+    fun aFreshInstallInAnOptInOrUnknownRegionCollectsNothing() {
+        for (region in listOf("DE", "FR", "NO", "GB", "CH", "", "150", null)) {
+            val sdk = Sdk()
+            val a = analytics(sdk, region)
+            assertEquals(collectionOff, sdk.calls, "$region")
+            assertFalse(a.choice.value, "$region")
+            assertFalse(a.track("weather_fetch", fetch), "$region")
+            assertEquals(null, choices.getString(ConsentStore.KEY, null))
+        }
+    }
+
+    @Test
+    fun theStoredChoiceWinsOverTheRegion() {
+        choices.edit().putString(ConsentStore.KEY, "false").commit()
+        val declined = Sdk()
+        assertFalse(analytics(declined, "KR").choice.value, "a stored decline stays off where the default is on")
+        assertEquals(collectionOff, declined.calls)
+        assertEquals("false", choices.getString(ConsentStore.KEY, null))
+
+        choices.edit().putString(ConsentStore.KEY, "true").commit()
+        collection.edit().putBoolean(ConsentStore.ENABLED, true).commit()
+        val granted = Sdk()
+        assertTrue(analytics(granted, "DE").choice.value, "a stored grant collects in an opt-in region")
+        assertEquals(collectionOn, granted.calls)
+    }
+
+    @Test
+    fun theRegionDecidesAgainAtEachStartWhileNothingIsStored() {
+        assertTrue(analytics(Sdk(), "KR").choice.value)
+        val moved = Sdk()
+        assertFalse(analytics(moved, "DE").choice.value)
+        assertEquals(collectionOff, moved.calls)
+        assertEquals(null, choices.getString(ConsentStore.KEY, null))
+    }
+
+    @Test
+    fun turningItOffWhereTheDefaultIsOnHoldsAfterARestart() {
+        val sdk = Sdk()
+        val a = analytics(sdk, "KR")
+        sdk.calls.clear()
+        assertTrue(a.setCollectionEnabled(false))
+        assertEquals(collectionOff + collectionOff, sdk.calls)
+        assertFalse(a.choice.value)
+        assertFalse(a.track("weather_fetch", fetch))
+        assertEquals("false", choices.getString(ConsentStore.KEY, null))
+        val restarted = Sdk()
+        assertFalse(analytics(restarted, "KR").choice.value)
+        assertEquals(collectionOff, restarted.calls)
+
+        assertTrue(analytics(Sdk(), "KR").setCollectionEnabled(true))
+        assertEquals("true", choices.getString(ConsentStore.KEY, null), "turning it on again writes a grant")
+    }
+
+    @Test
+    fun aFailureWhileApplyingTheDefaultLeavesEverythingOffAndStoresNoChoice() {
+        val sdk = Sdk(failOn = "collection true")
+        val a = analytics(sdk, "KR")
+        assertEquals(collectionOn + collectionOff, sdk.calls)
+        assertFalse(a.choice.value)
+        assertFalse(a.track("weather_fetch", fetch))
+        assertFalse(collection.getBoolean(ConsentStore.ENABLED, true))
+        assertEquals(null, choices.getString(ConsentStore.KEY, null), "a failure is not the user's choice")
+        val next = Sdk()
+        assertTrue(analytics(next, "KR").choice.value, "the next start applies the default again")
+        assertEquals(collectionOn, next.calls)
+    }
+
+    /** A grant that cannot be written keeps the stored choice: a decline is not erased into "no choice" (CODEX-3178-8). */
+    @Test
+    fun aGrantThatCannotBeWrittenKeepsAStoredDecline() {
+        choices.edit().putString(ConsentStore.KEY, "false").commit()
+        val a = analytics(Sdk(), "KR")
+        choices.failPuts = true
+        assertFalse(a.setCollectionEnabled(true))
+        assertFalse(a.choice.value)
+        choices.failPuts = false
+        assertEquals("false", choices.getString(ConsentStore.KEY, null))
+        val restarted = Sdk()
+        assertFalse(analytics(restarted, "KR").choice.value)
+        assertEquals(collectionOff, restarted.calls)
+    }
+
+    /** Any record the start cannot read as expected leaves collection off (CODEX-3178-10). */
+    @Test
+    fun anUnreadableCollectionRecordDoesNotCollect() {
+        for (region in listOf("KR", "DE")) {
+            choices.edit().remove(ConsentStore.KEY).commit()
+            collection.edit().putString(ConsentStore.ENABLED, "true").commit()
+            val sdk = Sdk()
+            assertFalse(analytics(sdk, region).choice.value, "no choice ($region)")
+            assertEquals(collectionOff, sdk.calls)
+            choices.edit().putString(ConsentStore.KEY, "true").commit()
+            collection.edit().putString(ConsentStore.ENABLED, "true").commit()
+            assertFalse(analytics(Sdk(), region).choice.value, "a stored grant ($region)")
+        }
+    }
+
+    @Test
+    fun anUnreadableChoiceDoesNotCollect() {
+        choices.edit().putBoolean(ConsentStore.KEY, true).commit()
+        val sdk = Sdk()
+        assertFalse(analytics(sdk, "KR").choice.value, "a stored value of another type is not 'no choice'")
+        assertEquals(collectionOff, sdk.calls)
+    }
+
+    @Test
+    fun theCollectionStateIsRecordedBeforeTheSdkCollects() {
+        collection.fail = true
+        val sdk = Sdk()
+        val a = analytics(sdk, "KR")
+        assertFalse(a.choice.value)
+        assertEquals(collectionOn.dropLast(1) + collectionOff, sdk.calls, "the SDK is never told to collect")
+        assertEquals(null, choices.getString(ConsentStore.KEY, null))
+        sdk.calls.clear()
+        assertFalse(a.setCollectionEnabled(true))
+        assertFalse("collection true" in sdk.calls)
     }
 
     @Test
@@ -79,7 +219,7 @@ class AnalyticsTest {
         a.setCollectionEnabled(true)
         sdk.calls.clear()
         assertTrue(a.setCollectionEnabled(false))
-        assertEquals(listOf("collection false", "analytics storage denied"), sdk.calls)
+        assertEquals(collectionOff + collectionOff, sdk.calls, "the SDK stops before the choice is written, then the choice applies")
         assertFalse(a.track("weather_fetch", fetch))
         assertEquals("false", choices.getString(ConsentStore.KEY, null))
 
@@ -117,14 +257,94 @@ class AnalyticsTest {
         assertEquals("false", choices.getString(ConsentStore.KEY, null))
     }
 
+    /**
+     * A withdrawal that cannot be written keeps the stored value; collection stays off for the session, and an old grant
+     * is withdrawn at the next start because the collection state says off (simplified design, 2026-11-24).
+     */
     @Test
-    fun aFailedWriteRemovesAnOldGrant() {
-        val a = analytics(Sdk())
-        a.setCollectionEnabled(true)
-        // The new value cannot be written, but the old one can be removed (`persistChoice`).
-        choices.failPuts = true
-        assertFalse(a.setCollectionEnabled(false))
-        assertEquals(null, choices.getString(ConsentStore.KEY, null))
+    fun aFailedWithdrawalKeepsTheStoredValueAndStaysOff() {
+        for (region in listOf("DE", "KR")) {
+            choices.failPuts = false
+            choices.edit().remove(ConsentStore.KEY).commit()
+            val a = analytics(Sdk(), region)
+            assertTrue(a.setCollectionEnabled(true))
+            choices.failPuts = true
+            val sdk = Sdk()
+            val b = Analytics(sdk, ConsentStore(choices, collection), "development") { region }.also { it.start() }
+            sdk.calls.clear()
+            assertFalse(b.setCollectionEnabled(false), "the save-failed notice ($region)")
+            assertFalse(b.choice.value)
+            assertEquals(collectionOff + collectionOff, sdk.calls, "the SDK stops before the write ($region)")
+            assertEquals("true", choices.getString(ConsentStore.KEY, null), "the stored value stays ($region)")
+            choices.failPuts = false
+            assertFalse(analytics(Sdk(), region).choice.value, "the next start withdraws the old grant ($region)")
+            assertEquals("false", choices.getString(ConsentStore.KEY, null))
+        }
+    }
+
+    /**
+     * A withdrawal whose first SDK stop fails is still written, and the decision applied after the write turns the SDK
+     * off; a failure there too shows the notice (CODEX-3178-20, order of writes in the spec).
+     */
+    @Test
+    fun aWithdrawalIsWrittenEvenWhenTheFirstSdkStopFails() {
+        for (failing in listOf("collection false", "analytics storage denied")) {
+            choices.edit().remove(ConsentStore.KEY).commit()
+            val sdk = OnceFailing(failing)
+            val a = Analytics(sdk, ConsentStore(choices, collection), "development") { "KR" }.also { it.start() }
+            assertTrue(a.choice.value)
+            sdk.calls.clear()
+            sdk.armed = true
+            assertTrue(a.setCollectionEnabled(false), failing)
+            assertEquals("false", choices.getString(ConsentStore.KEY, null), failing)
+            assertEquals(collectionOff, sdk.calls.takeLast(2), "the SDK ends off and denied ($failing)")
+            assertFalse(a.track("weather_fetch", fetch))
+        }
+        val sdk = Sdk(failOn = "collection false")
+        choices.edit().remove(ConsentStore.KEY).commit()
+        val a = Analytics(sdk, ConsentStore(choices, collection), "development") { "DE" }.also { it.start() }
+        assertFalse(a.setCollectionEnabled(false), "an SDK that keeps failing shows the notice")
+        assertEquals("false", choices.getString(ConsentStore.KEY, null))
+    }
+
+    /** An SDK double whose [failing] call throws once after [armed] is set. */
+    private class OnceFailing(private val failing: String) : AnalyticsSdk {
+        val calls = mutableListOf<String>()
+        var armed = false
+        private fun call(name: String) {
+            calls += name
+            if (armed && name == failing) {
+                armed = false
+                throw IllegalStateException(name)
+            }
+        }
+        override fun setCollectionEnabled(enabled: Boolean) = call("collection $enabled")
+        override fun setConsent(analytics: Boolean) = call("analytics storage ${if (analytics) "granted" else "denied"}")
+        override fun logEvent(name: String, params: Map<String, Any>) = call("event $name")
+    }
+
+    /**
+     * A grant whose commit fails keeps the stored choice even when the SDK then throws while it is turned off: "no
+     * choice" does not become a decline (CODEX-3178-23), and the SDK ends off.
+     */
+    @Test
+    fun aFailedGrantKeepsNoChoiceWhenTheSdkFailsAfterIt() {
+        for (region in listOf("DE", "KR")) {
+            choices.failPuts = false
+            choices.edit().remove(ConsentStore.KEY).commit()
+            val sdk = OnceFailing("collection false")
+            val a = Analytics(sdk, ConsentStore(choices, collection), "development") { region }.also { it.start() }
+            if (region == "KR") assertTrue(a.setCollectionEnabled(true)).also { choices.edit().remove(ConsentStore.KEY).commit() }
+            choices.failPuts = true
+            choices.failValue = "true"
+            sdk.calls.clear()
+            sdk.armed = true
+            assertFalse(a.setCollectionEnabled(true), region)
+            assertEquals(null, choices.getString(ConsentStore.KEY, null), "no choice stays no choice ($region)")
+            assertFalse(a.choice.value)
+            assertEquals(collectionOff, sdk.calls.takeLast(2), "the SDK ends off and denied ($region)")
+            choices.failValue = null
+        }
     }
 
     @Test
@@ -147,14 +367,17 @@ class AnalyticsTest {
 
     @Test
     fun onlyTheExactStoredGrantCounts() {
-        for (stored in listOf("TRUE", "1", "yes", "")) {
-            choices.edit().putString(ConsentStore.KEY, stored).commit()
-            collection.edit().putBoolean(ConsentStore.ENABLED, true).commit()
-            assertFalse(analytics(Sdk()).choice.value, stored)
+        for (region in listOf("DE", "KR")) {
+            for (stored in listOf("TRUE", "1", "yes", "")) {
+                choices.edit().putString(ConsentStore.KEY, stored).commit()
+                collection.edit().putBoolean(ConsentStore.ENABLED, true).commit()
+                assertFalse(analytics(Sdk(), region).choice.value, "$stored $region")
+            }
+            choices.edit().putString(ConsentStore.KEY, "true").commit()
+            collection.edit().remove(ConsentStore.ENABLED).commit()
+            assertFalse(analytics(Sdk(), region).choice.value, "a grant without the collection state ($region)")
+            assertEquals("false", choices.getString(ConsentStore.KEY, null), "is withdrawn ($region)")
         }
-        choices.edit().putString(ConsentStore.KEY, "true").commit()
-        collection.edit().remove(ConsentStore.ENABLED).commit()
-        assertFalse(analytics(Sdk()).choice.value, "a grant without the collection state")
     }
 
     @Test
@@ -187,14 +410,17 @@ class AnalyticsTest {
     private class FailingPrefs(private val real: SharedPreferences) : SharedPreferences by real {
         var fail = false
 
-        /** Only writes of a value fail; a removal succeeds. */
+        /** Only writes of a value fail ([failValue] only, when set); a removal succeeds. */
         var failPuts = false
+        var failValue: String? = null
+
         override fun edit(): SharedPreferences.Editor = when {
             fail -> Failing(real.edit())
             failPuts -> object : SharedPreferences.Editor by real.edit() {
                 private val staged = real.edit()
                 private var put = false
-                override fun putString(key: String?, value: String?) = also { put = true }
+                override fun putString(key: String?, value: String?) =
+                    also { if (failValue == null || value == failValue) put = true else staged.putString(key, value) }
                 override fun remove(key: String?) = also { staged.remove(key) }
                 override fun commit() = !put && staged.commit()
             }

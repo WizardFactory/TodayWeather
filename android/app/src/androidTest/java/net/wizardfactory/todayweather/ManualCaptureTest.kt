@@ -42,8 +42,9 @@ import org.junit.Test
 import org.junit.rules.RuleChain
 
 /** Actual native UI and live read-only data for AN-18's manual. One method per cleared install.
- * The test application records product push requests locally; no token is supplied and analytics stays off.
- * No fake weather, predictions or bitmap is injected. Never select a share recipient or enable analytics.
+ * The test application records product push requests locally; no token is supplied and analytics sends nothing
+ * ([SilentAnalyticsSdk]; the menu shows the state a user of the device's region gets). No fake weather, predictions or
+ * bitmap is injected. Never select a share recipient.
  */
 internal class ManualWalk(val rule: AndroidComposeTestRule<*, MainActivity>) {
     val app get() = rule.activity.application as TestTodayWeatherApp
@@ -51,7 +52,7 @@ internal class ManualWalk(val rule: AndroidComposeTestRule<*, MainActivity>) {
     fun capture(name: String, system: Boolean = false) {
         if (!system) rule.waitForIdle()
         Thread.sleep(600)
-        assertFalse("manual never opts into analytics", app.analytics.choice.value)
+        assertTrue("manual captures send no analytics", app.analyticsSdkInUse === SilentAnalyticsSdk)
         val ads = adsOff()
         if (ads) {
             assertEquals("an ad-free capture never starts the Ads SDK", 0, NoAdsPlatform.sdkStarts.get())
@@ -193,7 +194,7 @@ class ManualCaptureTest {
         // Close without saving. Capturing this manual must never claim delivery of a real alarm.
         rule.onAllNodes(hasTestTag(PopupTags.BUTTON))[0].performClick()
         assertEquals(saved, app.appState.current()!!.push)
-        assertFalse(app.analytics.choice.value)
+        assertNull("the walk makes no analytics choice", net.wizardfactory.todayweather.analytics.ConsentStore(app).storedChoice())
     }
     @Test fun settings() {
         walk.tap(ShellTags.MENU_BUTTON); walk.capture("26-menu"); walk.back()
@@ -248,8 +249,19 @@ class ManualCaptureTest {
         walk.tap(NationTags.BACK)
         open(MenuRow.NATIONAL_AIR, "38-national-air")
     }
+    /**
+     * The consent popup of an opt-in region (analytics default-on, 2026-11-24): capture.sh runs this section with
+     * `-e analyticsRegion DE`; the app language stays Korean. Nothing is chosen.
+     */
+    @Test fun analyticsOptIn() {
+        assertTrue("needs -e analyticsRegion DE", app.analytics.optInRegion)
+        assertFalse(app.analytics.choice.value)
+        walk.menu(MenuRow.ANALYTICS); walk.capture("40a-analytics-opt-in"); walk.back(); walk.back()
+        assertNull(net.wizardfactory.todayweather.analytics.ConsentStore(app).storedChoice())
+    }
     @Test fun privacyAndShare() {
         walk.menu(MenuRow.ABOUT); walk.capture("39-about"); walk.back(); walk.back()
+        assertFalse("a default-on region (the capture emulator's KR)", app.analytics.optInRegion)
         walk.menu(MenuRow.ANALYTICS); walk.capture("40-analytics"); walk.back(); walk.back()
         walk.menu(MenuRow.AD_PRIVACY)
         rule.waitUntil(30_000) { rule.onAllNodes(hasTestTag(PopupTags.POPUP)).fetchSemanticsNodes().isNotEmpty() }

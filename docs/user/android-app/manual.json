@@ -1,6 +1,6 @@
 {
   "title": "TodayWeather for Android: native app user manual",
-  "scenario": "TodayWeather 2.0 on Android. Screens are in Korean. All journey screens were captured without ads on 23 November 2026 from live data; the pull-to-refresh example uses sample Seoul data. Weather values and system dialogs may vary.",
+  "scenario": "TodayWeather 2.0 on Android. Screens are in Korean. All journey screens were captured without ads from live data on 23 November 2026, the menu and usage analytics screens on 24 November 2026; the pull-to-refresh example uses sample Seoul data. Weather values and system dialogs may vary.",
   "steps": [
     {
       "title": "Read the first-launch notice",
@@ -290,18 +290,25 @@
       "expected": "The menu remains when the dialog closes."
     },
     {
-      "title": "Choose optional usage statistics",
-      "instruction": "Open 선택적 이용 통계 (Optional usage statistics). Read the explanation and choose whether to allow collection. This manual keeps collection off.",
+      "title": "Review usage analytics",
+      "instruction": "Open 이용 통계 (Usage analytics) at the end of the menu; the row shows 켜짐 (On) or 꺼짐 (Off). In Korea and other regions outside the EEA, the United Kingdom and Switzerland, usage analytics is on until you turn it off. Read the explanation, then tap 끄기 (Turn off) or 켜기 (Turn on). This capture closes the popup without a choice.",
       "screenshot": "screenshots/40-analytics.png",
-      "caption": "The optional analytics choice.",
-      "expected": "Your choice is saved. Withdrawing consent disables collection. A choice made in the old app is not automatically treated as native consent."
+      "caption": "The usage analytics popup where it is on by default (device region Korea).",
+      "expected": "Your choice is saved and the row shows 켜짐 or 꺼짐; turning it off stops collection at once. Analytics data is not used for advertising. A choice made in the old app is not carried over."
+    },
+    {
+      "title": "Allow usage analytics in an opt-in region",
+      "instruction": "In the EEA, the United Kingdom and Switzerland, or when the device region is unknown, usage analytics stays off (이용 통계 · 꺼짐) until you allow it. Open 이용 통계 and choose 동의 (Allow) or 거부 / 철회 (Decline / withdraw). This capture sets the app's region to Germany and closes the popup without a choice.",
+      "screenshot": "screenshots/40a-analytics-opt-in.png",
+      "caption": "The consent popup of an opt-in region, with the app in Korean.",
+      "expected": "Nothing is collected until you allow it; your choice is saved and can be withdrawn here at any time."
     },
     {
       "title": "Review advertising privacy options",
       "instruction": "Open 광고 개인정보 선택 (Ad privacy choices). The available form depends on the advertising consent service and region.",
       "screenshot": "screenshots/41-ad-privacy.png",
       "caption": "The ad-privacy response in this capture environment.",
-      "expected": "A form opens when required; otherwise an explanatory message appears. This is separate from optional usage statistics."
+      "expected": "A form opens when required; otherwise an explanatory message appears. This is separate from usage analytics."
     },
     {
       "title": "Share weather using Android",
