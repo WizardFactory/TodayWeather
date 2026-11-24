@@ -426,7 +426,7 @@ are qualified failure cases. The actual native manual/PDF remains AN-18 PR4.
 
 The [home-screen widget guide](../docs/user/android-app/widgets/README.md) includes the four widget types, location and forecast settings, and the five-day main-app visit requirement.
 
-The [native app manual](../docs/user/android-app/README.md) includes 44 illustrated steps,
+The [native app manual](../docs/user/android-app/README.md) includes 46 illustrated steps (usage analytics on by default and the opt-in consent popup since 2026-11-24),
 actual API36 screenshots, editable JSON and a PDF. It covers the 2.0.0 preview with
 Korean screens and English instructions. [Capture tooling](tools/manual/README.md)
 uses the production activity with read-only product data and intercepted push

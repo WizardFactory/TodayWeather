@@ -10,15 +10,16 @@ The [editable supplement](forecast-ads/manual.json) and [capture record](forecas
 identify the Android 14 Google Play emulator, sample ads and saved Seoul fixture.
 
 This is the **native Kotlin / Jetpack Compose app**, version 2.0. Its
-45 illustrated steps cover first launch and permissions, current location,
+46 illustrated steps cover first launch and permissions, current location,
 hourly/daily charts, air quality and stations, saved places, alarms, units,
 startup/refresh settings, themes, nationwide information, privacy, sharing and exit.
 The app screens are Korean; the instructions are English with Korean control labels.
 The [home-screen widget guide](widgets/README.md) covers configuration, resizing, the five-day visit interval and recovery.
 The [older Cordova app manual](../cordova-app/README.md) describes version 1.1.1.
 
-All 44 journey screenshots were captured from the running native app on 23 November 2026
-**without ads** (`capture.sh --no-ads`: the test application replaces the consent and
+All 45 journey screenshots were captured from the running native app **without ads**: 40 on
+23 November 2026 and, after usage analytics became on by default outside the EEA, the United Kingdom and Switzerland
+(#3178), the menu, About, ad-privacy and both usage analytics screens on 24 November 2026 (`capture.sh --no-ads`: the test application replaces the consent and
 Ads SDK platform; every capture asserts that the Ads SDK did not start, and every
 capture of an app screen also asserts that no native ad card is in it — the three
 system screens, the location and notification permission dialogs and the share
@@ -42,7 +43,7 @@ under 업데이트 주기 in the menu.
 All four tabs use outline icons. On the selected tab, the icon and its label
 use the theme’s accent color, with a short line above the icon, on the pages
 that show the tab bar (the start, alarm, settings and nationwide pages have none).
-The 44 journey screenshots of this edition are full device frames; the
+The 45 journey screenshots of this edition are full device frames; the
 pull-to-refresh example is a capture of the app's own view from a device test,
 without the system bars. The earlier cropped captures are in the previous edition
 named in the capture record.
@@ -52,8 +53,12 @@ named in the capture record.
 - Location permission is optional if you search for a place. Android 13+ asks
   separately for notification permission. Android versions and device vendors may
   present different system dialogs.
-- Optional usage analytics stays off throughout this manual. Advertising privacy
-  choices depend on region and the consent service; they are separate from analytics.
+- Usage analytics (이용 통계) is on by default in Korea and other regions outside the EEA,
+  the United Kingdom and Switzerland, and can be turned off in the menu; in those regions
+  it stays off until you allow it. The menu screens show the Korean default (켜짐); the
+  opt-in page sets the app's region to Germany (`analyticsOptIn` capture section). The
+  capture's test application sends no analytics. Advertising privacy choices depend on
+  region and the consent service; they are separate from analytics.
   In Korea no consent form is required, so the 광고 개인정보 선택 page shows the same
   message with or without ads.
 - The alarm example edits settings and discards them. Product push requests were
