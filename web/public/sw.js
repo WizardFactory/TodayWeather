@@ -4,7 +4,7 @@ const CACHE = "tw-shell-" + VERSION;
 const ASSETS = /*__PRECACHE__*/ [
   "/",
   "/index.html",
-  "/icon.svg",
+  "/icons/favicon.png",
   "/manifest.webmanifest",
   "/theme.js",
 ];

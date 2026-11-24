@@ -99,8 +99,8 @@ describe("native and development boundaries", () => {
       writeFileSync(join(dir, "web/public/sw.js"), worker);
       for (const file of [
         "index.html",
-        "icon.svg",
         "manifest.webmanifest",
+        "icons/favicon.png",
         "icons/icon-192.png",
         "icons/icon-512.png",
         "assets/test.js",

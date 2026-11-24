@@ -200,13 +200,33 @@ test.describe("desktop QR and default link preview metadata", () => {
         name: "오늘날씨 모바일 앱 열기 및 스토어 이동 QR 코드",
       }),
     ).toBeVisible();
+    // The preview is the landing page's: its words and its 1200 × 630 share image (web/test/link-preview.test.ts).
     await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
       "content",
-      "https://app.todayweather.ai/icons/icon-512.png",
+      "https://app.todayweather.ai/icons/share-ko-d785e0ab.png",
     );
     await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
       "content",
-      "오늘날씨 · TodayWeather",
+      "오늘날씨 · 어제와 비교하는 날씨",
+    );
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+      "content",
+      "summary_large_image",
+    );
+    // The host serves the share image and the store app icon as images.
+    for (const path of [
+      "/icons/share-ko-d785e0ab.png",
+      "/icons/favicon.png",
+      "/icons/apple-touch-icon.png",
+      "/icons/icon-maskable-512.png",
+    ]) {
+      const response = await page.request.get(path);
+      expect(response.status(), path).toBe(200);
+      expect(response.headers()["content-type"], path).toBe("image/png");
+    }
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
+      "href",
+      "/icons/favicon.png",
     );
     // A static og:url would canonicalize every shared place to the home page.
     await expect(page.locator('meta[property="og:url"]')).toHaveCount(0);
