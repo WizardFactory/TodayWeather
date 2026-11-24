@@ -1,23 +1,27 @@
 #!/bin/sh
 # Checks a signed release APK before it is uploaded (docs/operations/android-release.md) and prints its identity
 # for the release notes:
-#   android/tools/release/check-apk.sh <signed.apk> <installed-store-release.apk>
-# The second APK is the release users have now (the Cordova 1.1.1 store APK for the first native release). The
-# check passes when both signatures verify, every signer's certificate equals the store release's, the package is
-# the same, the versionCode is higher, versionName, minSdk and targetSdk are those of app/build.gradle.kts, the
-# app is not debuggable, the AdMob app ID is not Google's sample and the Firebase configuration is in the APK.
-# It reads both files and changes nothing. Status 1: a check failed; 2: usage or a missing SDK tool.
+#   android/tools/release/check-apk.sh <signed.apk> <installed-store-release.apk> <mapping.txt>
+# The second APK is the release users have now (the Cordova 1.1.1 store APK for the first native release); the
+# mapping is R8's mapping.txt of the build (app/build/outputs/mapping/release/mapping.txt). The check passes when
+# both signatures verify, every signer's certificate equals the store release's, the package is the same, the
+# versionCode is higher, versionName, minSdk and targetSdk are those of app/build.gradle.kts, the app is not
+# debuggable, the AdMob app ID is not Google's sample, the Firebase configuration is in the APK, and R8 shrank the
+# code and wrote this mapping (check_r8.py). It reads the files and changes nothing. Status 1: a check failed;
+# 2: usage or a missing SDK tool.
 set -eu
-[ $# -eq 2 ] || { echo "usage: check-apk.sh <signed.apk> <installed-store-release.apk>" >&2; exit 2; }
+[ $# -eq 3 ] || { echo "usage: check-apk.sh <signed.apk> <installed-store-release.apk> <mapping.txt>" >&2; exit 2; }
 APK=$1
 STORE=$2
+MAPPING=$3
 HERE=$(cd "$(dirname "$0")" && pwd)
 GRADLE=$HERE/../../app/build.gradle.kts
 SDK=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}
 [ -n "$SDK" ] || { echo "set ANDROID_HOME" >&2; exit 2; }
 TOOLS=$(ls -d "$SDK"/build-tools/* 2>/dev/null | sort -V | tail -n 1)
 [ -x "$TOOLS/apksigner" ] && [ -x "$TOOLS/aapt2" ] || { echo "no apksigner and aapt2 under $SDK/build-tools" >&2; exit 2; }
-for file in "$APK" "$STORE"; do [ -f "$file" ] || { echo "no file $file" >&2; exit 2; }; done
+command -v python3 >/dev/null || { echo "no python3" >&2; exit 2; }
+for file in "$APK" "$STORE" "$MAPPING"; do [ -f "$file" ] || { echo "no file $file" >&2; exit 2; }; done
 
 failed=0
 fail() { echo "FAIL $*"; failed=1; }
@@ -65,6 +69,12 @@ elif printf '%s\n' "$manifest" | grep -q "ca-app-pub-"; then pass "an AdMob app 
 else fail "no AdMob app ID in the manifest"; fi
 if "$TOOLS/aapt2" dump resources "$APK" | grep -q "string/google_app_id"; then pass "Firebase configuration present"
 else fail "no Firebase configuration (app/google-services.json was missing at build time)"; fi
+# R8: every dex file shrunk by R8, and the mapping is this build's and complete (check_r8.py prints its lines).
+r8_status=0
+r8=$(python3 "$HERE/check_r8.py" "$APK" "$MAPPING" 2>&1) || r8_status=$?
+printf '%s\n' "$r8" | grep -v '^- ' || true
+[ "$r8_status" -eq 0 ] || fail "R8 check (check_r8.py status $r8_status)"
+mapping_digest=$(printf '%s\n' "$r8" | sed -n 's/^- R8 mapping SHA-256: //p')
 
 digest=$( (shasum -a 256 "$APK" 2>/dev/null || sha256sum "$APK" 2>/dev/null) | cut -d' ' -f1)
 if printf '%s' "$digest" | grep -Eq '^[0-9a-f]{64}$'; then pass "SHA-256 computed"; else fail "cannot compute the APK's SHA-256"; fi
@@ -75,4 +85,5 @@ echo "- versionCode: $code"
 echo "- minSdk / targetSdk: $min / $target"
 echo "- APK SHA-256: $digest"
 echo "- Signing certificate SHA-256: $cert"
+echo "- R8 mapping SHA-256: ${mapping_digest:-none}"
 exit $failed
