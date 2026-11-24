@@ -46,22 +46,6 @@
       "criteria": [
         "AC3"
       ]
-    },
-    {
-      "id": "S4",
-      "user": "The Hermes workspace setting up the collection host",
-      "goal": "Confirm that every source answers with the copied credentials before building collectors",
-      "prerequisites": "The private GTM files copied to a mode-700 directory on the host, paths in gtm.env rewritten, Node and the AWS CLI installed",
-      "steps": [
-        "Load gtm.env into the environment",
-        "Run node gtm/tools/check-access.mjs",
-        "Fix every line that does not read ok and run it again"
-      ],
-      "expected": "Seven lines read ok and the exit code is 0; no configured value appears in the output",
-      "failure": "A refused or not configured line names the source and a fixed reason; the exit code is 1",
-      "criteria": [
-        "AC5"
-      ]
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Sources and locations
 
-Last verified: 2026-11-24 (KST) with [`tools/check-access.mjs`](tools/check-access.mjs). This page records where GTM records, credentials and consoles are. It holds names and paths only. Secret values and account identifiers are in the private files listed below.
+Last verified: 2026-11-24 (KST) with one read-only request per source. This page records where GTM records, credentials and consoles are. It holds names and paths only. Secret values and account identifiers are in the private files listed below.
 
 ## Where things are
 
@@ -94,7 +94,7 @@ As of 2026-11-24 no link used campaign values, so both stores reported only orga
 The scheduled collection is built and run on the Hermes host from another workspace (AK, 2026-11-24). This repository supplies the access check and the documents; it does not run collectors.
 
 1. Copy to a mode-700 directory on the host: `gtm.env`, `aws-credentials`, the App Store `.p8` file, `admob-oauth-client.json`, `admob-oauth.json` and the Google Play service account key. Rewrite the paths in `gtm.env` for that host.
-2. Install Node 22.12 or later and the AWS CLI, and check out this repository.
-3. Run `set -a; . <dir>/gtm.env; set +a; node gtm/tools/check-access.mjs`. Every line must read `ok`. Each source gets the read its collector needs (for example the AdMob check generates a one-day report and the Play check reads one byte of the newest installs and ratings files). A missing variable is shown as `not configured (<names>)`, a failure as `refused (<fixed reason>)`; no configured value is printed.
+2. Install what the collectors need (the AWS CLI for the bucket).
+3. Confirm each source once with the read its collector performs, using the permissions in [Access per source](#access-per-source). Print only status codes, never a configured value or a response body.
 
 The host does not need the release signing material or the administrator AWS profile.

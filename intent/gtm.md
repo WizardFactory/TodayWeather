@@ -18,7 +18,7 @@ Go-to-market information for TodayWeather was spread over release notes, researc
 
 ## Scope
 
-- In scope: the `gtm/` documents, the artifact-policy wiring, collectors and the brief under `gtm/tools/`, and the private bucket.
+- In scope: the `gtm/` documents, the artifact-policy wiring and the private bucket. Collectors and the brief belong to the Hermes workspace (amendment of 2026-11-24).
 - Out of scope: store writes (review replies, listing edits, releases), paid acquisition, new accounts, the Hermes host setup, and the later metrics listed in the specification.
 
 ## Authority and endpoint
@@ -40,10 +40,7 @@ Criteria for the later tasks are the completion criteria of #3145.
 
 AK decided after the attribution audit:
 
-- The pull request is completed now. Collectors, the brief and the schedule are built on the Hermes host from another workspace; this repository supplies only what that work needs. The first pull request therefore also adds `gtm/tools/check-access.mjs`, a read-only check that every source answers with the configured credentials.
+- The pull request is completed now. Collectors, the brief and the schedule are built on the Hermes host from another workspace ("셋업만": this repository supplies the access, locations and documents that work needs, not tools).
 - An App Store Connect Admin key is issued so the ongoing analytics report request can be created.
 - Campaign values in store links, Android code shrinking, analytics on by default with the matching privacy text (#2660), the landing analytics tag and a new advertising campaign proceed as separate tasks. Store country availability is handled in its own issue.
 
-Added criterion for `gtm-g01`:
-
-- **AC5:** `node gtm/tools/check-access.mjs` reports each source as `ok`, `refused` or `not configured` without printing any configured value, and exits non-zero when a configured source fails.

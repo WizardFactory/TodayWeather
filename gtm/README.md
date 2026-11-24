@@ -23,5 +23,5 @@ The question is: per-store downloads, ad earnings, and review and rating changes
 
 ## State on 2026-11-24
 
-- Every planned source answers with the prepared credentials; [`tools/check-access.mjs`](tools/check-access.mjs) verifies them without printing values. App Store analytics reports still need an Admin key to be requested once. See [sources](sources.md).
+- Every planned source answered with the prepared credentials on 2026-11-24. App Store analytics reports still need an Admin key to be requested once. See [sources](sources.md).
 - The private bucket exists and is empty. Collectors, the brief and the schedule are built on the Hermes host from another workspace; [sources](sources.md#running-on-another-host) lists what that host needs.

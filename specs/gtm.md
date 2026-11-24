@@ -28,9 +28,7 @@ The brief reports, per source, the latest complete day with its date, the change
 
 ## Tools
 
-`gtm/tools/check-access.mjs` makes one read-only request per source and reports `ok`, `refused (<fixed reason>)` or `not configured (<variable names>)`. Reasons are fixed texts and numeric HTTP codes; no response body, error message or configured value is printed. Requests refuse redirects, the AdMob token request goes only to Google's token endpoint, and the bucket check uses only the collector profile. It exits non-zero when any source is not `ok`.
-
-Collectors and the brief are built in the Hermes workspace (AK, 2026-11-24). They are dependency-free scripts with tests. They read variables named in `gtm/.env.example`. They have no dry-run or mock mode: tests use in-test doubles, and each source and method is verified once against the real service.
+Collectors and the brief are built in the Hermes workspace (AK, 2026-11-24). They read the variables named in `gtm/.env.example`, have no dry-run or mock mode, use in-test doubles in tests, and verify each source once against the real service. They read variables named in `gtm/.env.example`. They have no dry-run or mock mode: tests use in-test doubles, and each source and method is verified once against the real service.
 
 ## Acceptance
 
@@ -40,9 +38,8 @@ Collectors and the brief are built in the Hermes workspace (AK, 2026-11-24). The
 | AC2 | The artifact checker link-checks `gtm/` and rejects a tracked file under `gtm/data/`. | `python3 scripts/verification/test_artifact_policy.py`; a real staged `gtm/data/` file is rejected |
 | AC3 | The change contains no credential, account identifier, figure or review body. | Pattern scan of the outgoing commits against the private values |
 | AC4 | `AGENTS.md` and the artifact retention document point to `gtm/`. | Document review; artifact checker links |
-| AC5 | `check-access.mjs` reports each source as `ok`, `refused` or `not configured` without printing a configured value, and exits non-zero when a configured source fails. | `node --test gtm/tools/*.test.mjs`; one real run against every source |
 
-AC1 to AC5 belong to the first task (`gtm-g01`). The later tasks use the completion criteria of #3145.
+AC1 to AC4 belong to the first task (`gtm-g01`). The later tasks use the completion criteria of #3145.
 
 ## Not specified here
 
