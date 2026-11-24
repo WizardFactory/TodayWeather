@@ -8,7 +8,7 @@ const assets = (await readdir(new URL("assets/", root)))
 const shell = [
   "/",
   "/index.html",
-  "/icon.svg",
+  "/icons/favicon.png",
   "/manifest.webmanifest",
   // Early theme script; optional so older or minimal artifacts still build.
   ...(existsSync(new URL("theme.js", root)) ? ["/theme.js"] : []),

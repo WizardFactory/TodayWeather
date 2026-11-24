@@ -30,7 +30,7 @@ an image fails and then uses the fallback fonts.
 `root/` holds files served from the site root: `robots.txt`, `sitemap.xml`,
 `favicon.ico`, `apple-touch-icon.png` and the share image `og/ko-<hash>.png`
 (1200 × 630, rendered from the hero copy and hourly capture). The page's
-Open Graph and icon tags point at these production URLs. The share image name carries the first eight hex digits of its SHA-256, because messengers such as KakaoTalk cache link previews by image URL; a changed image needs a new name, and the landing check enforces it.
+Open Graph and icon tags point at these production URLs. The share image name carries the first eight hex digits of its SHA-256, because messengers such as KakaoTalk cache link previews by image URL; a changed image needs a new name, and the landing check enforces it. The WebApp shows the same preview for shared `link.todayweather.ai` links: `web/index.html` repeats these words and `web/public/icons/` holds copies of the share image, the page icon and the touch icon. Change them together; `web/test/link-preview.test.ts` fails otherwise.
 
 ## Icons and store QR
 
