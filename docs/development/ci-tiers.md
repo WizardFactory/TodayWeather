@@ -44,7 +44,7 @@ This document defines the tiers for all targets. Android and iOS are split as de
 
 PR CI is unchanged: the JVM suites of every module, the imported-asset, corpus, route-table and reference consistency checks, and the build without `client/`.
 
-Release CI is [Android release verification](../../.github/workflows/android-release.yml). It holds no secret, builds debug and test APKs only, and installs them on hosted emulators that stay offline while the app is installed.
+Release CI is [Android release verification](../../.github/workflows/android-release.yml). It holds no secret, builds debug and test APKs only, and installs them on hosted emulators that stay offline while the app is installed. R8 shrinks only the release build, so neither tier runs it: the operator's release build is the first ([runbook, step 4](../operations/android-release.md#4-build-and-sign)), and the device gate the first run of the shrunk code.
 
 | Job | What it checks |
 | --- | --- |
