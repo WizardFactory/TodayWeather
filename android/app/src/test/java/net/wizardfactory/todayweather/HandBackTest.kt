@@ -123,7 +123,7 @@ class HandBackTest {
         assertEquals(listOf(null, "서울"), cities())
     }
 
-    /** The app's writer hands back the choice as written to disk (CODEX-3178-13), through the real preference files. */
+    /** The app's writer hands back each written choice through the real preference files. */
     @Test
     fun theAppsWriterHandsBackTheWrittenChoice() {
         val writer = HandBackWriter.of(context)

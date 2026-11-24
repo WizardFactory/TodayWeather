@@ -59,7 +59,7 @@ class HandBackWriter(private val suite: SharedPreferences, private val consent: 
         private const val TAG = "TwHandBack"
 
         fun of(context: Context) = HandBackWriter(context.getSharedPreferences(CordovaMigration.SUITE, Context.MODE_PRIVATE)) {
-            ConsentStore(context).confirmedChoice()
+            ConsentStore(context).storedChoice()
         }
     }
 }

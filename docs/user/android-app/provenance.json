@@ -909,7 +909,7 @@
     "android/app/src/main/java/net/wizardfactory/todayweather/AppLocale.kt": "1c4e351f573444d1e3aaf3db3e6a17772fcd0c0a1641379b0c6e43bf972c7791",
     "android/app/src/main/java/net/wizardfactory/todayweather/AppStateHolder.kt": "ab14017f4f288791b05df0a07478e80a58764608b471421a860c854da2e1c459",
     "android/app/src/main/java/net/wizardfactory/todayweather/EntryIntents.kt": "ed08b7de8e6c859c6fbcc6c4cc27dc389dc735c40ac6e4c6fdec050d77ae1bd0",
-    "android/app/src/main/java/net/wizardfactory/todayweather/HandBack.kt": "b94bf525236e40bd179f773d86cb8cc592acf6de4f87f5fe16001a3cfcef200a",
+    "android/app/src/main/java/net/wizardfactory/todayweather/HandBack.kt": "2c91cb047354b86c9e3cf1be49d4c9a63b6504e7e0f622efbc489d3fa3e6742c",
     "android/app/src/main/java/net/wizardfactory/todayweather/Handoff.kt": "2edad7e668b7c8c7e68e192cb079bf4c848696515beff52032ae2cef742d3724",
     "android/app/src/main/java/net/wizardfactory/todayweather/MainActivity.kt": "61e8ed5efa9a6c56d716bc5efae4ccab0a190eaa43d611f0cf3b85caee10ee6f",
     "android/app/src/main/java/net/wizardfactory/todayweather/MessagingService.kt": "1d04d3d25e13d43da725bf43a7cd3d19f754d28c65a2de176b80fb71f555f800",
@@ -924,7 +924,7 @@
     "android/app/src/main/java/net/wizardfactory/todayweather/ads/NativeForecastAds.kt": "69af2c459bd3d23fecb1a3fd8c3fbbf1664b12af97d5b68b92b9e8aedc770dca",
     "android/app/src/main/java/net/wizardfactory/todayweather/ads/NativeInventory.kt": "3c403a7bb32bc8b1d98864471e162f552cbf880499af68f641db4254823db86f",
     "android/app/src/main/java/net/wizardfactory/todayweather/ads/TwAds.kt": "ce8cfa146b4326c52df68f15db46ab66b6e3fd908aa5a9fb4ffc42dee4f3c3ba",
-    "android/app/src/main/java/net/wizardfactory/todayweather/analytics/Analytics.kt": "090772c1fededa524d8e849c8b89444bfcd5fc3f583a0fb5354b26a87a894a7b",
+    "android/app/src/main/java/net/wizardfactory/todayweather/analytics/Analytics.kt": "0b1651185be67c51f4057df273c0b9785002037ef751aa59d79095c6a162566d",
     "android/app/src/main/java/net/wizardfactory/todayweather/analytics/RemoteBannerConfig.kt": "bdbe176c325f78f3b577c4374f562f126b8fa5b8e10bf14be29dba58567030b6",
     "android/app/src/main/java/net/wizardfactory/todayweather/location/AndroidLocationAccess.kt": "4d26ff3b9b0516f979bdc652c063f12140c161a96ed1d4d7073817119546d222",
     "android/app/src/main/java/net/wizardfactory/todayweather/location/LocationGlyph.kt": "a0b9ea053b7c80c02e79d0e51dc45c2a2249988f80f3a789bcff73139286252d",
@@ -1234,10 +1234,9 @@
       "pull_request": 3178,
       "date": "2026-11-24 (Asia/Seoul)",
       "changed_sources": [
-        "android/app/src/main/java/net/wizardfactory/todayweather/HandBack.kt",
         "android/app/src/main/java/net/wizardfactory/todayweather/analytics/Analytics.kt"
       ],
-      "assessment": "After the analytics-default-on capture, review round 5 (CODEX-3178-12, -13) changed how the start reads the consent files (a damaged preference file now counts as unreadable) and which value the rollback hand-back copies (the choice on disk). No screen, text or decision for an intact install changes, so the screenshots and instructions stay valid; these two hashes are renewed with this assessment, not by a new capture."
+      "assessment": "After the capture at 87a0ca3a0c55f7c61f549d1eaa0ab1e288050c02, the review of PR 3178 simplified how ConsentStore handles failed writes (the coordinator decision of 2026-11-24: the choice is read only through SharedPreferences and the pending-withdrawal record is removed). No screen, text or decision for an intact install changes, so the screenshots and instructions stay valid; the changed hashes are renewed with this assessment, not by a new capture."
     }
   ]
 }

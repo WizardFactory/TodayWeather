@@ -13,7 +13,7 @@ Since AN-15 (#2894) the native Android app collects usage analytics only after a
 
 ## Desired outcome
 
-Outside the EEA, the United Kingdom and Switzerland, a user who has not chosen gets usage analytics from the first start, can see that it is on in the menu, and can turn it off there. In those regions, and when the region is unknown, nothing changes: collection waits for consent. A stored choice is never overridden by the default, and nothing is collected before the app has decided. Storage failures follow the spec's accepted scope: a withdrawal that cannot be persisted before the process ends may give way to the region default at the next start ([Rule 1](../specs/analytics-default-on.md#rule)).
+Outside the EEA, the United Kingdom and Switzerland, a user who has not chosen gets usage analytics from the first start, can see that it is on in the menu, and can turn it off there. In those regions, and when the region is unknown, nothing changes: collection waits for consent. A stored choice is never overridden by the default, and nothing is collected before the app has decided. Storage failures follow the spec's [scope of the guarantee](../specs/analytics-default-on.md#scope-of-the-guarantee-coordinator-decision-2026-11-24) (coordinator decision, 2026-11-24): failure or corruption of the app's private preference storage is outside it, so a damaged file or a withdrawal that cannot be persisted before the process ends may give way to the region default at the next start. "Writes no choice" means no choice record; recording the SDK's collection state is allowed. The Cordova hand-back path is historical and gets no new guarantee.
 
 ## Constraints
 

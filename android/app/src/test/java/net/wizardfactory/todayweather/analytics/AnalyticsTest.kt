@@ -143,63 +143,6 @@ class AnalyticsTest {
         assertEquals(collectionOn, next.calls)
     }
 
-    @Test
-    fun aWithdrawalThatCannotBeWrittenHoldsWhereTheDefaultIsOn() {
-        for (failure in listOf("everything", "puts")) {
-            choices.fail = false
-            choices.failPuts = false
-            choices.edit().remove(ConsentStore.KEY).commit()
-            val a = analytics(Sdk(), "KR")
-            assertTrue(a.choice.value)
-            if (failure == "everything") choices.fail = true else choices.failPuts = true
-            assertFalse(a.setCollectionEnabled(false), failure)
-            assertEquals(null, choices.getString(ConsentStore.KEY, null), failure)
-            assertTrue(collection.getBoolean(ConsentStore.DECLINED, false), "the withdrawal is recorded beside the collection state ($failure)")
-            choices.fail = false
-            choices.failPuts = false
-            val restarted = Sdk()
-            assertFalse(analytics(restarted, "KR").choice.value, "the region default does not turn it back on ($failure)")
-            assertEquals(collectionOff, restarted.calls)
-            assertEquals("false", choices.getString(ConsentStore.KEY, null), "and the withdrawal is written now ($failure)")
-            assertFalse(collection.contains(ConsentStore.DECLINED), failure)
-        }
-        // A grant written later clears nothing it should not: it collects after a restart.
-        assertTrue(analytics(Sdk(), "KR").setCollectionEnabled(true))
-        assertTrue(analytics(Sdk(), "KR").choice.value)
-    }
-
-    @Test
-    fun aPendingWithdrawalWinsOverAStaleGrant() {
-        choices.edit().putString(ConsentStore.KEY, "true").commit()
-        collection.edit().putBoolean(ConsentStore.ENABLED, true).putBoolean(ConsentStore.DECLINED, true).commit()
-        assertFalse(analytics(Sdk(), "KR").choice.value)
-        assertEquals("false", choices.getString(ConsentStore.KEY, null))
-    }
-
-    @Test
-    fun anUnreadablePendingWithdrawalDoesNotCollect() {
-        for (region in listOf("DE", "KR")) {
-            choices.edit().putString(ConsentStore.KEY, "true").commit()
-            collection.edit().putBoolean(ConsentStore.ENABLED, true).putString(ConsentStore.DECLINED, "true").commit()
-            assertFalse(analytics(Sdk(), region).choice.value, "a stale grant ($region)")
-            choices.edit().remove(ConsentStore.KEY).commit()
-            collection.edit().putString(ConsentStore.DECLINED, "true").commit()
-            assertFalse(analytics(Sdk(), region).choice.value, "no choice ($region)")
-        }
-    }
-
-    /** The process may end between the two writes of a failed withdrawal: the withdrawal is on disk before the removal. */
-    @Test
-    fun aFailedWithdrawalIsRecordedBeforeTheChoiceIsRemoved() {
-        val a = analytics(Sdk(), "KR")
-        assertTrue(a.setCollectionEnabled(true))
-        var recordedFirst: Boolean? = null
-        choices.failPuts = true
-        choices.beforeRemoval = { recordedFirst = collection.getBoolean(ConsentStore.DECLINED, false) }
-        assertFalse(a.setCollectionEnabled(false))
-        assertEquals(true, recordedFirst)
-    }
-
     /** A grant that cannot be written keeps the stored choice: a decline is not erased into "no choice" (CODEX-3178-8). */
     @Test
     fun aGrantThatCannotBeWrittenKeepsAStoredDecline() {
@@ -220,7 +163,7 @@ class AnalyticsTest {
     fun anUnreadableCollectionRecordDoesNotCollect() {
         for (region in listOf("KR", "DE")) {
             choices.edit().remove(ConsentStore.KEY).commit()
-            collection.edit().remove(ConsentStore.DECLINED).putString(ConsentStore.ENABLED, "true").commit()
+            collection.edit().putString(ConsentStore.ENABLED, "true").commit()
             val sdk = Sdk()
             assertFalse(analytics(sdk, region).choice.value, "no choice ($region)")
             assertEquals(collectionOff, sdk.calls)
@@ -228,49 +171,6 @@ class AnalyticsTest {
             collection.edit().putString(ConsentStore.ENABLED, "true").commit()
             assertFalse(analytics(Sdk(), region).choice.value, "a stored grant ($region)")
         }
-    }
-
-    /**
-     * Android's SharedPreferences load a file they cannot parse as an empty map, which would read as "no choice"; the
-     * store reads the files as the framework loads them (a backup first) and leaves collection off (CODEX-3178-12).
-     */
-    @Test
-    fun aDamagedPreferenceFileDoesNotCollect() {
-        val dir = kotlin.io.path.createTempDirectory("prefs").toFile()
-        fun start(region: String) = Analytics(Sdk(), ConsentStore(choices, collection, dir), "development") { region }.also { it.start() }
-        assertTrue(start("KR").choice.value, "no files: the region default")
-        for (name in listOf(ConsentStore.CHOICE_FILE, ConsentStore.COLLECTION_FILE)) {
-            val file = java.io.File(dir, "$name.xml")
-            file.writeText("<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n    <string name=\"twAnalyticsConsentV1\">fal")
-            assertFalse(start("KR").choice.value, "a truncated $name")
-            file.delete()
-            java.io.File(dir, "$name.xml.bak").writeText("<map><boolean")
-            java.io.File(dir, "$name.xml").writeText("<map />")
-            assertFalse(start("KR").choice.value, "a damaged backup of $name, which the framework loads first")
-            java.io.File(dir, "$name.xml.bak").delete()
-            assertTrue(start("KR").choice.value, "a valid empty $name")
-            file.delete()
-        }
-    }
-
-    /**
-     * A failed commit still changes SharedPreferences' memory and notifies listeners; the hand-back takes the choice as
-     * it is on disk, the backup first (CODEX-3178-13).
-     */
-    @Test
-    fun theConfirmedChoiceIsTheOneOnDisk() {
-        val dir = kotlin.io.path.createTempDirectory("prefs").toFile()
-        val store = ConsentStore(choices, collection, dir)
-        choices.edit().putString(ConsentStore.KEY, "true").commit()
-        assertEquals(null, store.confirmedChoice(), "nothing on disk")
-        val xml = { v: String -> "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n    <string name=\"twAnalyticsConsentV1\">$v</string>\n</map>\n" }
-        java.io.File(dir, "${ConsentStore.CHOICE_FILE}.xml").writeText(xml("false"))
-        assertEquals("false", store.confirmedChoice())
-        java.io.File(dir, "${ConsentStore.CHOICE_FILE}.xml").delete()
-        java.io.File(dir, "${ConsentStore.CHOICE_FILE}.xml.bak").writeText(xml("false"))
-        assertEquals("false", store.confirmedChoice(), "a failed write leaves the old file as the backup")
-        java.io.File(dir, "${ConsentStore.CHOICE_FILE}.xml.bak").writeText("<map")
-        assertEquals(null, store.confirmedChoice(), "an unreadable file hands back no choice")
     }
 
     @Test
@@ -357,14 +257,29 @@ class AnalyticsTest {
         assertEquals("false", choices.getString(ConsentStore.KEY, null))
     }
 
+    /**
+     * A withdrawal that cannot be written keeps the stored value; collection stays off for the session, and an old grant
+     * is withdrawn at the next start because the collection state says off (simplified design, 2026-11-24).
+     */
     @Test
-    fun aFailedWriteRemovesAnOldGrant() {
-        val a = analytics(Sdk())
-        a.setCollectionEnabled(true)
-        // The new value cannot be written, but the old one can be removed (`persistChoice`).
-        choices.failPuts = true
-        assertFalse(a.setCollectionEnabled(false))
-        assertEquals(null, choices.getString(ConsentStore.KEY, null))
+    fun aFailedWithdrawalKeepsTheStoredValueAndStaysOff() {
+        for (region in listOf("DE", "KR")) {
+            choices.failPuts = false
+            choices.edit().remove(ConsentStore.KEY).commit()
+            val a = analytics(Sdk(), region)
+            assertTrue(a.setCollectionEnabled(true))
+            choices.failPuts = true
+            val sdk = Sdk()
+            val b = Analytics(sdk, ConsentStore(choices, collection), "development") { region }.also { it.start() }
+            sdk.calls.clear()
+            assertFalse(b.setCollectionEnabled(false), "the save-failed notice ($region)")
+            assertFalse(b.choice.value)
+            assertEquals(collectionOff + collectionOff, sdk.calls, "the SDK stops before the write ($region)")
+            assertEquals("true", choices.getString(ConsentStore.KEY, null), "the stored value stays ($region)")
+            choices.failPuts = false
+            assertFalse(analytics(Sdk(), region).choice.value, "the next start withdraws the old grant ($region)")
+            assertEquals("false", choices.getString(ConsentStore.KEY, null))
+        }
     }
 
     @Test
@@ -433,8 +348,6 @@ class AnalyticsTest {
         /** Only writes of a value fail; a removal succeeds. */
         var failPuts = false
 
-        /** Runs before a removal is committed while [failPuts] is set. */
-        var beforeRemoval: (() -> Unit)? = null
         override fun edit(): SharedPreferences.Editor = when {
             fail -> Failing(real.edit())
             failPuts -> object : SharedPreferences.Editor by real.edit() {
@@ -442,11 +355,7 @@ class AnalyticsTest {
                 private var put = false
                 override fun putString(key: String?, value: String?) = also { put = true }
                 override fun remove(key: String?) = also { staged.remove(key) }
-                override fun commit(): Boolean {
-                    if (put) return false
-                    beforeRemoval?.invoke()
-                    return staged.commit()
-                }
+                override fun commit() = !put && staged.commit()
             }
             else -> real.edit()
         }

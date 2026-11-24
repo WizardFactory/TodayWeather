@@ -4,8 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
-import java.io.File
-import javax.xml.parsers.DocumentBuilderFactory
 import com.google.firebase.analytics.FirebaseAnalytics
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,38 +45,23 @@ class FirebaseAnalyticsSdk(private val context: Context) : AnalyticsSdk {
 
 /**
  * The usage analytics choice (`twAnalyticsConsentV1`) and the SDK's collection state, in two private preference files
- * written with `commit()`. The Cordova app kept the choice in WebView storage and the plugin persisted the collection
- * flag on its own: a grant restores at the start only when both still hold it, so a withdrawal whose choice could not
- * be written still holds after a restart when the collection state was written. Since the region default
- * (2026-11-24) a missing choice can collect, so a withdrawal that could not be written is also recorded beside the
- * collection state ([DECLINED]) and counts as `"false"` at the next start. When neither can be written and the process
- * ends, the next start has no choice and the region default may apply (an accepted residual, specs/analytics-default-on.md).
+ * written with `commit()` and read only through SharedPreferences. The Cordova app kept the choice in WebView storage and
+ * the plugin persisted the collection flag on its own: a grant restores at the start only when both still hold it, so a
+ * withdrawal whose choice could not be written still holds after a restart when the collection state was written.
+ * Failure or corruption of these private files is outside the guarantee (specs/analytics-default-on.md): Android loads a
+ * damaged file as empty, which reads as "no choice", so the region default may apply.
  */
-class ConsentStore(
-    private val choices: SharedPreferences,
-    private val collection: SharedPreferences,
-    /** The preference files' directory, read as the framework loads them ([PrefsFile]); null skips those checks. */
-    private val dir: File? = null,
-) {
+class ConsentStore(private val choices: SharedPreferences, private val collection: SharedPreferences) {
     constructor(context: Context) : this(
         context.getSharedPreferences(CHOICE_FILE, Context.MODE_PRIVATE),
         context.getSharedPreferences(COLLECTION_FILE, Context.MODE_PRIVATE),
-        File(context.dataDir, "shared_prefs"),
     )
 
     /**
-     * The stored choice at the start (`init`): `"true"`, `"false"`, none, or another value ([UNREADABLE] when the
-     * choice or the collection record cannot be read as expected), which does not collect. A recorded withdrawal that could not be written is `"false"`
-     * and is written now; a grant the collection state does not confirm is withdrawn and written so.
+     * The stored choice at the start (`init`): `"true"`, `"false"`, none, or another value ([UNREADABLE] when a record
+     * cannot be read), which does not collect. A grant the collection state does not confirm is withdrawn and written so.
      */
     fun startChoice(): String? {
-        // SharedPreferences load a file they cannot parse as an empty map: such a file is unreadable, not "no choice".
-        if (dir != null && (PrefsFile(dir, CHOICE_FILE).unreadable() || PrefsFile(dir, COLLECTION_FILE).unreadable())) return UNREADABLE
-        // A record that cannot be read counts as a withdrawal: any state the start cannot read leaves collection off.
-        if (runCatching { collection.getBoolean(DECLINED, false) }.getOrDefault(true)) {
-            write(false)
-            return "false"
-        }
         val stored = runCatching { choices.getString(KEY, null) }.getOrElse { return UNREADABLE }
         val enabled = runCatching { collection.getBoolean(ENABLED, false) }.getOrElse { return UNREADABLE }
         if (stored != "true") return stored
@@ -88,36 +71,18 @@ class ConsentStore(
     }
 
     /**
-     * Writes the choice (`persistChoice`). When a withdrawal cannot be written it records it beside the collection state
-     * ([DECLINED]) first, so a process end before the removal still leaves it off, and then removes the
-     * choice, so an old grant cannot survive. When a grant cannot be written the stored choice stays as it was, so a
-     * decline is never erased into "no choice" (the grant's collection state is not recorded, so an old grant is
-     * withdrawn at the next start).
+     * Writes the choice (`persistChoice`). When that fails the stored value stays as it was: a failed grant keeps a
+     * decline, and an old grant after a failed withdrawal is withdrawn at the next start, because the collection state
+     * recorded for this session says off.
      */
     fun write(value: Boolean): Boolean {
-        if (choices.edit().putString(KEY, value.toString()).commit()) {
-            if (runCatching { collection.contains(DECLINED) }.getOrDefault(true)) collection.edit().remove(DECLINED).commit()
-            return true
-        }
-        if (!value) {
-            collection.edit().putBoolean(DECLINED, true).commit()
-            choices.edit().remove(KEY).commit()
-        }
+        if (choices.edit().putString(KEY, value.toString()).commit()) return true
         Log.w(TAG, "collection storage_write_failed")
         return false
     }
 
     /** The stored choice as written (`"true"`, `"false"` or none), for the hand-back (AN-17). */
     fun storedChoice(): String? = runCatching { choices.getString(KEY, null) }.getOrNull()
-
-    /**
-     * The choice as it is on disk, for the hand-back (AN-17): a failed `commit()` still changes the preferences' memory
-     * and notifies listeners, so a grant that was not written must not be handed back. None when unreadable.
-     */
-    fun confirmedChoice(): String? {
-        val files = dir ?: return storedChoice()
-        return runCatching { PrefsFile(files, CHOICE_FILE).strings()?.get(KEY) }.getOrNull()
-    }
 
     /** The collection state after the SDK calls (the flag the plugin persisted). */
     fun recordCollection(enabled: Boolean): Boolean = collection.edit().putBoolean(ENABLED, enabled).commit()
@@ -126,10 +91,7 @@ class ConsentStore(
         const val KEY = "twAnalyticsConsentV1"
         const val ENABLED = "collectionEnabled"
 
-        /** A withdrawal whose choice could not be written (in the collection file). */
-        const val DECLINED = "declinePending"
-
-        /** [startChoice] when the stored choice cannot be read. */
+        /** [startChoice] when a record cannot be read. */
         const val UNREADABLE = "unreadable"
         const val CHOICE_FILE = "tw_analytics_consent"
         const val COLLECTION_FILE = "tw_analytics_collection"
@@ -280,22 +242,3 @@ class Analytics(
 
 private const val TAG = "TwAnalytics"
 
-/**
- * A preference file as `SharedPreferencesImpl` loads it: the backup (`.bak`, left by a write that did not finish) first,
- * then the file. Reading it tells a damaged file, which the framework would load as an empty map, from a missing one.
- */
-internal class PrefsFile(private val dir: File, private val name: String) {
-    private fun file() = File(dir, "$name.xml.bak").takeIf { it.exists() } ?: File(dir, "$name.xml")
-
-    /** The string values, or null when there is no file; throws when the file cannot be parsed. */
-    fun strings(): Map<String, String>? {
-        val file = file()
-        if (!file.exists()) return null
-        val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
-        check(doc.documentElement.tagName == "map") { "not a preference file" }
-        val nodes = doc.getElementsByTagName("string")
-        return (0 until nodes.length).associate { nodes.item(it).attributes.getNamedItem("name").nodeValue to nodes.item(it).textContent }
-    }
-
-    fun unreadable(): Boolean = runCatching { strings() }.isFailure
-}
