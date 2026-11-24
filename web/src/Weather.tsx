@@ -37,7 +37,7 @@ import {
 import { useApp } from "./context";
 import { fetchWeather, readStoredWeather } from "./api";
 import { weatherKey, resolvePlace } from "./state";
-import { linkPollutant, shareLink } from "./deeplink";
+import { catalogOnlyRoute, linkPollutant, shareLink } from "./deeplink";
 import {
   WeatherIcon,
   Stamp,
@@ -144,9 +144,7 @@ export default function WeatherPage({
   const navigationType = useNavigationType();
   const linkPlaceKind = route.state?.linkPlaceKind;
   // A catalog deep link must never open an unrelated favorite with the same ID.
-  const catalogOnly =
-    linkPlaceKind === "catalog" ||
-    (search.get("from") === "link" && linkPlaceKind !== "saved");
+  const catalogOnly = catalogOnlyRoute(search, linkPlaceKind);
   const place =
     preview ??
     (catalogOnly

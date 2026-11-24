@@ -1,8 +1,10 @@
 # Android release runbook
 
-How a commit of the native Android app (`android/`) becomes a Google Play release. The release itself is tracked in [#2898](https://github.com/WizardFactory/TodayWeather/issues/2898) (AN-19). This document defines the procedure; it does not record that a release happened. Versions, tags and notes follow [GitHub Releases](github-releases.md); the automated checks are the release tier of [PR CI and release CI](../development/ci-tiers.md).
+How a commit of the native Android app (`android/`) becomes a Google Play release. The first release is tracked in [#2898](https://github.com/WizardFactory/TodayWeather/issues/2898) (AN-19). This document defines the procedure; each release is recorded by its tag and GitHub Release, not here. Versions, tags and notes follow [GitHub Releases](github-releases.md); the automated checks are the release tier of [PR CI and release CI](../development/ci-tiers.md).
 
 **Who does what.** AK is the operator: private inputs, the signing key, the Play Console and every approval are AK's. An agent may prepare the commit, run release CI and the emulator gates, draft the notes and check an APK it is given. An agent builds, signs, uploads or publishes only when AK says so for that release.
+
+**Releases so far.** 2.0.0 (`versionCode` 200003) shipped before this runbook existed. On 2026-11-24 Play showed it in open testing and in production with the release completed (100%); when each track received it was not recorded. It was recorded afterwards as [`android/v2.0.0`](https://github.com/WizardFactory/TodayWeather/releases/tag/android/v2.0.0) by the method in [Recording a release built outside the runbook](#recording-a-release-built-outside-the-runbook). Its notes list what was and was not recorded at the time; the release CI run and the device gate were not. The next release, 2.0.1, is the first to follow every step.
 
 **What a step proves.** A passed release CI run, a signed APK, an upload, an approved review and a finished rollout are five different states. Record each with its own evidence, and never infer a later one from an earlier one.
 
@@ -12,12 +14,12 @@ How a commit of the native Android app (`android/`) becomes a Google Play releas
 | --- | --- | --- | --- |
 | 1 | [Freeze the version](#1-freeze-the-version) | The version change is merged; its commit is the candidate | Agent or AK |
 | 2 | [Release CI](#2-release-ci) | `Android release verification` passed for the candidate's full SHA | Agent or AK |
-| 3 | [Manual gates on emulators](#manual-gates) | Every gate passed on the candidate, evidence kept | Agent or AK |
+| 3 | [Manual gates on emulators](#manual-gates) | Every gate that is run passed on the candidate, evidence kept (the Cordova gates are not run) | Agent or AK |
 | 4 | [Build and sign](#4-build-and-sign) | The export of the candidate is built and signed; `check-apk.sh` passes on the signed APK | AK |
 | 5 | [Device gate](#5-device-gate) | The signed APK passed the physical-device checks | AK |
 | 6 | [Tag the candidate](#6-tag-the-candidate-and-publish-its-notes) | `android/vX.Y.Z-rc.N` and its pre-release exist; `--check` passes | AK |
-| 7 | [Store declarations and test tracks](#7-store-declarations-and-test-tracks) | Internal, closed and open testing accepted | AK |
-| 8 | [Production](#8-production-rollout) | `android/vX.Y.Z` released; staged rollout at 100% without a halt | AK |
+| 7 | [Store declarations and test tracks](#7-store-declarations-and-test-tracks) | Internal and open testing accepted | AK |
+| 8 | [Production](#8-production-rollout) | `android/vX.Y.Z` released to 100%; no halt signal in the first week | AK |
 | 9 | [Close](#9-close-the-release) | Notes say `deployed`; #2898 or the release issue updated | AK or agent |
 
 A failure at any step ends the candidate. Fix on `master`, then start again at step 1 with the next candidate number and a higher `versionCode`. Keep the failed candidate's tag, Release and evidence.
@@ -27,13 +29,12 @@ A failure at any step ends the candidate. Fix on `master`, then start again at s
 `versionName` and `versionCode` are in `android/app/build.gradle.kts`. Change them in a pull request; the merged commit on `master` is the candidate, so the source commit states its own version.
 
 - `versionName` is `MAJOR.MINOR.PATCH`, the version of the tag.
-- `versionCode` must be above every code on every active Play track, the Cordova builds included. Read the tracks in the Play Console before choosing. The default is `MAJOR × 100000 + MINOR × 1000 + PATCH × 10 + (candidate − 1)`: 2.0.0 candidate 1 is 200000, candidate 2 is 200001, and 2.0.1 starts at 200010. Play accepts a code once, so each candidate that was uploaded needs a new one.
-- A Cordova fallback build for a rollback needs a code above the native release it replaces ([hand-back](../../android/README.md#rollback-hand-back-to-a-cordova-build-an-17)).
+- `versionCode` must be above every code on every active Play track, the Cordova builds included, and must not have been uploaded before. Read the tracks and the uploaded codes in the Play Console before choosing. 200000–200003 are spent (2.0.0); 2.0.1 candidate 1 is 200010. The default is `MAJOR × 100000 + MINOR × 1000 + PATCH × 10 + (candidate − 1)`: 2.0.0 candidate 1 is 200000, candidate 2 is 200001, and 2.0.1 starts at 200010. Play accepts a code once, so each candidate that was uploaded needs a new one.
 
 ### 2. Release CI
 
 ```sh
-gh workflow run android-release.yml --ref master -f ref=<full SHA>
+gh workflow run android-release.yml --ref <branch or tag at the candidate> -f ref=<full SHA>   # master, while it is the candidate
 gh run list --workflow android-release.yml --limit 5
 gh run view <run id> --json conclusion,jobs --jq '.conclusion, (.jobs[] | "\(.name): \(.conclusion)")'
 ```
@@ -57,15 +58,17 @@ The gates need two builds, each from the candidate commit with the inputs of [Pr
 
 | Build | Private inputs | Gates |
 | --- | --- | --- |
-| Full | `app/google-services.json`, `TW_SERVER_URL`, `TW_PLACES_API_KEY_ANDROID`, `TW_MAIL_TO` | Every gate but the menu hand-offs. The test application sends weather requests to the production server only in the production gates, and never sends a push request |
+| Full | `app/google-services.json`, `TW_SERVER_URL`, `TW_PLACES_API_KEY_ANDROID`, `TW_MAIL_TO` | Every gate that is run but the menu hand-offs. The test application sends weather requests to the production server only in the production gates, and never sends a push request |
 | Without a server | `TW_MAIL_TO`; `TW_SERVER_URL` removed from the environment and `android/private.properties` | Menu hand-offs: its runner requires a build without a server URL |
+
+Releases do not consider Cordova compatibility (AK, 2026-11-24): the four gates that need a Cordova 1.1.1 APK (upgrade, hand-back, backup and restore, notification after the upgrade) are not run. They stay listed for the record.
 
 | Gate | Command under `android/tools/` | Needs | Emulators |
 | --- | --- | --- | --- |
-| Upgrade from Cordova 1.1.1: state, push re-registration, token work, entry intents | `upgrade/run-upgrade-test.sh <cordova-1.1.1-debug.apk> [out] [token-a\|token-b]` | Cordova 1.1.1 debug APK signed with the same debug key; `app/google-services.json` | API 36 and API 24 |
-| Rollback hand-back to a Cordova fallback and back | `upgrade/run-handback-test.sh <cordova-1.1.1-debug.apk> <fallback-debug.apk> [out]` | The two Cordova APKs; the fallback's `versionCode` above this build's | API 36 |
-| Backup and restore, a Cordova backup included; entry links | `backup/run-backup-test.sh <cordova-1.1.1-debug.apk> [out]` | Cordova 1.1.1 debug APK | API 36 and API 24 |
-| Notification after the upgrade | `emulator/run-notification-check.sh <cordova-1.1.1-debug.apk> [out]` | Cordova 1.1.1 debug APK; `app/google-services.json`; a Google APIs image | API 36 and API 24 |
+| **Not run.** Upgrade from Cordova 1.1.1: state, push re-registration, token work, entry intents | `upgrade/run-upgrade-test.sh <cordova-1.1.1-debug.apk> [out] [token-a\|token-b]` | Cordova 1.1.1 debug APK signed with the same debug key; `app/google-services.json` | API 36 and API 24 |
+| **Not run.** Rollback hand-back to a Cordova fallback and back | `upgrade/run-handback-test.sh <cordova-1.1.1-debug.apk> <fallback-debug.apk> [out]` | The two Cordova APKs; the fallback's `versionCode` above this build's | API 36 |
+| **Not run.** Backup and restore, a Cordova backup included; entry links | `backup/run-backup-test.sh <cordova-1.1.1-debug.apk> [out]` | Cordova 1.1.1 debug APK | API 36 and API 24 |
+| **Not run.** Notification after the upgrade | `emulator/run-notification-check.sh <cordova-1.1.1-debug.apk> [out]` | Cordova 1.1.1 debug APK; `app/google-services.json`; a Google APIs image | API 36 and API 24 |
 | Ads, consent and analytics choice | `emulator/run-ads-check.sh [out]` | `app/google-services.json`; network | API 36 |
 | Weather, air and nationwide pages from production | `emulator/run-production-weather.sh [out]` | `TW_SERVER_URL`; network | API 36 and API 24 |
 | New install: position or search reaches the weather | `emulator/run-production-start.sh [out]` | `TW_SERVER_URL`, and `TW_PLACES_API_KEY_ANDROID` for the search with Google's predictions; Google Play services; network | API 36 |
@@ -102,7 +105,7 @@ The commands are one chain: a failed export, a failed build or a failed signatur
 - Record the candidate SHA, the signed APK's SHA-256 and the time of the build together; the release notes carry the first two. Keep `$BUILD` until the release is closed.
 - `apksigner` asks for the keystore and key passwords; do not put them on the command line, in a file of the checkout or in a log. `TW_ANDROID_KEYSTORE` and `TW_ANDROID_KEY_ALIAS` name the existing release keystore and its key. The app is not enrolled in Play App Signing, so this key is the one users' installs are signed with: a different key cannot update them.
 - `$OUT`, `$PRIVATE` and `$BUILD` are absolute paths outside the checkout (`$OUT` may be under ignored `reports/`). Keep the signed APK; the uploaded file and the checked file must be the same bytes.
-- `$STORE_APK` (an absolute path) is the release users have now: the Cordova 1.1.1 store APK for the first native release.
+- `$STORE_APK` (an absolute path) is the release users have now, 2.0.0 (200003) until 2.0.1 ships. Use the operator's copy of the previous release's signed APK. Its SHA-256 must equal the `APK SHA-256` in that release's notes. Without a copy, take it from a phone that installed it from Play (`adb shell pm path net.wizardfactory.todayweather`, then `adb pull` the `base.apk`) and compare the hash the same way.
 - `check-apk.sh` verifies both signatures, compares every signer's certificate and the package with the store release, requires a higher `versionCode`, compares `versionName`, `versionCode`, `minSdk` and `targetSdk` with the export's `app/build.gradle.kts`, and refuses a debuggable APK, Google's sample AdMob app ID and a build without the Firebase configuration. It prints the identity lines of the release notes. A `FAIL` line ends the candidate.
 - A candidate is exported and built once. For another attempt, export to a new directory.
 
@@ -142,8 +145,9 @@ The notes carry the release CI run, the `check-apk.sh` identity lines and the re
 
 1. Compare the merged manifest's permissions (`aapt2 dump permissions <signed.apk>`) and the app's actual data flows with the Play declarations: Data safety, ads and advertising ID, location, notifications, app access. Use the [store privacy review](store-privacy-review.md) and the [policy evidence](store-policy-evidence.md). A changed answer is saved and verified before the upload.
 2. Upload the signed APK once to internal testing. Read back the version code list of the track before committing the change. Do not touch other tracks.
-3. Promote the same file to closed and then open testing after the device gate holds on a tester's install from Play.
-4. After each change, edit the pre-release notes: `Store status`, `Attempts`, the time and what was read back.
+3. Check the update from Play: a phone with the current store release (2.0.0 for 2.0.1) and real state, whose account is an internal tester, receives the candidate from the internal track; its state is kept and the device gate's checks 1–6 hold.
+4. Promote the same file, with the same version code, to open testing. To see that the open track serves it, use an account that is not an internal tester. Closed testing is skipped (AK, 2026-11-24, from 2.0.1 on): it still holds the Cordova 1.1.0 build (100090) from before the native app. Leave that track as it is. This replaces the internal, closed and open order that #2898 names.
+5. After each change, edit the pre-release notes: `Store status`, `Attempts`, the time and what was read back.
 
 Upload, review and track handling, with their failure cases, are in the [Cordova store release](cordova-store-release.md) and its [troubleshooting](cordova-store-troubleshooting.md): the Play application, its tracks and its review are the same. Its upload lane accepts an AAB for the internal track only; this APK is uploaded in the Play Console.
 
@@ -161,16 +165,7 @@ node scripts/release-notes.mjs --check "$OUT/notes-final.md" --tag "$TAG" --comm
 
 `notes-final.md` is the candidate's notes with `Tag:` set to the final tag (`--check` fails while it still says the candidate's), the candidate's tag as the tested build, and the rollout record. The final tag points at the candidate's commit and names the candidate's APK; nothing is rebuilt.
 
-Roll out in stages and hold each stage until its window has passed without a halt:
-
-| Stage | Share of users | Hold at least |
-| --- | --- | --- |
-| 1 | 5% | 48 hours |
-| 2 | 20% | 48 hours |
-| 3 | 50% | 48 hours |
-| 4 | 100% | — |
-
-Halt the rollout in the Play Console (it stops new installs of the release; installed users keep it) when any of these holds for the new version:
+Release to 100% of users at once; there is no staged rollout (AK, 2026-11-24). Watch the signals below for the first week. Halt the release in the Play Console (it stops new installs of the release; installed users keep it) when any of these holds for the new version. Stop it on every track that serves it, because the testing tracks hold the same version code: halt the rollout on production and open testing, and pause the internal testing track (internal testing has no halt). Then check that no track still serves the version code.
 
 | Signal | Halt when | Read from |
 | --- | --- | --- |
@@ -181,17 +176,27 @@ Halt the rollout in the Play Console (it stops new installs of the release; inst
 | Weather requests failing | Failure share of `weather_fetch` above the previous release's by 2 points | Analytics, CloudFront logs |
 | Push registrations | Registrations per updated install clearly below the previous release's, or duplicate registrations | Push server logs |
 
-The crash and ANR limits are Google Play's bad-behavior thresholds ([crashes](https://developer.android.com/google/play/vitals/crash), [ANRs](https://developer.android.com/google/play/vitals/anr); read 2026-11-23). The stages, windows and the other limits are proposed values: AK confirms or changes them when AN-19 starts, and the release notes record the values used.
+The crash and ANR limits are Google Play's bad-behavior thresholds ([crashes](https://developer.android.com/google/play/vitals/crash), [ANRs](https://developer.android.com/google/play/vitals/anr); read 2026-11-23). The other limits are proposed values; the release notes record the values used.
 
 ### 9. Close the release
 
-Set `Rollout status: deployed` in the final notes with the time 100% was reached and the vitals read then. Update the release issue. Keep the signed APK, the private evidence and the previous release's APK: the next release's `check-apk.sh` and device gate start from them.
+One week after the release reached 100%, read the signals of step 8 and close the release. Set `Rollout status: deployed` in the final notes with the time 100% was reached, the end of the week and the values read then; a halt within the week sets `failed` instead. Update the release issue. For #2898, AK's decisions of 2026-11-24 (one full rollout; no Cordova compatibility) replace its staged-rollout and Cordova-upgrade criteria. Keep the signed APK, the private evidence and the previous release's APK: the next release's `check-apk.sh` and device gate start from them.
 
 ## Halt and rollback
 
 Google Play cannot move users back to an older version code. After a halt:
 
-1. **Fix forward (default).** Fix on `master`, take the next `PATCH` with a higher `versionCode`, and run this runbook again from step 1. Resume as a new release; the halted release's notes get `Rollout status: failed` and the reason.
-2. **Cordova fallback (last resort).** When the native app cannot be fixed quickly, ship a Cordova build with a higher `versionCode` that takes the state back ([hand-back](../../android/README.md#rollback-hand-back-to-a-cordova-build-an-17)). It needs its own hand-back gate run, the release signing and AK's decision.
+1. **Fix forward.** Fix on `master`, take the next `PATCH` with a higher `versionCode`, and run this runbook again from step 1. Resume as a new release; the halted release's notes get `Rollout status: failed` and the reason.
+A Cordova fallback is no longer a rollback path: releases do not consider Cordova compatibility (AK, 2026-11-24).
 
-Record the halt time, the share reached, the signal and its value in the notes before starting either.
+Record the halt time, the signal and its value in the notes before the fix.
+
+## Recording a release built outside the runbook
+
+A build that reached Play without this runbook gets its tag and Release afterwards, from evidence that identifies its bytes. It is an exception to the candidate rule of [GitHub Releases](github-releases.md#versions-candidates-and-tags): the binaries on the test tracks have no candidate tags, and the final Release records that. 2.0.0 was recorded this way on 2026-11-24, with AK's approval of the same day.
+
+1. **The shipped file.** Get the signed APK: the operator's copy, or `adb pull` from a phone that installed it from Play. Its SHA-256 must equal the SHA-256 that Play reports for the version code. The Play Developer API lists it per uploaded APK (`edits.apks.list`). Read it in an edit that is deleted without committing, and only when the operator has no API edit in progress: a new edit can invalidate the edit another session of the same account has open. Keep the dated read-out with the evidence. `apksigner verify --print-certs` must show the signer of the previous store release.
+2. **The commit.** Narrow the candidates by build or install time and by what the release notes describe. Export a candidate with `export_candidate.py` and record the exporter's commit. Change in the export only what the shipped build demonstrably differs in, such as `versionCode`, and record each change. Build with the shipped build's private inputs. The values compiled into `BuildConfig` and the manifest can be read from the APK. The Firebase configuration cannot: use the operator's retained `google-services.json`. Record the Gradle, Kotlin and JDK versions. Keep the values out of logs and delete the export afterwards.
+3. **The comparison.** Compare the unsigned rebuild with the signed APK entry by entry. Refuse duplicate entry names. APK Signature Scheme v2 and later sign in a block outside the entries, so a store APK without a JAR (v1) signature (`apksigner verify -v` reports v1 false) is compared in every entry. Only when it has a verified v1 signature, ignore the files of that signature: `META-INF/MANIFEST.MF` and its signer's `.SF` and signature block file. Every other entry must match in name, order, compression method and bytes. A missing input or a difference leaves the source unconfirmed: keep the APK hash and the Play read-out in the operator's private record, and create no tag or GitHub Release until the evidence identifies the commit.
+4. **The commit to tag.** Every commit with the same `android/` tree builds the same bytes from the same inputs and tools. Tag the commit through which that tree first entered `master`'s first-parent history (a merge commit, not a branch commit): [GitHub Releases](github-releases.md#versions-candidates-and-tags) tags commits on `master`.
+5. **The Release.** Draft final notes with `node scripts/release-notes.mjs --scope android --version <X.Y.Z> --commit <full SHA>`, adding `--from <commit>` when the scope has no earlier tag. Fill every field from the evidence. Write "none" or "no record" where a step left no evidence. Name the test-track uploads that have no candidate tags. State each change made in the build tree. Then create the annotated tag locally, run `--check` against it, push the tag and create the Release, in the order of [step 8](#8-production-rollout). `--check` confirms the fields, tag and commit, not the facts: the evidence above does.

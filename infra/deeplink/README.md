@@ -1,6 +1,6 @@
 # TodayWeather link host
 
-This stack serves only `link.todayweather.ai`. The viewer-request function rewrites app-open links to the static fallback and redirects content links to the matching route on `app.todayweather.ai`. The dedicated S3 bucket also serves the two OS association files. The product landing and policy pages stay on `todayweather.ai`. See the [link contract](../../specs/deeplink.md) and [rollout order](../../plans/deeplink.md#critical-rollout-order-immediate-branch-replacement-safety).
+This stack serves only `link.todayweather.ai`. The viewer-request function serves the two OS association files from private S3 and redirects recognized deep links (`/`·`/open` and content routes) straight to `app.todayweather.ai` for browser fallback, or to the OS app store when `?fallback=store` is passed on mobile. The product landing and policy pages stay on `todayweather.ai`. See the [link contract](../../specs/deeplink.md) and [rollout order](../../plans/deeplink.md#critical-rollout-order-immediate-branch-replacement-safety).
 
 ## Verify locally
 
@@ -25,11 +25,9 @@ node scripts/deploy-deeplink-static.mjs --execute \
 node scripts/deeplink-live-smoke.mjs
 ```
 
-The uploader resolves the selected bucket region via `s3:GetBucketLocation` and requires an exact regional S3 origin match. It also checks the deployed alias and routing, exact LIVE function code, cache and header policies, OAC and bucket protection before writing. It uploads only the fallback assets and generated association objects, verifies each object's metadata, then waits for its CloudFront invalidation. The bucket grants CloudFront only `s3:GetObject`. The distribution accepts the standard CloudFront method set so the viewer-request function can return `405` with `Allow: GET, HEAD` before a write method reaches the origin.
+The uploader resolves the selected bucket region via `s3:GetBucketLocation` and requires an exact regional S3 origin match. It also checks the deployed alias and routing, exact LIVE function code, cache and header policies, OAC and bucket protection before writing. It uploads only the generated association objects, verifies each object's metadata, then waits for its CloudFront invalidation. The bucket grants CloudFront only `s3:GetObject`. The distribution accepts the standard CloudFront method set so the viewer-request function can return `405` with `Allow: GET, HEAD` before a write method reaches the origin.
 
-The live smoke uses the same identity inputs. It checks direct association responses, HTML and CSP, the preview image, content redirects, missing paths and method rejection. Complete the physical-device checks in [DL-06](https://github.com/WizardFactory/TodayWeather/issues/3098) after the PWA is deployed. On iOS, use the Safari Smart App Banner from the fallback page. Android browsers that support intent links offer an explicit app-open action. In-app browsers can still require the user to open the system browser.
-
-The preview PNG reuses the [PWA app icon](../../web/public/icons/icon-512.png).
+The live smoke uses the same identity inputs. It checks direct association responses, direct `302` redirects to `app.todayweather.ai`, `?fallback=store` redirects to App Store / Google Play / WebApp, missing paths (`404`, including removed `/open.html` and `/assets/*`) and method rejection (`405`). Complete the physical-device checks in [DL-06](https://github.com/WizardFactory/TodayWeather/issues/3098) after the PWA is deployed.
 
 ## Recover from a failed upload
 

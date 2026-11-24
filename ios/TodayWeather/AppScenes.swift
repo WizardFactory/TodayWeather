@@ -98,6 +98,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
+        Monetization.shared.refreshTrackingStatus()
         WidgetStore.activated(at: Date())
         WidgetCenter.shared.reloadAllTimelines()
     }

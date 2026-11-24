@@ -17,7 +17,7 @@ All HTTPS deep links use scheme `https` and host `link.todayweather.ai` (case-in
 
 | Route | Canonical URL (`https://link.todayweather.ai`) | Query parameters | Native app target | Browser / PWA fallback (`https://app.todayweather.ai`) |
 | --- | --- | --- | --- | --- |
-| App open (Branch replacement) | `/` or `/open` | `lang` (optional BCP-47 primary tag, e.g. `ko`, `en`) | Open app (preserve active/default startup tab) | Static smart fallback HTML at `link.todayweather.ai` (App Store + Google Play buttons + "Open in Web" link to `https://app.todayweather.ai/`) |
+| App open (Branch replacement) | `/` or `/open` | `lang` (optional BCP-47 primary tag, e.g. `ko`, `en`); `fallback=store` (optional edge-only store redirect hint, ignored by native) | Open app (preserve active/default startup tab) | `302` to `https://app.todayweather.ai/` (or OS-matched App Store / Google Play when `fallback=store` is present on mobile UA) |
 | Catalog place weather | `/place/{slug}` | `view` = `hourly` (default) \| `daily` \| `air`; `pollutant` (used when `view=air`) | Resolve catalog slug; open matching saved place or ephemeral preview on requested tab | `302` to `/weather/{slug}/{view}?from=link` (`hourly` default or `daily`) or `/air/{slug}?from=link` with optional `pollutant` when reading the inbound alias `?view=air` |
 | Arbitrary coordinate weather | `/loc` | `lat` (required), `lon` (required), `name` (optional), `view` = `hourly` (default) \| `daily` \| `air`, `pollutant` (optional) | Validate coordinates; match nearby saved place or open ephemeral preview on requested tab | `302` to `https://app.todayweather.ai/loc?lat={lat}&lon={lon}[&name=...][&view=...][&pollutant=...]` |
 | Catalog air detail | `/air/{slug}` | `pollutant` = `aqi` \| `pm25` \| `pm10` \| `o3` \| `no2` \| `so2` \| `co` (optional, default `aqi`) | Resolve catalog slug; open Air tab (`S05`) with selected pollutant | `302` to `https://app.todayweather.ai/air/{slug}[?pollutant=...]` |
@@ -119,22 +119,39 @@ Modeled on [infra/web/static/stack.json](../infra/web/static/stack.json): privat
 
 1. Allow only `GET` and `HEAD`; return `405 Method Not Allowed` otherwise.
 2. Decode URI; reject malformed encoding, `..`, `\`, or NUL with `400 Bad Request`.
-3. **Verification & static assets (served from S3, 200 OK, no redirect):**
+3. **Verification files (served from S3, 200 OK, no redirect):**
    - `/.well-known/apple-app-site-association`
    - `/.well-known/assetlinks.json`
-   - `/open.html`, `/assets/*` (smart fallback page icons/CSS/JS if any; CSP uses `style-src 'self'`, `script-src 'self'`, no inline scripts/styles).
-4. **App-open fallback (`/` or `/open` or `/open/`):**
-   - Rewrite `request.uri` to `/open.html` (HTTP 200).
-   - `/open.html` includes localized Korean/English copy, Open Graph metadata (`og:title`, `og:description`, `og:image`), App Store link, Google Play link, and a primary "Open in Web (`https://app.todayweather.ai/`)" button.
-   - Include an explicit "Open TodayWeather App" action for in-app browsers (KakaoTalk, Naver, Instagram) where Universal/App Links may be suppressed.
-5. **Content link browser fallback (`302 Found` with `Cache-Control: no-store` or short TTL):**
+   - No HTML landing page or static web assets are served on `link.todayweather.ai`.
+4. **Store fallback redirect (`?fallback=store` on any recognized deep-link route):**
+   - When `fallback=store` is present on a recognized deep-link route (`/`, `/open`, `/place/{slug}`, `/loc`, `/air/{slug}`, `/nation/weather`, `/nation/air`, `/warnings`) and the request reaches the edge (app not installed, or Universal/App Links suppressed):
+     - Return `302 Found` with `Cache-Control: no-store` and `Vary: User-Agent`:
+       - iOS `User-Agent` (`/iPhone|iPad|iPod/i`) or explicit `store=ios` (for desktop-class iPadOS Safari UA) → the App Store campaign link `https://apps.apple.com/app/apple-store/id1041700694?pt={provider token}&ct=sharelink&mt=8`.
+       - Android `User-Agent` (`/Android/i`) or explicit `store=android` → `https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather&referrer=utm_source%3Dlink.todayweather.ai%26utm_medium%3Dshare%26utm_campaign%3Dsharelink`.
+       - The exact URLs are `contract.appStoreUrl` and `contract.playStoreUrl` in the [golden file](deeplink.golden.json). The campaign values follow [store campaign links](#42-store-campaign-links).
+       - Desktop or unknown `User-Agent` → fall through to the normal WebApp `302` destination below.
+   - Native apps ignore unknown query parameters (`fallback`, `store`) and still open the requested place/tab directly when Universal Links or App Links fire.
+5. **App-open and content-link browser fallback (`302 Found` with `Cache-Control: no-store`):**
+   - `/` or `/open` or `/open/` → `https://app.todayweather.ai/`.
    - `/place/{slug}` → `https://app.todayweather.ai/weather/{slug}/{view}?from=link` (`view` normalized to `hourly` or `daily`), or `https://app.todayweather.ai/air/{slug}[?pollutant=...]&from=link` when `view=air` (omitting `pollutant` when default `aqi`).
-   - `/loc` (with valid `lat` and `lon`) → `https://app.todayweather.ai/loc?lat={lat}&lon={lon}[&name=...][&view=...][&pollutant=...]&from=link` (normalizing coordinates, stripping control chars / 80-char capping `name`, omitting default `view=hourly` and default `pollutant=aqi`). If `lat`/`lon` are missing or invalid, redirect `302` to `https://link.todayweather.ai/open`.
+   - `/loc` (with valid `lat` and `lon`) → `https://app.todayweather.ai/loc?lat={lat}&lon={lon}[&name=...][&view=...][&pollutant=...]&from=link` (normalizing coordinates, stripping control chars / 80-char capping `name`, omitting default `view=hourly` and default `pollutant=aqi`). If `lat`/`lon` are missing or invalid, redirect `302` to `https://app.todayweather.ai/`.
    - `/air/{slug}` → `https://app.todayweather.ai/air/{slug}[?pollutant=...]&from=link` (omitting `pollutant` when default `aqi`).
    - `/nation/weather` → `https://app.todayweather.ai/nation/weather?from=link`.
    - `/nation/air` → `https://app.todayweather.ai/nation/air?from=link`.
    - `/warnings` → `https://app.todayweather.ai/warnings?from=link`.
-6. **All other paths:** return `404 Not Found`. Never fall back unknown paths to `/open.html` or `200 OK`.
+6. **All other paths:** return `404 Not Found` (including removed `/open.html` and `/assets/*`). Never fall back unknown paths to `200 OK` or `/`.
+
+### 4.2 Store campaign links
+
+Every store link that TodayWeather's web surfaces control carries a campaign so that App Store Connect (Campaigns) and Google Play Console / GA4 attribute installs to the surface. The App Store link is `https://apps.apple.com/app/apple-store/id1041700694?pt={provider token}&ct={campaign}&mt=8`; `pt` is the App Store Connect provider token, which is public in these links by design, and `ct` is at most 30 characters (the App Store Connect campaign-name limit). The Google Play link appends one URL-encoded `referrer` value (at most 512 characters): `https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather&referrer=` + the encoded `utm_source={source}&utm_medium={medium}&utm_campaign={campaign}`.
+
+| Surface | App Store `ct` | `utm_source` | `utm_medium` | `utm_campaign` |
+| --- | --- | --- | --- | --- |
+| Landing page `todayweather.ai` ([landing/ko/index.html](../landing/ko/index.html)) | `landing` | `todayweather.ai` | `web` | `landing` |
+| Web app `app.todayweather.ai` ([web/src/deeplink.ts](../web/src/deeplink.ts), including the Android `intent://` `browser_fallback_url`) | `webapp` | `app.todayweather.ai` | `web` | `webapp` |
+| Share-link store fallback on `link.todayweather.ai` ([route-request.js](../infra/deeplink/route-request.js)) | `sharelink` | `link.todayweather.ai` | `share` | `sharelink` |
+
+The edge applies `sharelink` whenever it answers with a store URL: a request with `fallback=store` and an iOS or Android user agent, or with `store=ios` / `store=android` on any other user agent (desktop-class iPadOS Safari is the intended `store=ios` case). Without `fallback=store`, a recognized share-link request that reaches the edge redirects to the web app, whatever the user agent; Universal Links and App Links can open the installed app before any request reaches the edge. Store visits from the web app's iOS "Open in app" action and from the fixed desktop QR code (web app and landing page) pass through this fallback, so they count as `sharelink`; the web app's own `APP_STORE_URL` carries the `webapp` campaign but has no run-time use today. The landing page keeps the Korean storefront (`/kr/`) because desktop browsers get `404` from the storefront-neutral, `us` and `jp` App Store pages while the `kr` page answers (observed 2026-11-24; see [global storefront readiness](landing.md#10-assumptions--unresolved-dependencies)). The share-link App Store link stays storefront-neutral, as before this change; an iPhone user agent gets a `301` to `itms-appss://` for it (observed 2026-11-24), and opening the App Store app is device behavior. The Safari Smart App Banner (`apple-itunes-app` meta) stays unchanged by scope decision (2026-11-24): Apple's [campaign links help](https://developer.apple.com/help/app-store-connect-analytics/acquisition/campaign-links/) says to add the campaign and provider tokens when implementing a Smart App Banner, but shows no tag format, so adding them is a separate change.
 
 ## 5. Web PWA behavior (`web/` + `infra/web/static/`)
 
@@ -146,9 +163,17 @@ Modeled on [infra/web/static/stack.json](../infra/web/static/stack.json): privat
    - Invalid coordinates render a recoverable error state with a link to `/locations`.
 2. **Existing `/place/:publicId` route enhancement:**
    - Support optional `view` (`hourly`/`daily`/`air`) and `pollutant` query parameters while preserving current behavior when absent.
-3. **Dismissible "Open in app / Install" banner (`?from=link`):**
-   - When the visitor arrives from `link.todayweather.ai` (`from=link` on mobile user agents, especially in-app browsers), display a slim, dismissible top banner offering "앱에서 열기 / 설치" (linking to `https://link.todayweather.ai/open` or store/Android intent fallback) without blocking the weather content. Strip `from=link` cleanly from history after reading or keep dismissal in `sessionStorage`.
-4. **Unified share URL generation ([web/src/Weather.tsx](../web/src/Weather.tsx)):**
+3. **Mobile "Open in app" (`앱에서 보기`) action & iOS Smart App Banner:**
+   - On mobile web visitors, identified by a mobile User-Agent (or iPadOS touch Macintosh), not by viewport width, display a slim top bar offering **"앱에서 보기"** ("Open in app") that targets the **current screen's canonical `link.todayweather.ai` URL** (preserving place, coordinates, view, and air pollutant rather than hard-coding `/open`):
+     - **Android:** `intent://link.todayweather.ai/{pathAndQuery}#Intent;scheme=https;package=net.wizardfactory.todayweather;S.browser_fallback_url=<encoded Google Play URL with the `webapp` campaign>;end` (launches the installed app on the current screen, or falls back directly to Google Play if uninstalled).
+     - **iOS / iPadOS:** `https://link.todayweather.ai/{pathAndQuery}?fallback=store` (appending `&store=ios` when desktop-class iPadOS Safari reports a Macintosh User-Agent). In Safari, Universal Links open the installed app on the current screen and uninstalled devices receive `302` to the App Store. Because iOS does not expose app installation state to web pages, in-app browsers that suppress Universal Links redirect to the App Store (where installed users see "Open" with no error popup, though the place context is not carried across the Store).
+   - Include `<meta name="apple-itunes-app" content="app-id=1041700694, app-argument=https://link.todayweather.ai/...">` in [web/index.html](../web/index.html) and update `app-argument` to the current route's canonical deep link for Safari's native Smart App Banner. Safari may read the meta only at page load, so route-preserving behavior of the native banner is best effort and is verified on devices in #3098; the custom bar is the guaranteed route-preserving action.
+   - Hide the bar in the installed PWA (`display-mode: standalone` or `navigator.standalone`) and on narrow desktop windows, where a store fallback would only resolve back to the web app. The bar is dismissible per browser session via `sessionStorage`.
+4. **Desktop fixed QR code:**
+   - On desktop browsers with a non-compact viewport (hidden on mobile User-Agents, compact viewports and the installed PWA), render a scannable static SVG QR code in the sidebar encoding the fixed URL `https://link.todayweather.ai/open?fallback=store`. Scanning with a phone camera opens the installed mobile app directly or redirects to App Store (iOS) / Google Play (Android) automatically.
+5. **Default Open Graph metadata ([web/index.html](../web/index.html)):**
+   - Include static `og:type`, `og:site_name`, `og:locale`, `og:title`, `og:description`, `og:image` with its size and alt text, and `twitter:card` (`summary_large_image`) so link previews render cleanly when crawlers follow `302` redirects from `link.todayweather.ai`. The words and the 1200 × 630 share image are the landing page's ([landing/ko/index.html](../landing/ko/index.html)): the image is a byte-identical copy served as `https://app.todayweather.ai/icons/share-ko-<hash>.png`, under `icons/` because the app host's edge function serves no other image directory. The shell's icon, touch icon and install icons are the store app icon, as on the landing page. Omit `og:url`: a static root value would make crawlers canonicalize every shared place to the home page.
+6. **Unified share URL generation ([web/src/Weather.tsx](../web/src/Weather.tsx)):**
    - Sharing a catalog city generates the view-specific URL defined in §7, including `/air/{slug}` from the Air tab.
    - Sharing a non-catalog place generates `https://link.todayweather.ai/loc?lat={roundedLat}&lon={roundedLon}&name={encodedName}` (using 3-decimal coordinate rounding; current GPS location applies the privacy rule in §2.1).
 
@@ -195,8 +220,8 @@ Both iOS ([ShareMessage.swift](../ios/Core/Sources/TWDomain/Share/ShareMessage.s
    - Else (fallback when location metadata is missing/unusable) → `https://link.todayweather.ai/open` (language is auto-detected).
 2. **Message text preservation:**
    - Preserve the existing multi-line weather summary format (`cityName`, current temperature + emoji, high/low, weather/air summary, blank line, `{appName} {url}`) so existing user expectations stay intact while replacing only the URL portion.
-3. **Parity and golden test updates:**
-   - Record the intentional departure from Cordova's Branch links in [decisions-and-open-questions.md](../docs/rewrite/decisions-and-open-questions.md) (`D35`), [ios/parity.md](../ios/parity.md), and [android/parity.md](../android/parity.md).
+3. **Parity, deferred deep-link exclusion, and golden test updates:**
+   - Record the intentional departure from Cordova's Branch links — including that **post-install deferred deep linking is not supported** (installing the app after tapping a shared link opens the normal startup flow rather than restoring the shared location; Android Play Install Referrer may be considered separately later) — in [decisions-and-open-questions.md](../docs/rewrite/decisions-and-open-questions.md) (`D35`), [ios/parity.md](../ios/parity.md), and [android/parity.md](../android/parity.md).
    - Update `ShareMessageTests` (iOS) and `ShareMessageTest` (Android) golden expectations to test the new `link.todayweather.ai` URL generation rules alongside legacy message formatting.
    - Keep existing Branch redirects live during a post-release grace period for historical messages shared by older app versions.
 
@@ -228,9 +253,9 @@ Required vector categories:
 | AC2 | `infra/deeplink/` CloudFormation template validates cleanly (private S3 + OAC + CloudFront + `cloudfront-js-2.0` function + strict CSP, zero backend compute). |
 | AC3 | Live `https://link.todayweather.ai/.well-known/apple-app-site-association` returns HTTP `200`, `Content-Type: application/json`, zero redirects, valid JSON with expected `appIDs` and components. |
 | AC4 | Live `https://link.todayweather.ai/.well-known/assetlinks.json` returns HTTP `200`, `Content-Type: application/json`, zero redirects, valid JSON with `net.wizardfactory.todayweather` and release SHA-256 fingerprint. |
-| AC5 | Browser `GET https://link.todayweather.ai/` and `/open` return HTTP `200` static fallback HTML with App Store, Google Play, Web PWA links, OG metadata, and zero CSP violations. |
-| AC6 | Browser `GET` to `/place/*`, `/loc?...`, `/air/*`, `/nation/*`, `/warnings` returns `302` to the exact mapped `https://app.todayweather.ai/...` path; unknown paths return `404`. |
-| AC7 | Web PWA renders `/loc?lat=...&lon=...` in ephemeral preview with "Add to favorites", matches existing saved places when nearby, shows dismissible app banner on `from=link`, and shares `https://link.todayweather.ai/...`. |
+| AC5 | Browser `GET https://link.todayweather.ai/` and `/open` return `302` to `https://app.todayweather.ai/`; adding `?fallback=store` returns `302` to App Store on iOS UA, Google Play on Android UA, and WebApp on desktop/unknown UA (`Cache-Control: no-store`, `Vary: User-Agent`). |
+| AC6 | Browser `GET` to `/place/*`, `/loc?...`, `/air/*`, `/nation/*`, `/warnings` returns `302` to the exact mapped `https://app.todayweather.ai/...` path (or OS store when `?fallback=store` is set on mobile UA); unknown paths (including `/open.html` and `/assets/*`) return `404`. |
+| AC7 | Web PWA renders `/loc?lat=...&lon=...` in ephemeral preview with "Add to favorites", matches existing saved places when nearby, offers a mobile "Open in app" action preserving the current route (Android `intent://`, iOS `?fallback=store` + Safari Smart App Banner), shows a fixed desktop QR code (`https://link.todayweather.ai/open?fallback=store`), carries default OG metadata, and shares `https://link.todayweather.ai/...`. |
 | AC8 | iOS real device opens `link.todayweather.ai` Universal Links directly in app (cold and warm start), routes tabs/overlays/ephemeral preview, temporarily bypasses `S01` without saving until explicitly requested, and keeps `todayweather://widget?...` working. |
 | AC9 | Android real device reports `verified` via `adb shell pm get-app-links net.wizardfactory.todayweather`, opens `link.todayweather.ai` App Links directly (cold and warm start), ignores history replay, temporarily bypasses `S01` without saving until explicitly requested, and keeps `todayweather://N` working. |
 | AC10 | Opening `https://todayweather.ai/mobile/privacy.html`, `support.html`, `terms.html`, and `https://app.todayweather.ai/` from inside the native app or browser NEVER triggers Universal Links or App Links. |

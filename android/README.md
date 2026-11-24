@@ -36,7 +36,7 @@ From `android/`:
 
 Set `ANDROID_SERIAL` to an emulator serial before any install or device test; a connected phone must not be the target by accident.
 
-The Robolectric tests read their Android runtimes (one jar per SDK level in `@Config`, listed in `app/build.gradle.kts`) from `app/build/robolectric-runtimes`, where Gradle copies them: Robolectric runs offline and downloads nothing while the tests run. A test of an SDK level without a listed runtime fails naming the missing jar; add the version Robolectric asks for.
+The Robolectric tests read their Android runtimes (one jar per SDK level in `@Config`) from `android/.gradle/robolectric-runtimes`: Robolectric runs offline and downloads nothing while the tests run. `app/robolectric-runtimes.txt` lists each version with the SHA-256 of its jar; `:app:copyRobolectricRuntimes` keeps a jar with that hash and fetches any other again, requiring the hash. A jar of a version no longer listed stays in the directory and is unused. CI keeps the directory in the Actions cache, keyed by that file, because Maven Central often refuses these large jars to CI runners (429). A test of an SDK level whose runtime is not in the directory fails naming the missing jar; add the version Robolectric asks for, with its hash.
 
 CI (`.github/workflows/android.yml`) runs the same build and tests twice: once after re-running the import tool, the corpus generator and the server route table generator and checking that they change nothing, and once in a checkout whose `client/` directory has been deleted.
 
@@ -313,6 +313,8 @@ The Cordova debug APK must be signed with the same debug key (`client/`: `npx co
 
 ## Rollback hand-back to a Cordova build (AN-17)
 
+Historical: releases no longer consider Cordova compatibility (AK, 2026-11-24), so this is not a rollback path. The section records the implementation and its tests, which remain in the code.
+
 If a native release has to be rolled back, a Cordova build is shipped as an update with a higher `versionCode` (the fallback build). Its WebView storage still holds the state of the day the native app was installed, and its start (`TwStorage.init`) would show that state and copy it over the suite. The hand-back gives it the native state instead, and gives the native app what the user changes in the fallback build if the native app returns.
 
 - **Contract (schema 1), in the suite `group.net.wizardfactory.todayweather`:** the marker `_twHandBack` is `{"schema":1,"generation":N,"writer":"native"|"cordova","complete":true,"keys":[…]}`; `generation` grows by one at each hand-over, whichever build writes it. The leading `_` keeps the marker out of the migration's suite read and out of Cordova's restore list. A native hand-back owns `cities`, `cityIndex`, `cityList`, `units`, `settingsInfo`, `pushData2`, `pushData`, `expandShortChart`, `startVersion`, `appVersion`, `disableUpdateInfo` and `twAnalyticsConsentV1`, each with the text the Cordova app writes (`TwStorage.set`'s JSON, the consent `"true"`/`"false"`). A key the state lacks is removed, so a place or alarm deleted in the native app cannot come back; legacy `pushData` is always removed (its alarms live in `pushData2`).
@@ -363,11 +365,11 @@ The build and the unit tests run without them.
 
 ## Version
 
-`versionCode` 200000 and `versionName` 2.0.0 keep the native debug build installable over the Cordova 1.1.1 build (100091). A release sets both in a pull request, with a `versionCode` above every active Play track ([runbook, step 1](../docs/operations/android-release.md#1-freeze-the-version)).
+`versionCode` 200010 and `versionName` 2.0.1 are the next release (2.0.1 candidate 1). Debug builds carry the same values; a debug APK installs as an update only over a build signed with the same debug key, never over the Play release. The 2.0.0 release on Play is `versionCode` 200003 ([`android/v2.0.0`](https://github.com/WizardFactory/TodayWeather/releases/tag/android/v2.0.0)); 200000–200003 are spent. A release sets both values in a pull request, with a `versionCode` above every active Play track that has not been uploaded before ([runbook, step 1](../docs/operations/android-release.md#1-freeze-the-version)).
 
 ## Release
 
-The [Android release runbook](../docs/operations/android-release.md) is the procedure: version freeze, release CI, the manual emulator gates, the operator's build and signing, the device gate, the tag and its notes, the test tracks, the staged rollout and its halt and rollback. The release itself is [#2898](https://github.com/WizardFactory/TodayWeather/issues/2898).
+The [Android release runbook](../docs/operations/android-release.md) is the procedure: version freeze, release CI, the manual emulator gates, the operator's build and signing, the device gate, the tag and its notes, the test tracks, the full rollout and its halt and fix forward. The release itself is [#2898](https://github.com/WizardFactory/TodayWeather/issues/2898).
 
 - **Release CI:** [Android release verification](../.github/workflows/android-release.yml) runs the pull-request checks, `lintRelease` and the device suites that need no private input on hosted API 36 and API 24 emulators, a tablet and a foldable, for a named commit and nightly ([PR CI and release CI](../docs/development/ci-tiers.md#android)).
 - **`tools/release-ci/run-suites.sh <out-dir> <suite> …`** runs those suites on one emulator and reports each. A suite passes by adb's status and the raw status of every test (`instrument` and `instrumentation_passed` in `tools/emulator/offline.sh`), so a failed adb or a skipped test fails it; `tools/emulator/test-instrumentation-passed.sh` and `tools/release-ci/test-runners.sh` (an adb test double) check that in CI. The `parity` and `window-fit` runners accept only an AVD whose name starts with `tw_`, and `fold` in the name turns the fold steps on. `tools/release-ci/run-device-tests.sh <out-dir> [Class[:name=value] …]` runs the instrumented classes without a runner of their own (`CoreOnDeviceTest`, `PullRefreshDeviceTest`, `ForecastInterstitialDeviceTest`, `EntryIntentTest` with the migration held), each in a new install, and fails on a failed or skipped test.

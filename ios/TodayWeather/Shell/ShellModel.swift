@@ -42,7 +42,9 @@ final class ShellModel {
     /// The analytics choice the menu shows (`Monetization.getCollectionChoice()`); off until the user opts in. IN-15
     /// keeps it.
     var analyticsAllowed = false
+    var trackingStatus: TrackingStatus = .unavailable
 
+    @ObservationIgnored var onMenuOpen: () -> Void = {}
     /// A menu row was chosen (after the menu closed when the row closes it). IN-12, IN-13 and IN-15 connect the rows.
     @ObservationIgnored var onMenuRow: (MenuRow) -> Void = { _ in }
     /// A tap on a tab before the shell handles it: true when the app took it (no enabled place: the start choice O02,
@@ -81,7 +83,7 @@ final class ShellModel {
     var theme: Theme { Theme.of(holder.state?.settings.theme) }
 
     /// The rows of the side menu for the region.
-    var menuRows: [MenuRow] { MenuRow.rows(region: locale.region) }
+    var menuRows: [MenuRow] { MenuRow.rows(region: locale.region, tracking: trackingStatus) }
 
     /// The value at the right of a menu row, as a catalog key or a literal (the version).
     func menuValue(_ row: MenuRow) -> MenuValue? {
@@ -119,6 +121,7 @@ final class ShellModel {
     }
 
     func openMenu() {
+        onMenuOpen()
         menuOpen = true
     }
 

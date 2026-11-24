@@ -1,3 +1,6 @@
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 import java.util.Properties
 
 plugins {
@@ -44,8 +47,8 @@ android {
         targetSdk = 36
         // Above the Cordova 1.1.1 build (100091) so the native build installs as an update.
         // AN-19 sets the release value above every active Play track.
-        versionCode = 200000
-        versionName = "2.0.0"
+        versionCode = 200010
+        versionName = "2.0.1"
         testInstrumentationRunner = "net.wizardfactory.todayweather.TestRunner"
         buildConfigField("String", "SERVER_URL", "\"" + serverUrl.trimEnd('/') + "\"")
         buildConfigField("String", "WEATHER_PHOTOS_URL", "\"" + weatherPhotosUrl + "\"")
@@ -92,27 +95,68 @@ android {
     }
 }
 
-// Robolectric's Android runtimes (one per SDK level the tests name in @Config) come through Gradle, with its
-// retries and cache, and the tests read them offline. Left to itself Robolectric downloads them from Maven Central
-// while the tests run, and a refused download fails every Robolectric class (IOException in MavenArtifactFetcher).
-// The versions are those Robolectric 4.17 (gradle/libs.versions.toml) asks for; without one, the tests of its SDK
-// level fail naming the missing file. Each version resolves on its own: together Gradle would keep only the newest.
-val robolectricRuntimes = listOf(
-    "14-robolectric-10818077-i7", // SDK 34
-    "7.0.0_r1-robolectric-r1-i7", // SDK 24
-).map { version ->
-    configurations.detachedConfiguration(dependencies.create("org.robolectric:android-all-instrumented:$version"))
-        .apply { isTransitive = false }
+// Robolectric's Android runtimes (one per SDK level the tests name in @Config) are fetched by Gradle, kept in
+// android/.gradle/robolectric-runtimes, and read by the tests offline. Left to itself Robolectric downloads them
+// from Maven Central while the tests run, and a refused download fails every Robolectric class (IOException in
+// MavenArtifactFetcher). Maven Central refuses these large jars to CI runners often enough (429) that CI keeps the
+// directory in its cache, keyed by robolectric-runtimes.txt. That file lists each version with the SHA-256 of its
+// jar: a jar that is there with that hash is used as it is, and any other is fetched again and must match. Without a
+// listed version the tests of its SDK level fail naming the jar.
+data class RobolectricRuntime(val version: String, val sha256: String)
+val robolectricRuntimes = file("robolectric-runtimes.txt").readLines().map { it.substringBefore('#').trim() }.filter { it.isNotEmpty() }
+    .map { line -> line.split(Regex("\\s+")).let { RobolectricRuntime(it[0], it[1].lowercase()) } }
+val robolectricRuntimeDir = rootProject.layout.projectDirectory.dir(".gradle/robolectric-runtimes").asFile
+// Resolution stays lazy: a FileCollection is resolved only when the task reads it for a jar that is missing.
+val robolectricDownloads = robolectricRuntimes.associate { runtime ->
+    // Each version resolves on its own: together Gradle would keep only the newest.
+    runtime.version to configurations.detachedConfiguration(dependencies.create("org.robolectric:android-all-instrumented:${runtime.version}"))
+        .apply { isTransitive = false }.incoming.files
 }
-val robolectricRuntimeDir = layout.buildDirectory.dir("robolectric-runtimes")
-val copyRobolectricRuntimes = tasks.register<Copy>("copyRobolectricRuntimes") {
-    from(robolectricRuntimes)
-    into(robolectricRuntimeDir)
+val copyRobolectricRuntimes = tasks.register("copyRobolectricRuntimes") {
+    description = "Puts the listed Robolectric runtimes, with their recorded hashes, in android/.gradle/robolectric-runtimes"
+    val runtimes = robolectricRuntimes
+    val directory = robolectricRuntimeDir
+    val downloads = robolectricDownloads
+    inputs.property("runtimes", runtimes.map { "${it.version} ${it.sha256}" })
+    outputs.dir(directory)
+    // Always checks the hashes (about a second): a jar changed on disk must not pass because Gradle took the task as
+    // up to date.
+    outputs.upToDateWhen { false }
+    doLast {
+        // Local to the action, so the action captures no build script object.
+        fun sha256(file: File): String = MessageDigest.getInstance("SHA-256").let { digest ->
+            file.inputStream().use { input ->
+                val buffer = ByteArray(1 shl 16)
+                while (true) { val n = input.read(buffer); if (n < 0) break; digest.update(buffer, 0, n) }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        }
+        directory.mkdirs()
+        for (runtime in runtimes) {
+            val name = "android-all-instrumented-${runtime.version}.jar"
+            val target = File(directory, name)
+            if (target.isFile && sha256(target) == runtime.sha256) continue
+            val fetched = downloads.getValue(runtime.version).singleFile
+            val hash = sha256(fetched)
+            if (hash != runtime.sha256) {
+                throw GradleException("android-all-instrumented ${runtime.version}: fetched SHA-256 $hash, robolectric-runtimes.txt records ${runtime.sha256}")
+            }
+            // A file of this run's own, moved over the target in one step: no partial or shared temporary file.
+            val part = File.createTempFile("$name.", ".part", directory)
+            try {
+                fetched.copyTo(part, overwrite = true)
+                Files.move(part.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE)
+            } finally {
+                part.delete()
+            }
+        }
+    }
 }
 tasks.withType<Test>().configureEach {
     dependsOn(copyRobolectricRuntimes)
     systemProperty("robolectric.offline", "true")
-    systemProperty("robolectric.dependency.dir", robolectricRuntimeDir.get().asFile.absolutePath)
+    systemProperty("robolectric.dependency.dir", robolectricRuntimeDir.absolutePath)
 }
 
 // A release package refuses Google's sample IDs, as client/scripts/build-release.mjs does.

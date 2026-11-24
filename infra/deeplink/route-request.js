@@ -1,6 +1,7 @@
 // CloudFront Function (cloudfront-js-2.0) for link.todayweather.ai.
-// Serves .well-known verification files and /open.html from S3; redirects known
-// content deep links to https://app.todayweather.ai/... for browser fallback.
+// Serves .well-known verification files from S3; redirects recognized deep links
+// straight to https://app.todayweather.ai/... (or the OS app store when
+// fallback=store is requested on mobile).
 function handler(event) {
   var request = event.request;
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -28,23 +29,22 @@ function handler(event) {
 
   if (
     uri === "/.well-known/apple-app-site-association" ||
-    uri === "/.well-known/assetlinks.json" ||
-    uri === "/open.html" ||
-    /^\/assets\/(?:icon\.svg|preview\.png|open\.(?:css|js))$/.test(uri)
+    uri === "/.well-known/assetlinks.json"
   ) {
     request.uri = uri;
     return request;
   }
 
-  var trimmed = uri.length > 1 && uri.charAt(uri.length - 1) === "/" ? uri.slice(0, -1) : uri;
-  if (uri === "/" || trimmed === "/open") {
-    request.uri = "/open.html";
-    return request;
-  }
-
   var PWA_ORIGIN = "https://app.todayweather.ai";
-  var LINK_ORIGIN = "https://link.todayweather.ai";
+  // Store fallbacks carry the share-link campaign (App Store Connect `ct`, Google Play `referrer`).
+  var APP_STORE_URL =
+    "https://apps.apple.com/app/apple-store/id1041700694?pt=117919046&ct=sharelink&mt=8";
+  var PLAY_STORE_URL =
+    "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather&referrer=utm_source%3Dlink.todayweather.ai%26utm_medium%3Dshare%26utm_campaign%3Dsharelink";
   var qs = request.querystring || {};
+  var headers = request.headers || {};
+  var uaHeader = headers["user-agent"];
+  var ua = uaHeader && typeof uaHeader.value === "string" ? uaHeader.value : "";
 
   function getParam(key) {
     var entry = qs[key];
@@ -54,6 +54,44 @@ function handler(event) {
     } catch (_) {
       return entry.value;
     }
+  }
+
+  var storeFallback = getParam("fallback") === "store";
+  var storeLocation = null;
+  if (storeFallback) {
+    if (/iPhone|iPad|iPod/i.test(ua)) {
+      storeLocation = APP_STORE_URL;
+    } else if (/Android/i.test(ua)) {
+      storeLocation = PLAY_STORE_URL;
+    } else {
+      var storeHint = getParam("store");
+      if (storeHint === "ios") storeLocation = APP_STORE_URL;
+      else if (storeHint === "android") storeLocation = PLAY_STORE_URL;
+    }
+  }
+
+  function redirect302(pwaLocation) {
+    var resHeaders = {
+      location: { value: storeLocation || pwaLocation },
+      "cache-control": { value: "no-store" },
+    };
+    if (storeFallback) {
+      resHeaders.vary = { value: "User-Agent" };
+    }
+    return {
+      statusCode: 302,
+      statusDescription: "Found",
+      headers: resHeaders,
+    };
+  }
+
+  var trimmed =
+    uri.length > 1 && uri.charAt(uri.length - 1) === "/"
+      ? uri.slice(0, -1)
+      : uri;
+
+  if (uri === "/" || trimmed === "/open") {
+    return redirect302(PWA_ORIGIN + "/");
   }
 
   function normalizeView(raw) {
@@ -110,17 +148,6 @@ function handler(event) {
     return out;
   }
 
-  function redirect302(location) {
-    return {
-      statusCode: 302,
-      statusDescription: "Found",
-      headers: {
-        location: { value: location },
-        "cache-control": { value: "no-store" },
-      },
-    };
-  }
-
   if (trimmed === "/nation/weather") {
     return redirect302(PWA_ORIGIN + "/nation/weather?from=link");
   }
@@ -169,11 +196,12 @@ function handler(event) {
     var lat = parseCoord(getParam("lat"), -90, 90);
     var lon = parseCoord(getParam("lon"), -180, 180);
     if (lat === null || lon === null) {
-      return redirect302(LINK_ORIGIN + "/open");
+      return redirect302(PWA_ORIGIN + "/");
     }
     var name = sanitizeName(getParam("name"));
     var locView = normalizeView(getParam("view"));
-    var locPollutant = locView === "air" ? normalizePollutant(getParam("pollutant")) : null;
+    var locPollutant =
+      locView === "air" ? normalizePollutant(getParam("pollutant")) : null;
     var parts = ["lat=" + lat, "lon=" + lon];
     if (name) parts.push("name=" + encodeURIComponent(name));
     if (locView !== "hourly") parts.push("view=" + locView);

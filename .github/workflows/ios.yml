@@ -6,6 +6,7 @@ on:
       # Sources of ios/tools/import_client_assets.py, so a change there shows up as a stale copy.
       - "client/www/img/**"
       - "client/www/locales/**"
+      - "client/resources/ios/tracking-settings/strings.json"
       - "client/www/data/town.js"
       - "client/www/fonts/MaterialIcons-Regular.ttf"
       - "client/tw.resources/icon.png"
@@ -76,6 +77,7 @@ on:
       - "ios/**"
       - "client/www/img/**"
       - "client/www/locales/**"
+      - "client/resources/ios/tracking-settings/strings.json"
       - "client/www/data/town.js"
       - "client/www/fonts/MaterialIcons-Regular.ttf"
       - "client/tw.resources/icon.png"
@@ -132,6 +134,13 @@ on:
       - "server/package-lock.json"
       - "android/tools/server-routes/generate.mjs"
       - ".github/workflows/ios.yml"
+  # iOS release verification (ios-release.yml) runs this job on the commit it verifies.
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit to check out (empty: the commit of the calling event)"
+        required: false
+        type: string
 
 concurrency:
   # First attempts of a pull request's runs share a group and cancel older ones. Re-runs,
@@ -145,21 +154,24 @@ env:
   DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
   SIMULATOR: "platform=iOS Simulator,name=iPhone 17,OS=26.5"
 
+# PR CI of the native iOS app (docs/development/ci-tiers.md): minutes, no simulator. The app-hosted suites, the
+# screenshot comparisons and the size and language matrix run in iOS release verification (ios-release.yml).
 jobs:
   build:
-    name: Build and test (with client import check)
+    name: Build and test (import check, then without client/, android/ and the legacy iOS directories)
     runs-on: macos-26
-    # The app-hosted screenshot suites take about an hour on the runner; the size and language matrix (IN-18, about 30
-    # minutes more) runs in the standalone job only.
-    timeout-minutes: 120
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.ref }}
       # Node runs the Android route generator for ios/tools/server-routes/generate.py (IN-18).
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      # The generators read client/ and android/ and run in the macOS jsc shell, so this check runs here, before
+      # those directories are removed.
       - name: Imported client assets, golden corpus, chart scenes, push requests and S09 goldens, weather request timing, air scales, settings steps, ad privacy entries, hand-back starts and the server route table are current
         run: |
           python3 ios/tools/import_client_assets.py
@@ -177,44 +189,7 @@ jobs:
           python3 ios/tools/server-routes/generate.py
           git diff --exit-code -- ios
           test -z "$(git status --porcelain -- ios)"
-      - name: Core package tests (macOS)
-        working-directory: ios/Core
-        run: swift test
-      - name: App build and tests (iOS Simulator)
-        working-directory: ios
-        run: >
-          xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -destination "$SIMULATOR"
-          -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO
-          -skip-testing:TodayWeatherTests/MatrixScreenshotTests test
-      # IN-11: the UI tests with real touches run from ios/tools/places-ui/run-places-ui.sh (an ad hoc signed build and a
-      # prepared simulator); CI builds them so they keep compiling.
-      - name: UI tests build (iOS Simulator)
-        working-directory: ios
-        run: >
-          xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeatherUITests -destination "$SIMULATOR"
-          -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build-for-testing
-      # The screenshot tests write their renders and difference images to the test host's tmp/chart-compare; keep
-      # them when a comparison fails, so a difference of the CI toolchain can be looked at.
-      - name: Collect the screenshot comparisons
-        if: failure()
-        run: |
-          mkdir -p "$RUNNER_TEMP/screenshot-compare"
-          find "$HOME/Library/Developer/CoreSimulator/Devices" -path '*/tmp/chart-compare/*' -name '*.png' \
-            -exec cp {} "$RUNNER_TEMP/screenshot-compare/" \; || true
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: screenshot-compare
-          path: ${{ runner.temp }}/screenshot-compare
-          if-no-files-found: ignore
-          retention-days: 7
-  standalone:
-    name: Build and test without client/, android/ and the legacy iOS directories
-    runs-on: macos-26
-    # Every app-hosted suite, the IN-18 size and language matrix included (about 30 minutes of it).
-    timeout-minutes: 150
-    steps:
-      - uses: actions/checkout@v4
+      # Everything after this builds and tests as the standalone app: a reference into these directories fails here.
       - name: Remove the directories the iOS build must not read
         run: |
           rm -rf client android tw.ios ta.ios applewatch
@@ -222,8 +197,16 @@ jobs:
       - name: Core package tests (macOS)
         working-directory: ios/Core
         run: swift test
-      - name: App build and tests (iOS Simulator)
+      # The app, its app-hosted test bundle and the UI tests compile; nothing boots a simulator.
+      - name: App and test bundles build (iOS Simulator)
         working-directory: ios
         run: >
-          xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -destination "$SIMULATOR"
-          -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test
+          xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -destination "generic/platform=iOS Simulator"
+          -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build-for-testing
+      # IN-11: the UI tests with real touches run from ios/tools/places-ui/run-places-ui.sh (an ad hoc signed build and a
+      # prepared simulator); CI builds them so they keep compiling.
+      - name: UI tests build (iOS Simulator)
+        working-directory: ios
+        run: >
+          xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeatherUITests -destination "generic/platform=iOS Simulator"
+          -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO build-for-testing
