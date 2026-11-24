@@ -61,6 +61,12 @@
 	<false/>
 	<key>FirebaseAutomaticScreenReportingEnabled</key>
 	<false/>
+	<!-- Not in the Cordova build (2026-11-24, CODEX-3178-22): GoogleAppMeasurement reads the IABTCF_* strings UMP writes
+	     and maps them to consent mode, which could grant ad storage, ad user data and ad personalization after a user
+	     accepts ads in UMP. The app's own consent (analytics storage only) is the only source; see
+	     https://developers.google.com/tag-platform/security/guides/implement-TCF-strings ("Apps"). -->
+	<key>GOOGLE_ANALYTICS_TCF_DATA_ENABLED</key>
+	<false/>
 	<!-- The legacy server (IN-04 push, IN-08 weather): TW_SERVER_URL, a private build input (the Cordova
 	     clientConfig.serverUrl), set by the ignored ios/Private.xcconfig. Empty without it: the app then sends nothing. -->
 	<key>TWServerURL</key>

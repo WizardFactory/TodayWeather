@@ -63,7 +63,9 @@ struct CrashReportingSourceTests {
         let plist = try Self.source("Support/Info.plist")
         for key in ["FIREBASE_ANALYTICS_COLLECTION_ENABLED", "GOOGLE_ANALYTICS_DEFAULT_ALLOW_ANALYTICS_STORAGE",
                     "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_STORAGE", "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_USER_DATA",
-                    "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS"] {
+                    "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS",
+                    // UMP's TCF strings must not override the app's denied ad signals (CODEX-3178-22).
+                    "GOOGLE_ANALYTICS_TCF_DATA_ENABLED"] {
             let entry = try #require(plist.range(of: "<key>\(key)</key>"), "\(key)")
             #expect(plist[entry.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("<false/>"), "\(key)")
         }

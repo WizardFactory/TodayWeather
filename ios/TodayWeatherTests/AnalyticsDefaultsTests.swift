@@ -11,7 +11,9 @@ struct AnalyticsDefaultsTests {
                     "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_STORAGE", "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_USER_DATA",
                     "GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS",
                     "GOOGLE_ANALYTICS_IDFV_COLLECTION_ENABLED", "GOOGLE_ANALYTICS_REGISTRATION_WITH_AD_NETWORK_ENABLED",
-                    "FirebaseAutomaticScreenReportingEnabled"] {
+                    "FirebaseAutomaticScreenReportingEnabled",
+                    // Not in the Cordova build: Firebase must not read UMP's TCF strings into its consent (CODEX-3178-22).
+                    "GOOGLE_ANALYTICS_TCF_DATA_ENABLED"] {
             #expect(info[key] as? Bool == false, "\(key)")
         }
     }
