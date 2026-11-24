@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // A shared link.todayweather.ai link ends on the web app's shell, so messengers read its preview from
@@ -14,6 +15,14 @@ const meta = (html: string, property: string) =>
 const link = (html: string, rel: string) =>
   new RegExp(`<link rel="${rel}"[^>]*href="([^"]*)"`).exec(html)?.[1];
 const bytes = (path: string) => readFileSync(path);
+/**
+ * The repository file a landing page link names: a production URL is served from landing/root, any other href is
+ * relative to the page. Reading the page's own links catches a landing page that switches to another file.
+ */
+const landingFile = (href: string) =>
+  href.startsWith("https://todayweather.ai/")
+    ? join("landing/root", href.slice("https://todayweather.ai/".length))
+    : join("landing/ko", href);
 /** Width and height of a PNG, from its IHDR chunk. */
 const size = (path: string) => {
   const png = bytes(path);
@@ -58,17 +67,16 @@ describe("link preview and icons", () => {
   });
 
   it("uses the store app icon, as the landing page does", () => {
+    // Compared with the files the landing page's own links name (CODEX-3171-1).
+    const landingIcon = landingFile(link(landing, "icon")!);
+    const landingTouch = landingFile(link(landing, "apple-touch-icon")!);
     expect(link(web, "icon")).toBe("/icons/favicon.png");
     expect(
-      bytes("web/public/icons/favicon.png").equals(
-        bytes("landing/assets/app-icon.png"),
-      ),
+      bytes("web/public/icons/favicon.png").equals(bytes(landingIcon)),
     ).toBe(true);
     expect(link(web, "apple-touch-icon")).toBe("/icons/apple-touch-icon.png");
     expect(
-      bytes("web/public/icons/apple-touch-icon.png").equals(
-        bytes("landing/root/apple-touch-icon.png"),
-      ),
+      bytes("web/public/icons/apple-touch-icon.png").equals(bytes(landingTouch)),
     ).toBe(true);
     // The earlier drawn sun icon is gone from the shell and the build.
     expect(web).not.toContain("icon.svg");
@@ -93,7 +101,8 @@ describe("link preview and icons", () => {
     expect(size("web/public/icons/icon-192.png")).toEqual([192, 192]);
     expect(size("web/public/icons/icon-512.png")).toEqual([512, 512]);
     expect(size("web/public/icons/icon-maskable-512.png")).toEqual([512, 512]);
-    // Every icon the shell or the manifest names is precached for offline use, except the crawler-only share image.
+    // The shell's page icon and the two `any` install icons are precached for offline use. The touch icon and the
+    // maskable icon are read by the system at install time, and the share image only by crawlers: none is precached.
     const precache = readFileSync("scripts/web-precache.mjs", "utf8");
     for (const path of [
       "/icons/favicon.png",
@@ -102,6 +111,7 @@ describe("link preview and icons", () => {
     ])
       expect(precache).toContain(`"${path}"`);
     expect(precache).not.toContain("icon.svg");
-    expect(precache).not.toContain("share-");
+    for (const name of ["share-", "apple-touch-icon", "icon-maskable"])
+      expect(precache).not.toContain(name);
   });
 });
