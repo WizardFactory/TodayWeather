@@ -56,7 +56,8 @@ The EU territories are part of the EU and so of the EEA; listing their codes kee
 - Row label: "Usage analytics" (en), "이용 통계" (ko), "利用状況分析" (ja), "Nutzungsanalyse" (de), "使用情况分析" (zh-CN), "使用情況分析" (zh-TW), with the state On/Off (켜짐/꺼짐, オン/オフ, An/Aus, 已开启/已关闭, 已開啟/已關閉) of the current decision.
 - Popup where the device region is on by default: it says what is collected, that usage analytics stays on unless the user turns it off in this menu, and that weather works either way; buttons Turn off / Turn on. Turning it off stores `"false"`, turning it on stores `"true"`.
 - Popup in the opt-in regions (and for an unknown region): the existing consent question with Decline / withdraw and Allow; the title is the row label. Allow stores `"true"`, Decline / withdraw stores `"false"`. The consent text and buttons are shown in the app language with no English fallback: English, Korean and Japanese keep the Cordova wording; German, Simplified Chinese and Traditional Chinese translate it with the same meaning (decided by AK, 2026-11-24).
-- Back closes the popup without a choice. A failed save shows the existing "could not fully apply" alert and leaves collection off.
+- Back closes the popup without a choice (Android only). A failed save shows the existing "could not fully apply" alert and leaves collection off.
+- **iOS** (coordinator decision, 2026-11-24, CODEX-3187-11): the popup closes only through its two buttons; there is no Back button and no close without a choice, as in the Cordova iOS build. A choice that matches the current state (Turn on in a default-on region, Decline / withdraw in an opt-in region) changes nothing the user sees, but it is stored as the user's choice.
 
 ## Backup, migration, rollback and upgrade
 
