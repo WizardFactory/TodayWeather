@@ -93,7 +93,7 @@ struct WidgetWeatherIntegrationTests {
         var draws = 0
         let visits = ForecastAdVisits(directory: directory, draw: { draws += 1; return 0 })
         let presenter = ForecastInterstitial(visits: visits, load: { _, _ in }, root: { nil }, uptime: { 0 }, track: { _, _ in })
-        let ads = Monetization(analytics: UsageAnalytics(sdk: sdk, records: records, trafficType: "development"),
+        let ads = Monetization(analytics: UsageAnalytics(sdk: sdk, records: records, trafficType: "development", region: "DE"),
                                settings: nil, interstitial: presenter)
         ads.connect(launch)
         let state = ShellFixture.state(startupPage: "1")

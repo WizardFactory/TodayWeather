@@ -294,7 +294,7 @@ struct NationTests {
         records.choice = "true"
         records.collection = true
         let sdk = PrivacyRowsTests.Sdk()
-        let monetization = Monetization(analytics: UsageAnalytics(sdk: sdk, records: records, trafficType: "development"),
+        let monetization = Monetization(analytics: UsageAnalytics(sdk: sdk, records: records, trafficType: "development", region: "DE"),
                                         settings: nil, openURL: { _ in })
         let f = try Fixture()
         monetization.pageScreen = { f.nation.screenName }

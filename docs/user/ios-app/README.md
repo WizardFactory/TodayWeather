@@ -21,6 +21,8 @@ the capture time. Images are reduced to 720 pixels wide and a 256-color palette 
 The [iPad supplement](ipad/manual.pdf) shows the main screens on an iPad Pro 13-inch simulator from the same
 ad-free capture; its [editable source](ipad/manual.json) lists the steps.
 
+The [usage analytics guide](usage-analytics/manual.pdf) shows the 이용 통계 row and its popup with the Region set to Korea (on by default) and to Germany (off until you agree). Its [editable source](usage-analytics/manual.json) lists the steps.
+
 The [tracking settings guide](tracking-settings/manual.pdf) shows where to read the tracking choice and open iOS Settings from the menu or the weather pages. Its [editable source](tracking-settings/manual.json) uses Korean controls on an iPhone 12 Pro Max.
 
 The [four main tabs](main-tabs/manual.pdf) supplement shows each tab with Seoul saved. Look for the short line above the selected tab. The line, outline icon and label share the theme’s accent color. The [editable source](main-tabs/manual.json) includes full-screen captures from an iPhone 16 simulator.
@@ -57,7 +59,9 @@ The [Home Screen widget guide](widgets/manual.pdf) covers small and medium widge
   Cordova app is called out on its page.
 - iOS has no back button: there is no exit confirmation (the Cordova manual's last page is Android-only).
 - Optional usage statistics stays off throughout. Advertising privacy choices depend on your region and Google's
-  consent service; they are separate from usage statistics.
+  consent service; they are separate from usage statistics. Since 24 November 2026 the row is named 이용 통계 (Usage
+  analytics) and shows 켜짐 or 꺼짐; outside the EEA, the United Kingdom and Switzerland analytics is on until you turn it
+  off. The analytics page of this manual (39) predates that change; see the [usage analytics guide](usage-analytics/manual.pdf).
 - The photo theme shows weather photos from a feed that this capture build did not have, so its page shows no photo.
 - Sharing opens iOS's share sheet with the weather text and the app link. No message was sent. In the
   22 November capture the share sheet did not appear on the iPhone 17 Pro Max and iPad simulators within two minutes

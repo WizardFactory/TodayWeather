@@ -129,7 +129,7 @@ struct AdsGoldenTests {
     @Test func eventSchemaMatchesMonetization() throws {
         for c in try Self.golden().track {
             let sdk = FakeAnalyticsSdk()
-            let analytics = UsageAnalytics(sdk: sdk, records: MemoryRecords(), trafficType: c.release ? "production" : "development")
+            let analytics = UsageAnalytics(sdk: sdk, records: MemoryRecords(), trafficType: c.release ? "production" : "development", region: "DE")
             analytics.start()
             #expect(analytics.setCollectionEnabled(true))
             let result = analytics.track(c.name, c.params.mapValues(\.analytics))
@@ -162,7 +162,7 @@ struct AdsGoldenTests {
     @Test func screenViewsMatchMonetization() throws {
         for c in try Self.golden().screens {
             let sdk = FakeAnalyticsSdk()
-            let analytics = UsageAnalytics(sdk: sdk, records: MemoryRecords(), trafficType: "production")
+            let analytics = UsageAnalytics(sdk: sdk, records: MemoryRecords(), trafficType: "production", region: "DE")
             analytics.start()
             analytics.setCollectionEnabled(true)
             c.calls.forEach(analytics.screen)
@@ -177,7 +177,7 @@ struct AdsGoldenTests {
     @Test func trackingStatusPropertyMatchesMonetization() throws {
         for c in try Self.golden().trackingStatus {
             let sdk = FakeAnalyticsSdk()
-            let analytics = UsageAnalytics(sdk: sdk, records: MemoryRecords(), trafficType: "production")
+            let analytics = UsageAnalytics(sdk: sdk, records: MemoryRecords(), trafficType: "production", region: "DE")
             analytics.start()
             c.before.forEach(analytics.setAdTrackingStatus)
             analytics.setCollectionEnabled(true)

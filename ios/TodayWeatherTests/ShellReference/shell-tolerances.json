@@ -46,8 +46,8 @@
    "heightDifference": 0
   },
   "en-US-dark-menu": {
-   "strong": 0.0057,
-   "mean": 0.94,
+   "strong": 0.0089,
+   "mean": 1.47,
    "heightDifference": 0
   },
   "en-US-dark-search-header": {
@@ -91,8 +91,8 @@
    "heightDifference": 0
   },
   "en-US-light-menu": {
-   "strong": 0.0007,
-   "mean": 0.79,
+   "strong": 0.0042,
+   "mean": 1.22,
    "heightDifference": 0
   },
   "en-US-light-search-header": {
@@ -136,8 +136,8 @@
    "heightDifference": 0
   },
   "en-US-old-menu": {
-   "strong": 0.0005,
-   "mean": 0.77,
+   "strong": 0.0039,
+   "mean": 1.2,
    "heightDifference": 0
   },
   "en-US-old-search-header": {
@@ -181,8 +181,8 @@
    "heightDifference": 0
   },
   "en-US-photo-menu": {
-   "strong": 0.0005,
-   "mean": 0.81,
+   "strong": 0.0039,
+   "mean": 1.24,
    "heightDifference": 0
   },
   "en-US-photo-search-header": {
@@ -226,8 +226,8 @@
    "heightDifference": 0
   },
   "ko-KR-dark-menu": {
-   "strong": 0.0081,
-   "mean": 1.09,
+   "strong": 0.0096,
+   "mean": 1.37,
    "heightDifference": 0
   },
   "ko-KR-dark-search-header": {
@@ -271,8 +271,8 @@
    "heightDifference": 0
   },
   "ko-KR-light-menu": {
-   "strong": 0.0004,
-   "mean": 0.89,
+   "strong": 0.0028,
+   "mean": 1.12,
    "heightDifference": 0
   },
   "ko-KR-light-search-header": {
@@ -316,8 +316,8 @@
    "heightDifference": 0
   },
   "ko-KR-old-menu": {
-   "strong": 0.0004,
-   "mean": 0.88,
+   "strong": 0.0028,
+   "mean": 1.11,
    "heightDifference": 0
   },
   "ko-KR-old-search-header": {
@@ -361,8 +361,8 @@
    "heightDifference": 0
   },
   "ko-KR-photo-menu": {
-   "strong": 0.0004,
-   "mean": 0.9,
+   "strong": 0.0028,
+   "mean": 1.13,
    "heightDifference": 0
   },
   "ko-KR-photo-search-header": {
@@ -380,5 +380,6 @@
    "mean": 0.45,
    "heightDifference": 0
   }
- }
+ },
+ "analyticsRow": "2026-11-24 (AK, usage analytics on by default): the menu's analytics row reads 이용 통계 · 꺼짐 / Usage analytics · Off where the Cordova captures read 선택적 이용 통계 · 꺼짐 / Optional usage analytics · Off (native strings, ios/Support/native-strings.json). The eight menu cases were measured again on Xcode 27.2, iOS 26.5 (tw_analytics_default, iPhone 16) and recorded rounded up; before the change they measured strong 0.00002-0.0072, mean 0.76-0.97. Only the row's text differs; every other row, the layout and the hairlines are unchanged (HostedShellTests.AnalyticsRowTests checks the new text)."
 }

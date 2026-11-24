@@ -17,7 +17,7 @@ struct TrackingSettingsTests {
         let shell = fixture.shell
         let choice = SystemChoice()
         let privacy = Monetization(analytics: UsageAnalytics(sdk: PrivacyRowsTests.Sdk(), records: PrivacyRowsTests.Records(),
-                                                              trafficType: "development"),
+                                                              trafficType: "development", region: "DE"),
                                    settings: nil, openURL: { choice.opened.append($0) })
         privacy.readTracking = { choice.status }
         privacy.attach(shell)

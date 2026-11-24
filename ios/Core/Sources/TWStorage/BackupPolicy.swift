@@ -8,7 +8,7 @@ import Foundation
 ///   server with the new device's token (`PushSync.open`, as the Android app after a restore, AN-16).
 /// - Excluded: `push_tokens.json` (tokens of this device's FCM installation not registered yet; a restored device has its
 ///   own installation and token) and the usage analytics records `analytics-choice` and `analytics-collection` (IN-15;
-///   analytics is off again on the new device until the user opts in, as on Android).
+///   the new device starts without a choice, so the device region's default applies there, as on Android).
 ///
 /// The weather cache is in `Library/Caches`, and the migration's copies of the WebKit database in `tmp`; iOS backs up
 /// neither. The Cordova storage the migration reads (WebKit's `localStorage`, the App Group suite) and the standard

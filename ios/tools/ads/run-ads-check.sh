@@ -99,8 +99,10 @@ launch() {
   # Launch only once the stream is attached (it prints its header first), so the SDK's first lines are in it.
   for _ in $(seq 1 120); do grep -Eq "^(Timestamp|Filtering the log data)" "$OUT/$1.oslog" 2>/dev/null && break; sleep 0.5; done
   sleep 3
+  # An opt-in region (the United Kingdom): without a stored choice usage analytics is on by default elsewhere
+  # (2026-11-24), and launches 1 and 2 must run without collection.
   SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --console-pty --terminate-running-process "$UDID" $BUNDLE \
-    -FIRAnalyticsDebugEnabled -FIRAnalyticsVerboseLoggingEnabled > "$OUT/$1.log" 2>&1 &
+    -AppleLocale en_GB -FIRAnalyticsDebugEnabled -FIRAnalyticsVerboseLoggingEnabled > "$OUT/$1.log" 2>&1 &
   CONSOLE=$!
   sleep "$2"
   if grep -q "Simulator device failed to launch" "$OUT/$1.log"; then
