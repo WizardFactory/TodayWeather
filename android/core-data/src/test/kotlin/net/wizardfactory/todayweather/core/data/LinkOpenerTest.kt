@@ -35,7 +35,8 @@ class LinkOpenerTest {
         val saved = Memory(state)
         val preview = LinkPreview(saved)
         val calls = mutableListOf<String>()
-        val opener = LinkOpener(saved.flow, preview, openPlace = { calls += "open $it" }, reload = { calls += "reload" })
+        val opener = LinkOpener(saved.flow, preview, openPlace = { calls += "open $it" }, reload = { calls += "reload" },
+            unblock = { calls += "unblock" })
         return Setup(saved, preview, opener, calls)
     }
 
@@ -45,7 +46,7 @@ class LinkOpenerTest {
         t.preview.show(Place(false, false, "부산", location = Location(35.179, 129.076)))
         t.opener.open(DeepLinkTarget.Place("london", WeatherView.AIR, "pm10"))
         assertEquals("부산", t.preview.unsaved.value?.place?.name, "the unsaved place opened earlier stays in the list")
-        assertEquals(listOf("open 1"), t.calls)
+        assertEquals(listOf("unblock", "open 1"), t.calls)
         assertEquals(LinkRoute.Weather(WeatherView.AIR, "pm10", 1, null), t.opener.requests.value?.route)
     }
 
@@ -55,7 +56,7 @@ class LinkOpenerTest {
         t.opener.open(DeepLinkTarget.Coordinate(37.383, 127.119, "분당구", WeatherView.DAILY, null))
         assertEquals("분당구", t.preview.unsaved.value?.place?.name)
         assertEquals(started, t.saved.flow.value, "nothing saved")
-        assertEquals(listOf("reload"), t.calls)
+        assertEquals(listOf("unblock", "reload"), t.calls)
         assertEquals(WeatherView.DAILY, (t.opener.requests.value?.route as LinkRoute.Weather).view)
     }
 
@@ -99,7 +100,7 @@ class LinkOpenerTest {
         assertNull(t.opener.requests.value, "S01 stays")
         t.opener.open(DeepLinkTarget.Place("seoul", WeatherView.HOURLY, null))
         assertEquals("서울", t.preview.unsaved.value?.place?.name, "S01 is bypassed by a preview, also with a saved place nearby")
-        assertEquals(listOf("reload"), t.calls)
+        assertEquals(listOf("unblock", "reload"), t.calls)
         assertEquals(LinkRoute.Weather(WeatherView.HOURLY, null, null, t.preview.unsaved.value?.place), t.opener.requests.value?.route)
     }
 
@@ -124,7 +125,7 @@ class LinkOpenerTest {
         assertEquals(emptyList(), t.calls)
         t.saved.flow.value = started
         link.join()
-        assertEquals(listOf("open 1"), t.calls)
+        assertEquals(listOf("unblock", "open 1"), t.calls)
     }
 
     /**

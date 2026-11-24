@@ -144,7 +144,9 @@ class PlacesPage(
         perform { show(flow.geoInfoPlace(geoInfo)) }
     }
 
+    /** Opens [place] unless it has neither usable coordinates nor an address: it could never load (CODEX-3195-4). */
     private fun show(place: Place) {
+        if (!WeatherRequests.usesCoordinates(place) && place.address.isNullOrEmpty()) return
         openPlace(place)
         openedNow.tryEmit(Unit)
     }

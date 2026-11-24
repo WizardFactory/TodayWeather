@@ -728,7 +728,8 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     /** `link.todayweather.ai` links of this app open, applied in order (specs/deeplink.md §6.2). */
     val links = LinkOpener(twApp.appState.state, preview, openPlace = { session.openPlace(it.toDouble()) },
-        reload = { session.reload(WeatherSession.Sender.DEEPLINK) })
+        reload = { session.reload(WeatherSession.Sender.DEEPLINK) },
+        unblock = { session.closeRetry(); session.closePositionRetry() })
 
     /**
      * The star of a place shown without being saved: it is saved and selected (on S01, as its first place). True when

@@ -61,7 +61,8 @@ class PlacesPageTest {
                         val events: MutableList<String>, val repository: WeatherRepository, val opened: MutableList<Place>)
 
     private fun TestScope.setup(places: List<Place>, device: Device = Device(true, PermissionStatus.GRANTED), index: Int = 1,
-                                records: List<JsonObject> = emptyList(), weather: (String) -> String = { seoulBody }): Setup {
+                                records: List<JsonObject> = emptyList(), weather: (String) -> String = { seoulBody },
+                                address: String = addressBody): Setup {
         val requests = mutableListOf<String>()
         val removed = mutableListOf<Int>()
         val events = mutableListOf<String>()
@@ -70,7 +71,7 @@ class PlacesPageTest {
             requests += url.removePrefix("https://server.test.invalid").substringBefore('?')
             when {
                 "/geocode/v000903/coord/" in url -> geocodeBody
-                "/geocode/v000903/addr/" in url -> addressBody
+                "/geocode/v000903/addr/" in url -> address
                 else -> weather(url)
             }
         }
@@ -224,6 +225,19 @@ class PlacesPageTest {
         assertEquals(3, t.opened.size)
         assertNull(t.page.popup.value)
         assertEquals(before, t.state.value)
+    }
+
+    /**
+     * A geocode answer without coordinates or an address (`{}`) opens nothing: such a place could never load, and its
+     * star would save it (CODEX-3195-4, found on iOS).
+     */
+    @Test
+    fun anAnswerWithoutALocationOpensNothing() = runTest {
+        val t = setup(listOf(Place.currentPositionPlaceholder(), seoul), address = "{}")
+        t.page.openPrediction("London, UK", 0, "Lon")
+        runCurrent()
+        assertTrue("/geocode/v000903/addr/London,UK" in t.requests)
+        assertEquals(emptyList(), t.opened)
     }
 
     @Test

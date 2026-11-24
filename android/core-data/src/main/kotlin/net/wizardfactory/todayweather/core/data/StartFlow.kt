@@ -118,7 +118,9 @@ class StartFlow(
         return when (val result = repository.load(city, s.units, languages(), force = true)) {
             is LoadResult.Loaded -> {
                 val saved = city.copy(source = source(result.entry.weather) ?: city.source)
-                if (PlaceList.add(s, saved) == null) return Outcome.Alert(ALREADY_ADDED)
+                // Checked on the state after the load: the same place saved meanwhile (a link's star) is already added,
+                // and nothing is chosen (CODEX-3190-22).
+                if (PlaceList.add(state.current() ?: s, saved) == null) return Outcome.Alert(ALREADY_ADDED)
                 state.change { current -> PlaceList.add(current, saved)?.closeStart() ?: current }
                 telemetry.track("favorite_change", mapOf("action" to "add"))
                 chosen()

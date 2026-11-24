@@ -199,6 +199,24 @@ class StartFlowTest {
         assertEquals(1, t.chosen.size)
     }
 
+    /**
+     * CODEX-3190-22: the same place saved while the add's weather loaded (a link's star) makes the add "already added": it
+     * saves nothing and chooses nothing, so the place shown stays.
+     */
+    @Test
+    fun aPlaceSavedWhileTheAddLoadedIsAlreadyAdded() = runTest {
+        lateinit var t: Setup
+        val seoul = CityShortcuts.forScreenHeight(800.0).first()
+        t = setup(http = HttpGet { url, _ ->
+            if ("/weather/" in url) t.state.change { it.copy(places = it.places + Place(false, false, seoul.name, seoul.address, seoul.country,
+                Location(seoul.lat, seoul.long))) }
+            seoulBody
+        })
+        assertEquals(StartFlow.Outcome.Alert(StartFlow.ALREADY_ADDED), t.flow.addShortcut(seoul))
+        assertEquals(2, t.state.value.places.size)
+        assertEquals(0, t.chosen.size)
+    }
+
     @Test
     fun aPredictionIsGeocodedByItsFullTextAndNamedByItsTerm() = runTest {
         val body = """{"country":"KR","address":"대한민국 서울특별시 중구 회현동","location":{"lat":37.558,"long":126.978}}"""

@@ -26,6 +26,11 @@ class LinkOpener(
     private val preview: LinkPreview,
     private val openPlace: (Int) -> Unit,
     private val reload: () -> Unit,
+    /**
+     * Closes what would stop the linked place's load: an open retry confirmation (O03) refuses every reload
+     * (CODEX-3195-3, found on iOS).
+     */
+    private val unblock: () -> Unit = {},
 ) {
     /** The requests the screens have not applied yet, oldest first; [pending] is its head. */
     private val queue = ArrayDeque<LinkRequest>()
@@ -41,6 +46,7 @@ class LinkOpener(
         when (route) {
             LinkRoute.App, is LinkRoute.Page -> if (start) return
             is LinkRoute.Weather -> {
+                unblock()
                 val place = route.preview
                 if (place != null) {
                     preview.show(place)
