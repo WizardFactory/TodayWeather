@@ -156,6 +156,22 @@ test('the native summaries link straight to their stores', () => {
   }
 });
 
+test('every App Store campaign link uses one provider token', () => {
+  // Landing page, web app and share-link fallback (golden contract) must report to the same App Store Connect account.
+  const sources = [
+    ...pages.map((page) => readFileSync(page, 'utf8').replace(/&amp;/g, '&')),
+    readFileSync(join(root, 'web/src/deeplink.ts'), 'utf8'),
+    readFileSync(join(root, 'specs/deeplink.golden.json'), 'utf8'),
+  ];
+  const tokens = sources.map((source) => {
+    const links = source.match(/https:\/\/apps\.apple\.com\/[^"'\s]*id1041700694[^"'\s]*/g) ?? [];
+    assert.ok(links.length > 0, 'an App Store link');
+    return links.map((link) => new URL(link).searchParams.get('pt'));
+  }).flat();
+  assert.match(tokens[0] ?? '', /^\d+$/);
+  assert.deepEqual(new Set(tokens), new Set([tokens[0]]));
+});
+
 test('the desktop store QR is the WebApp QR for the store fallback link', () => {
   const source = readFileSync(join(root, 'web/src/AppQrCode.tsx'), 'utf8');
   assert.match(source, /encoding https:\/\/link\.todayweather\.ai\/open\?fallback=store\n/);

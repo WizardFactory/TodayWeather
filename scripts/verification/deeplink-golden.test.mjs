@@ -334,7 +334,8 @@ test("store fallbacks carry the share-link campaign for App Store Connect and Go
   assert.equal(apple.origin + apple.pathname, "https://apps.apple.com/app/apple-store/id1041700694");
   assert.match(apple.searchParams.get("pt") ?? "", /^\d+$/);
   assert.equal(apple.searchParams.get("ct"), "sharelink");
-  assert.ok(apple.searchParams.get("ct").length <= 40);
+  // App Store Connect allows campaign names of up to 30 characters.
+  assert.ok(apple.searchParams.get("ct").length <= 30);
   assert.equal(apple.searchParams.get("mt"), "8");
 
   const play = new URL(contract.playStoreUrl);
