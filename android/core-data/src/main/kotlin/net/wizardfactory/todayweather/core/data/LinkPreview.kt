@@ -153,11 +153,13 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
 
         /**
          * The same place whatever its loaded fields (photo, source): the current position by its flag; another place by
-         * its name, address and coordinates, so two places of one name at different coordinates differ (CODEX-3190-10).
+         * its name and address, and by its coordinates when both have them, so two places of one name at different
+         * coordinates differ (CODEX-3190-10) and an old place whose coordinates a response fills in later stays the same
+         * (CODEX-3190-13).
          */
         private fun samePlace(a: Place, b: Place): Boolean = when {
             a.currentPosition || b.currentPosition -> a.currentPosition && b.currentPosition
-            else -> a.name == b.name && a.address == b.address && a.location == b.location
+            else -> a.name == b.name && a.address == b.address && (a.location == null || b.location == null || a.location == b.location)
         }
     }
 

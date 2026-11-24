@@ -447,4 +447,20 @@ class LinkPreviewTest {
         assertNull(preview.unsaved.value, "the saved place left the unsaved slot")
         assertEquals(3, saved.value.places.size)
     }
+
+    /**
+     * CODEX-3190-13: an old saved place without coordinates gets them from a response later; it is still the place to
+     * return to (coordinates are compared only when both places have them).
+     */
+    @Test
+    fun aPlaceWhoseCoordinatesArriveLaterIsStillTheOneToReturnTo() {
+        val hoehyeon = Place(false, false, "회현동", "대한민국 서울특별시 중구 회현동", "KR", null)
+        val saved = Memory(started.copy(places = listOf(current, london, hoehyeon), placeIndex = 2))
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        // A response fills in its coordinates (`updateCity`), then S02 deletes London.
+        saved.change { s -> s.copy(places = s.places.map { if (it.name == "회현동") it.copy(location = Location(37.56, 126.98)) else it }) }
+        preview.savedAccess.change { net.wizardfactory.todayweather.core.storage.PlaceList.remove(it, 1) }
+        assertEquals(1, saved.value.placeIndex, "회현동")
+    }
 }
