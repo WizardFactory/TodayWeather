@@ -1,6 +1,6 @@
 # TodayWeather GTM folder plan (`gtm/`)
 
-Date: 2026-11-23 (KST). Status: **decisions D1 to D4 set by AK on 2026-11-23; G-00 done; G-01 and G-07 delivered by the first pull request; collectors not started.** Tracking issue: [#3145](https://github.com/WizardFactory/TodayWeather/issues/3145). Sources: [intent](../intent/gtm.md), [specification](../specs/gtm.md), [user scenarios for the first task](gtm.scenarios.json). Current locations and access state are maintained in [gtm/sources.md](../gtm/sources.md); the tables below record the planning-time state.
+Date: 2026-11-23 (KST). Status: **decisions D1 to D4 set by AK on 2026-11-23; G-00 done; G-01 and G-07 delivered by the first pull request. On 2026-11-24 AK moved the collectors and the brief (G-02 to G-06) with the schedule (G-08) to the Hermes workspace; this repository supplies the access check `gtm/tools/check-access.mjs`.** Tracking issue: [#3145](https://github.com/WizardFactory/TodayWeather/issues/3145). Sources: [intent](../intent/gtm.md), [specification](../specs/gtm.md), [user scenarios for the first task](gtm.scenarios.json). Current locations and access state are maintained in [gtm/sources.md](../gtm/sources.md); the tables below record the planning-time state.
 
 ## Outcome
 
@@ -113,9 +113,8 @@ Each task with repository changes is one PR against `master`. Private data and i
 
 ## Open points
 
-1. The Google Play report bucket still refuses the service account. Recheck before G-04; G-04's Android half waits for it.
-2. Collectors (G-02 to G-06) follow as separate pull requests under #3145 and need AK's go.
-3. The brief's delivery target and the host setup belong to the Hermes workspace.
+1. App Store analytics reports need an Admin key to create the ongoing report request once; the account holder issues it.
+2. Collectors, the brief and the schedule are owned by the Hermes workspace (AK, 2026-11-24).
 
 ## User scenarios
 

@@ -1,6 +1,6 @@
 # Sources and locations
 
-Last verified: 2026-11-23 (KST). This page records where GTM records, credentials and consoles are. It holds names and paths only. Secret values and account identifiers are in the private files listed below.
+Last verified: 2026-11-24 (KST) with [`tools/check-access.mjs`](tools/check-access.mjs). This page records where GTM records, credentials and consoles are. It holds names and paths only. Secret values and account identifiers are in the private files listed below.
 
 ## Where things are
 
@@ -21,7 +21,7 @@ Last verified: 2026-11-23 (KST). This page records where GTM records, credential
 | --- | --- | --- |
 | `gtm.env` | Variable assignments: identifiers and paths to the files below. No private key material. | Loaded by every tool |
 | `aws-credentials` | Access key of the IAM user `tw-gtm-collector`, profile `tw-gtm` | Reading and writing the bucket |
-| `AuthKey_<key-id>.p8` | App Store Connect team key `tw_gtm_sales_reports`, role "Sales and Reports" | Sales reports and customer reviews |
+| `AuthKey_<key-id>.p8` | App Store Connect team key `tw_gtm_sales_reports`, role "Sales and Reports" | Sales reports, customer reviews and reading analytics report requests |
 | `admob-oauth-client.json` | OAuth desktop client "TodayWeather GTM AdMob reports" | Refreshing the AdMob token |
 | `admob-oauth.json` | Refresh token with scope `admob.readonly` | AdMob network reports |
 
@@ -50,13 +50,13 @@ Source names: `appstore-sales`, `play-installs`, `play-ratings`, `admob-network`
 
 ## Access per source
 
-| Source | Credential and variables | Permission it relies on | State on 2026-11-23 |
+| Source | Credential and variables | Permission it relies on | State on 2026-11-24 |
 | --- | --- | --- | --- |
 | App Store sales reports | `TW_ASC_SALES_KEY_ID`, `TW_ASC_SALES_KEY_FILE`, `TW_ASC_ISSUER_ID`, `TW_ASC_VENDOR_NUMBER` | Team key with the "Sales and Reports" role | Works. Daily summaries for 2026-11-20 and 2026-11-21 downloaded; 2026-11-22 was not yet published at 11:00 KST. |
 | App Store customer reviews | Same key | Same role | Works (HTTP 200). The release key also works. |
-| App Store analytics reports | None | Needs a higher role | Not planned. The release key is refused. |
+| App Store analytics reports | Sales key reads; creating the ongoing report request needs an Admin key | Admin role to create the request once | **Pending.** The sales key lists requests (none exist) but is refused when creating one. An Admin key is to be issued by the account holder (AK's decision, 2026-11-24). |
 | Google Play reviews | `TW_PLAY_JSON_KEY` | App-level access of the release service account | Works (HTTP 200). Lists only reviews created or changed in the last week. |
-| Google Play installs and ratings files | `TW_PLAY_JSON_KEY`, `TW_PLAY_REPORT_BUCKET` | Account-level "View app information and download bulk reports (read-only)" for the service account | **Not working yet.** The permission was saved and read back, but listing the bucket still returned 403 at 12:14 KST, about two and a half hours later. Recheck; if it persists after a day, inspect the grant again. |
+| Google Play installs and ratings files | `TW_PLAY_JSON_KEY`, `TW_PLAY_REPORT_BUCKET` | Account-level "View app information and download bulk reports (read-only)" for the service account | Works since 2026-11-24. The bucket refused the account for about a day after the permission was granted on 2026-11-23. Monthly installs and ratings files and the reviews CSV are listed. |
 | AdMob network report | `TW_ADMOB_OAUTH_FILE`, `TW_ADMOB_PUBLISHER_ID` | AdMob API enabled in the TodayWeather Google Cloud project; user consent for `admob.readonly`. Service accounts are not accepted. | Works. A report for 2026-11-20 to 2026-11-22 returned rows per day, app and platform. |
 | Public ratings | None | None | Works for the Korean App Store storefront. The US and Japan lookups returned no result. |
 
@@ -80,6 +80,21 @@ The OAuth consent screen is in production, so the refresh token is not subject t
 - Download counts, ad statistics and review bodies. The [AdSense terms, section 11](https://www.gstatic.com/adsense/tc/2022-v1/google_usa/en.html) treat performance statistics as confidential and allow disclosing gross payment amounts. That these terms govern the AdMob account is inferred from the [AdMob terms page](https://developers.google.com/admob/terms).
 - Reviewer names are not stored at all.
 
+## Campaign links
+
+| Store | Link format | Where it is reported |
+| --- | --- | --- |
+| App Store | `https://apps.apple.com/app/apple-store/id1041700694?pt=<provider token>&ct=<campaign>&mt=8`. The provider token is `TW_ASC_PROVIDER_TOKEN` in `gtm.env`; App Store Connect > Analytics > Campaigns generates the same link. | App Store Connect > Analytics > Campaigns, after at least five first-time downloads from different Apple accounts |
+| Google Play | `https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather&referrer=utm_source%3D<source>%26utm_medium%3D<medium>%26utm_campaign%3D<campaign>` | Play Console statistics (UTM source and campaign) and GA4 (`firebase_campaign`) for users with analytics on |
+
+As of 2026-11-24 no link used campaign values, so both stores reported only organic sources.
+
 ## Running on another host
 
-The scheduled run is set up on the Hermes host from another workspace. That host needs: a checkout of this repository, Node 22.12 or later, the AWS CLI, and copies of `gtm.env`, `aws-credentials`, the App Store key file, both AdMob files and the Google Play service account key, with the paths in `gtm.env` rewritten for that host. It does not need the release signing material or the administrator AWS profile.
+The scheduled collection is built and run on the Hermes host from another workspace (AK, 2026-11-24). This repository supplies the access check and the documents; it does not run collectors.
+
+1. Copy to a mode-700 directory on the host: `gtm.env`, `aws-credentials`, the App Store `.p8` file, `admob-oauth-client.json`, `admob-oauth.json` and the Google Play service account key. Rewrite the paths in `gtm.env` for that host.
+2. Install Node 22.12 or later and the AWS CLI, and check out this repository.
+3. Run `set -a; . <dir>/gtm.env; set +a; node gtm/tools/check-access.mjs`. Every line must read `ok`. The check makes one read-only request per source and prints no value; a missing variable is shown as `not configured`.
+
+The host does not need the release signing material or the administrator AWS profile.

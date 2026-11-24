@@ -21,8 +21,7 @@ The question is: per-store downloads, ad earnings, and review and rating changes
 2. Read the records in the private bucket named in [sources](sources.md), under the key layout described there.
 3. Name every source without a record for that day and give its reason. Do not write or report a zero in its place.
 
-## State on 2026-11-23
+## State on 2026-11-24
 
-- Access to every planned source is prepared, except the Google Play report files, which still refused the service account more than two hours after the permission was granted. See [sources](sources.md).
-- The private bucket exists and is empty. No collector, brief or schedule exists yet; they are tasks G-02 to G-06 of the plan.
-- The scheduled run on the Hermes host is prepared in another workspace.
+- Every planned source answers with the prepared credentials; [`tools/check-access.mjs`](tools/check-access.mjs) verifies them without printing values. App Store analytics reports still need an Admin key to be requested once. See [sources](sources.md).
+- The private bucket exists and is empty. Collectors, the brief and the schedule are built on the Hermes host from another workspace; [sources](sources.md#running-on-another-host) lists what that host needs.
