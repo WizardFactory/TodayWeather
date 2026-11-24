@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Native-only usage analytics texts (analytics default-on, AK 2026-11-24). Not generated: import_client_assets.py writes
-     only client_strings.xml. The opt-in regions' consent text and buttons stay the imported LOC_ANALYTICS_DETAIL,
-     LOC_ANALYTICS_DENY and LOC_ANALYTICS_ALLOW. See android/README.md, "Imported client assets". -->
+     only client_strings.xml. The opt-in regions' consent text and buttons (analytics_consent_*) are the
+     imported LOC_ANALYTICS_DETAIL, LOC_ANALYTICS_DENY and LOC_ANALYTICS_ALLOW texts in en, ko and ja, and translations
+     of them in de, zh-CN and zh-TW, whose imported catalogs show English (AK 2026-11-24). See android/README.md, "Imported client assets". -->
 <resources>
     <string name="analytics_label">使用情況分析</string>
     <string name="analytics_on">已開啟</string>
@@ -9,4 +10,7 @@
     <string name="analytics_detail">為改進應用程式，Google Firebase Analytics 會收集頁面使用情況、天氣查詢結果以及應用程式、裝置和安裝資訊。自訂事件不包含實際位置、地址、推播權杖和裝置 UUID。除非您在此選單中關閉，否則使用情況分析會保持開啟；關閉後仍可查詢天氣。分析資料不得用於廣告。廣告、當機診斷和通知另行處理。</string>
     <string name="analytics_turn_off">關閉</string>
     <string name="analytics_turn_on">開啟</string>
+    <string name="analytics_consent_detail">為改進應用程式，是否允許 Google Firebase Analytics 收集頁面使用情況、天氣查詢結果以及應用程式、裝置和安裝資訊？自訂事件不包含實際位置、地址、推播權杖和裝置 UUID。拒絕後仍可查詢天氣。您可以隨時在此選單中撤回。分析資料不得用於廣告。廣告、當機診斷和通知另行處理。</string>
+    <string name="analytics_consent_deny">拒絕 / 撤回</string>
+    <string name="analytics_consent_allow">同意</string>
 </resources>

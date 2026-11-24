@@ -49,7 +49,8 @@ class FirebaseAnalyticsSdk(private val context: Context) : AnalyticsSdk {
  * flag on its own: a grant restores at the start only when both still hold it, so a withdrawal whose choice could not
  * be written still holds after a restart when the collection state was written. Since the region default
  * (2026-11-24) a missing choice can collect, so a withdrawal that could not be written is also recorded beside the
- * collection state ([DECLINED]) and counts as `"false"` at the next start.
+ * collection state ([DECLINED]) and counts as `"false"` at the next start. When neither can be written and the process
+ * ends, the next start has no choice and the region default may apply (an accepted residual, specs/analytics-default-on.md).
  */
 class ConsentStore(private val choices: SharedPreferences, private val collection: SharedPreferences) {
     constructor(context: Context) : this(
@@ -59,7 +60,7 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
 
     /**
      * The stored choice at the start (`init`): `"true"`, `"false"`, none, or another value ([UNREADABLE] when the
-     * choice cannot be read), which does not collect. A recorded withdrawal that could not be written is `"false"`
+     * choice or the collection record cannot be read as expected), which does not collect. A recorded withdrawal that could not be written is `"false"`
      * and is written now; a grant the collection state does not confirm is withdrawn and written so.
      */
     fun startChoice(): String? {
@@ -69,15 +70,16 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
             return "false"
         }
         val stored = runCatching { choices.getString(KEY, null) }.getOrElse { return UNREADABLE }
+        val enabled = runCatching { collection.getBoolean(ENABLED, false) }.getOrElse { return UNREADABLE }
         if (stored != "true") return stored
-        if (runCatching { collection.getBoolean(ENABLED, false) }.getOrDefault(false)) return stored
+        if (enabled) return stored
         write(false)
         return "false"
     }
 
     /**
      * Writes the choice (`persistChoice`). When a withdrawal cannot be written it records it beside the collection state
-     * ([DECLINED]) first, so the region default cannot turn it back on even if the process ends here, and then removes the
+     * ([DECLINED]) first, so a process end before the removal still leaves it off, and then removes the
      * choice, so an old grant cannot survive. When a grant cannot be written the stored choice stays as it was, so a
      * decline is never erased into "no choice" (the grant's collection state is not recorded, so an old grant is
      * withdrawn at the next start).

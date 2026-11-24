@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Native-only usage analytics texts (analytics default-on, AK 2026-11-24). Not generated: import_client_assets.py writes
-     only client_strings.xml. The opt-in regions' consent text and buttons stay the imported LOC_ANALYTICS_DETAIL,
-     LOC_ANALYTICS_DENY and LOC_ANALYTICS_ALLOW. See android/README.md, "Imported client assets". -->
+     only client_strings.xml. The opt-in regions' consent text and buttons (analytics_consent_*) are the
+     imported LOC_ANALYTICS_DETAIL, LOC_ANALYTICS_DENY and LOC_ANALYTICS_ALLOW texts in en, ko and ja, and translations
+     of them in de, zh-CN and zh-TW, whose imported catalogs show English (AK 2026-11-24). See android/README.md, "Imported client assets". -->
 <resources>
     <string name="analytics_label">Usage analytics</string>
     <string name="analytics_on">On</string>
@@ -9,4 +10,7 @@
     <string name="analytics_detail">To improve the app, Google Firebase Analytics collects screen usage, weather request results, and app, device and installation information. Custom events exclude actual location, address, push tokens and device UUIDs. Usage analytics is on unless you turn it off in this menu; weather remains available either way. Analytics data is not permitted for advertising use. Advertising, crash diagnostics and notifications are handled separately.</string>
     <string name="analytics_turn_off">Turn off</string>
     <string name="analytics_turn_on">Turn on</string>
+    <string name="analytics_consent_detail">Allow Google Firebase Analytics to collect screen usage, weather request results, and app, device and installation information to improve the app? Custom events exclude actual location, address, push tokens and device UUIDs. Weather remains available if you decline. Withdraw anytime in this menu. Analytics data is not permitted for advertising use. Advertising, crash diagnostics and notifications are handled separately.</string>
+    <string name="analytics_consent_deny">Decline / withdraw</string>
+    <string name="analytics_consent_allow">Allow</string>
 </resources>

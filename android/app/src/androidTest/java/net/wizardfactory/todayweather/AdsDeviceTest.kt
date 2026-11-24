@@ -122,7 +122,7 @@ class AdsDeviceTest {
         rule.onNodeWithTag(ShellTags.row(MenuRow.ANALYTICS)).performScrollTo().performClick()
         rule.waitForIdle()
         capture("analytics-popup")
-        rule.onNode(hasText(rule.activity.getString(R.string.LOC_ANALYTICS_ALLOW)) and hasAnyAncestor(hasTestTag(PopupTags.POPUP)), useUnmergedTree = true)
+        rule.onNode(hasText(rule.activity.getString(R.string.analytics_consent_allow)) and hasAnyAncestor(hasTestTag(PopupTags.POPUP)), useUnmergedTree = true)
             .performClick()
         rule.waitForIdle()
         assertTrue(app.analytics.choice.value)

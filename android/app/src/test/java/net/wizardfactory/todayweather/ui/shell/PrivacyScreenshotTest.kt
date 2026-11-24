@@ -116,7 +116,7 @@ class PrivacyScreenshotTest {
             .jsonArray.map { it.jsonObject["text"]!!.jsonPrimitive.content.trimEnd() }
         var native = emptyList<String>()
         rule.setContent {
-            native = popupLines(rememberTextMeasurer(), listOf(stringResource(R.string.LOC_ANALYTICS_DETAIL)), LocalDensity.current)
+            native = popupLines(rememberTextMeasurer(), listOf(stringResource(R.string.analytics_consent_detail)), LocalDensity.current)
         }
         rule.waitForIdle()
         assertEquals(captured, native)

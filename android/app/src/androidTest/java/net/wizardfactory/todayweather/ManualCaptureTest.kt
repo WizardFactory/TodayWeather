@@ -249,8 +249,19 @@ class ManualCaptureTest {
         walk.tap(NationTags.BACK)
         open(MenuRow.NATIONAL_AIR, "38-national-air")
     }
+    /**
+     * The consent popup of an opt-in region (analytics default-on, 2026-11-24): capture.sh runs this section with
+     * `-e analyticsRegion DE`; the app language stays Korean. Nothing is chosen.
+     */
+    @Test fun analyticsOptIn() {
+        assertTrue("needs -e analyticsRegion DE", app.analytics.optInRegion)
+        assertFalse(app.analytics.choice.value)
+        walk.menu(MenuRow.ANALYTICS); walk.capture("40a-analytics-opt-in"); walk.back(); walk.back()
+        assertNull(net.wizardfactory.todayweather.analytics.ConsentStore(app).storedChoice())
+    }
     @Test fun privacyAndShare() {
         walk.menu(MenuRow.ABOUT); walk.capture("39-about"); walk.back(); walk.back()
+        assertFalse("a default-on region (the capture emulator's KR)", app.analytics.optInRegion)
         walk.menu(MenuRow.ANALYTICS); walk.capture("40-analytics"); walk.back(); walk.back()
         walk.menu(MenuRow.AD_PRIVACY)
         rule.waitUntil(30_000) { rule.onAllNodes(hasTestTag(PopupTags.POPUP)).fetchSemanticsNodes().isNotEmpty() }

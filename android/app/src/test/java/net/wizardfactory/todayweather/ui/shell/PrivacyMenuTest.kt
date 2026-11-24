@@ -165,6 +165,44 @@ class PrivacyMenuTest {
         inRow(MenuRow.ANALYTICS, "이용 통계 · 꺼짐").assertExists()
     }
 
+    /** The consent popup in German and Chinese has no English text (AK 2026-11-24). */
+    @Config(qualifiers = "de-rDE-w384dp-h832dp-xhdpi")
+    @Test
+    fun theConsentPopupInGerman() {
+        show(optIn = true)
+        openMenu()
+        inRow(MenuRow.ANALYTICS, "Nutzungsanalyse · Aus").assertExists()
+        tapRow(MenuRow.ANALYTICS)
+        rule.onNodeWithText("Dürfen wir zur Verbesserung der App", substring = true).assertExists()
+        inPopup("Ablehnen / Widerrufen").assertExists()
+        inPopup("Zustimmen").performClick()
+        rule.waitForIdle()
+        assertEquals(listOf(true), chosen)
+        inRow(MenuRow.ANALYTICS, "Nutzungsanalyse · An").assertExists()
+    }
+
+    @Config(qualifiers = "zh-rCN-w384dp-h832dp-xhdpi")
+    @Test
+    fun theConsentPopupInSimplifiedChinese() {
+        show(optIn = true)
+        openMenu()
+        tapRow(MenuRow.ANALYTICS)
+        rule.onNodeWithText("是否允许 Google Firebase Analytics", substring = true).assertExists()
+        inPopup("拒绝 / 撤回").assertExists()
+        inPopup("同意").assertExists()
+    }
+
+    @Config(qualifiers = "zh-rTW-w384dp-h832dp-xhdpi")
+    @Test
+    fun theConsentPopupInTraditionalChinese() {
+        show(optIn = true)
+        openMenu()
+        tapRow(MenuRow.ANALYTICS)
+        rule.onNodeWithText("是否允許 Google Firebase Analytics", substring = true).assertExists()
+        inPopup("拒絕 / 撤回").assertExists()
+        inPopup("同意").assertExists()
+    }
+
     @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
     @Test
     fun theRowAndPopupInEnglish() {

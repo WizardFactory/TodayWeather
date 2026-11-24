@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Native-only usage analytics texts (analytics default-on, AK 2026-11-24). Not generated: import_client_assets.py writes
-     only client_strings.xml. The opt-in regions' consent text and buttons stay the imported LOC_ANALYTICS_DETAIL,
-     LOC_ANALYTICS_DENY and LOC_ANALYTICS_ALLOW. See android/README.md, "Imported client assets". -->
+     only client_strings.xml. The opt-in regions' consent text and buttons (analytics_consent_*) are the
+     imported LOC_ANALYTICS_DETAIL, LOC_ANALYTICS_DENY and LOC_ANALYTICS_ALLOW texts in en, ko and ja, and translations
+     of them in de, zh-CN and zh-TW, whose imported catalogs show English (AK 2026-11-24). See android/README.md, "Imported client assets". -->
 <resources>
     <string name="analytics_label">Nutzungsanalyse</string>
     <string name="analytics_on">An</string>
@@ -9,4 +10,7 @@
     <string name="analytics_detail">Zur Verbesserung der App erfasst Google Firebase Analytics die Nutzung der Bildschirme, Ergebnisse von Wetterabfragen sowie App-, Geräte- und Installationsinformationen. Eigene Ereignisse enthalten keinen tatsächlichen Standort, keine Adresse, keine Push-Tokens und keine Geräte-UUIDs. Die Nutzungsanalyse ist eingeschaltet, solange Sie sie nicht in diesem Menü ausschalten; das Wetter bleibt in jedem Fall verfügbar. Analysedaten dürfen nicht für Werbung verwendet werden. Werbung, Absturzdiagnose und Benachrichtigungen werden getrennt behandelt.</string>
     <string name="analytics_turn_off">Ausschalten</string>
     <string name="analytics_turn_on">Einschalten</string>
+    <string name="analytics_consent_detail">Dürfen wir zur Verbesserung der App mit Google Firebase Analytics die Nutzung der Bildschirme, Ergebnisse von Wetterabfragen sowie App-, Geräte- und Installationsinformationen erfassen? Eigene Ereignisse enthalten keinen tatsächlichen Standort, keine Adresse, keine Push-Tokens und keine Geräte-UUIDs. Das Wetter bleibt auch bei Ablehnung verfügbar. Sie können Ihre Einwilligung jederzeit in diesem Menü widerrufen. Die Nutzung der Analysedaten für Werbung ist nicht gestattet. Werbung, Absturzdiagnose und Benachrichtigungen werden getrennt behandelt.</string>
+    <string name="analytics_consent_deny">Ablehnen / Widerrufen</string>
+    <string name="analytics_consent_allow">Zustimmen</string>
 </resources>

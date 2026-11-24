@@ -215,6 +215,21 @@ class AnalyticsTest {
         assertEquals(collectionOff, restarted.calls)
     }
 
+    /** Any record the start cannot read as expected leaves collection off (CODEX-3178-10). */
+    @Test
+    fun anUnreadableCollectionRecordDoesNotCollect() {
+        for (region in listOf("KR", "DE")) {
+            choices.edit().remove(ConsentStore.KEY).commit()
+            collection.edit().remove(ConsentStore.DECLINED).putString(ConsentStore.ENABLED, "true").commit()
+            val sdk = Sdk()
+            assertFalse(analytics(sdk, region).choice.value, "no choice ($region)")
+            assertEquals(collectionOff, sdk.calls)
+            choices.edit().putString(ConsentStore.KEY, "true").commit()
+            collection.edit().putString(ConsentStore.ENABLED, "true").commit()
+            assertFalse(analytics(Sdk(), region).choice.value, "a stored grant ($region)")
+        }
+    }
+
     @Test
     fun anUnreadableChoiceDoesNotCollect() {
         choices.edit().putBoolean(ConsentStore.KEY, true).commit()

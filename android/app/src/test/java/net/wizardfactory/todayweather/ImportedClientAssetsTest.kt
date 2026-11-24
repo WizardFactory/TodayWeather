@@ -69,7 +69,8 @@ class ImportedClientAssetsTest {
     @Test
     fun nativeAnalyticsStringsStayOutsideTheImport() {
         val res = File(appDir, "src/main/res")
-        val names = setOf("analytics_label", "analytics_on", "analytics_off", "analytics_detail", "analytics_turn_off", "analytics_turn_on")
+        val names = setOf("analytics_label", "analytics_on", "analytics_off", "analytics_detail", "analytics_turn_off", "analytics_turn_on",
+            "analytics_consent_detail", "analytics_consent_deny", "analytics_consent_allow")
         val imported = stringNames(File(res, "values/client_strings.xml"))
         for (dir in listOf("values", "values-ko", "values-ja", "values-de", "values-zh-rCN", "values-zh-rTW")) {
             assertEquals(dir, names, stringNames(File(res, "$dir/analytics_strings.xml")))
@@ -80,6 +81,32 @@ class ImportedClientAssetsTest {
             val output = files.getJSONObject(i).getString("output")
             assertTrue(output, !output.endsWith("analytics_strings.xml"))
         }
+    }
+
+    /**
+     * The opt-in regions' consent popup (AK 2026-11-24): en, ko and ja keep the imported Cordova texts word for word; de,
+     * zh-CN and zh-TW, whose imported catalogs show English, have their own translations.
+     */
+    @Test
+    fun theConsentTextsKeepTheCordovaWordingOrTranslateIt() {
+        val res = File(appDir, "src/main/res")
+        val pairs = mapOf("analytics_consent_detail" to "LOC_ANALYTICS_DETAIL", "analytics_consent_deny" to "LOC_ANALYTICS_DENY",
+            "analytics_consent_allow" to "LOC_ANALYTICS_ALLOW")
+        val english = stringValues(File(res, "values/client_strings.xml"))
+        for (dir in listOf("values", "values-ko", "values-ja", "values-de", "values-zh-rCN", "values-zh-rTW")) {
+            val native = stringValues(File(res, "$dir/analytics_strings.xml"))
+            val imported = stringValues(File(res, "$dir/client_strings.xml"))
+            for ((name, key) in pairs) {
+                if (dir in listOf("values", "values-ko", "values-ja")) assertEquals("$dir $name", imported[key], native[name])
+                else assertTrue("$dir $name is translated", native[name] != english[key] && !native[name].isNullOrBlank())
+            }
+        }
+    }
+
+    private fun stringValues(file: File): Map<String, String> {
+        val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
+        val nodes = doc.getElementsByTagName("string")
+        return (0 until nodes.length).associate { nodes.item(it).attributes.getNamedItem("name").nodeValue to nodes.item(it).textContent }
     }
 
     /** The Ionicons font copied from the Cordova build (tools/import_cordova_fonts.py). */

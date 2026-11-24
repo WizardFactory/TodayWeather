@@ -11,7 +11,8 @@ Consumes the [intent](../intent/analytics-default-on.md) (AK, 2026-11-24; Refs #
 
 ## Rule
 
-1. A stored `"true"` collects. Any other stored value (`"false"`, a value the app never writes, or a value that cannot be read) does not collect. Two existing failure fallbacks turn a stored value into `"false"` before this step, and the apps keep them: a stored `"true"` counts only while the app's own record of the SDK's collection state confirms it (Android AN-15; otherwise it is rewritten as `"false"`), and a withdrawal whose `"false"` could not be written is recorded beside that collection state (before the old choice is removed) and written as `"false"` at the next start, so the region default never turns a withdrawal back on. A grant that cannot be written leaves the stored choice as it was, so a decline is never erased into "no choice". Any of these records that cannot be read leaves collection off.
+1. Only a readable stored `"true"` collects. Any other stored value (`"false"`, a value the app never writes) does not collect, and any record the start cannot read as expected (the choice, the collection record or a pending withdrawal) leaves collection off. Existing failure fallbacks apply before this step: a stored `"true"` counts only while the app's own record of the SDK's collection state confirms it (Android AN-15; otherwise it is rewritten as `"false"`), and a grant that cannot be written leaves the stored choice as it was.
+   **Withdrawal and its residual (accepted 2026-11-24).** A withdrawal stops the SDK and denies every consent type before it writes `"false"`. If that write fails, collection stays off for the rest of the session and the save-failed notice is shown; the app also tries to record a pending withdrawal (Android: `declinePending`, before the old choice is removed) so the next start writes `"false"`. If the withdrawal still cannot be persisted in either form and the process ends, the next start sees no stored choice and the region default may apply. This is an accepted, documented residual, not a guarantee that a withdrawal always survives storage failures.
 2. Without a stored choice, the device region decides: collect when the region is a known region outside the opt-in regions; otherwise do not collect.
 3. A region is known when, after trimming, it is two ASCII letters (in any case) that form one of the 249 officially assigned ISO 3166-1 alpha-2 codes. An empty or missing region, a UN M.49 number (`150`, `419`), and reserved or user-assigned codes (`EU`, `UK`, `EL`, `IC`, `EA`, `XK`, `XA`, `ZZ` …) are unknown and keep the opt-in.
 4. Applying the region default writes nothing to the stored choice, so the stored values keep meaning "the user chose". The region is evaluated again at each start while no choice is stored.
@@ -34,7 +35,7 @@ The opt-in regions (39 codes):
 | Other EEA states | IS LI NO |
 | United Kingdom, Switzerland | GB CH |
 
-The EU territories are part of the EU and so of the EEA; listing their codes keeps a device set to, for example, `fr-RE` in the opt-in. Territories outside the EU with their own code (for example GL, FO, SJ, BL, PM, NC, PF), the Crown dependencies (GG, JE, IM) and Gibraltar (GI) are known regions outside the list and are on by default.
+The EU territories are part of the EU and so of the EEA; listing their codes keeps a device set to, for example, `fr-RE` in the opt-in. **Decided (AK, 2026-11-24): the seven EU territory codes stay in the opt-in list.** Territories outside the EU with their own code (for example GL, FO, SJ, BL, PM, NC, PF), the Crown dependencies (GG, JE, IM) and Gibraltar (GI) are known regions outside the list and are on by default.
 
 ## Consent signals and order
 
@@ -48,7 +49,7 @@ The EU territories are part of the EU and so of the EEA; listing their codes kee
 
 - Row label: "Usage analytics" (en), "이용 통계" (ko), "利用状況分析" (ja), "Nutzungsanalyse" (de), "使用情况分析" (zh-CN), "使用情況分析" (zh-TW), with the state On/Off (켜짐/꺼짐, オン/オフ, An/Aus, 已开启/已关闭, 已開啟/已關閉) of the current decision.
 - Popup where the device region is on by default: it says what is collected, that usage analytics stays on unless the user turns it off in this menu, and that weather works either way; buttons Turn off / Turn on. Turning it off stores `"false"`, turning it on stores `"true"`.
-- Popup in the opt-in regions (and for an unknown region): the existing consent question with Decline / withdraw and Allow; the title is the row label. Allow stores `"true"`, Decline / withdraw stores `"false"`.
+- Popup in the opt-in regions (and for an unknown region): the existing consent question with Decline / withdraw and Allow; the title is the row label. Allow stores `"true"`, Decline / withdraw stores `"false"`. The consent text and buttons are shown in the app language with no English fallback: English, Korean and Japanese keep the Cordova wording; German, Simplified Chinese and Traditional Chinese translate it with the same meaning (decided by AK, 2026-11-24).
 - Back closes the popup without a choice. A failed save shows the existing "could not fully apply" alert and leaves collection off.
 
 ## Backup, migration, rollback and upgrade
@@ -56,6 +57,10 @@ The EU territories are part of the EU and so of the EEA; listing their codes kee
 - The stored choice and the SDK state stay excluded from backup and device transfer; after a restore no choice is stored, so the region default applies.
 - An update from the Cordova app carries no choice (the Cordova choice was only in WebView storage), so the region default applies.
 - Rollback hand-back (Android AN-17): the handed-back text is the stored value (`"true"`, `"false"` or none), as before; an absent choice means "region default" in the native app and "off" in the fallback Cordova build. A native grant stands at the start only while the suite's choice says `"true"` once anything was handed over (unchanged). Without a native stored choice no suite choice is adopted: the suite is backed up and the native choice is not, so a suite value (under a native or a fallback build's marker) cannot be told apart from an old device's choice after a restore, which must leave the region default. Consequence: a withdrawal made in a fallback build while the native app had no stored choice is not carried back (as a grant made there is not); the region default applies again. This is a known limitation of the rollback path.
+
+### Declines that are not carried over (decided, AK 2026-11-24)
+
+A decline the native app cannot see, a Cordova 1.1.1 decline kept only in WebView storage or a withdrawal made in the Cordova fallback build while the native app had no stored choice, gets the region default. There is no migration of it and no new consent prompt.
 
 ## User scenarios
 
@@ -68,7 +73,7 @@ The EU territories are part of the EU and so of the EEA; listing their codes kee
 | ADO-US5 | User with an unknown region | System locale without a region (for example `en`) or `es-419` | Open the app | Nothing collected; consent popup | – | ADO2 |
 | ADO-US6 | User restores a backup on a new phone | Backup from a device with a stored choice | Restore; open the app | No stored choice; the region default applies | – | ADO6 |
 | ADO-US7 | User returns from a rollback build | Native grant handed back; the fallback Cordova build withdrew analytics | Install the native app again; open it | Off; `"false"` stored natively (unchanged AN-17 rule) | No native choice before the rollback: the region default applies (known limitation) | ADO6 |
-| ADO-US8 | Korean user turns usage analytics off while storage fails | ADO-US1; the choice file cannot be written | Menu → 끄기; restart | Alert; off now; the pending withdrawal keeps it off after the restart and is written then | Both files unwritable: as before, nothing can be kept | ADO3, ADO4 |
+| ADO-US8 | Korean user turns usage analytics off while storage fails | ADO-US1; the choice file cannot be written | Menu → 끄기; restart | Alert; off now; the pending withdrawal keeps it off after the restart and is written then | Neither the choice nor the pending withdrawal can be written and the process ends: the region default may apply at the next start (accepted residual) | ADO3, ADO4 |
 
 ## Verification
 
