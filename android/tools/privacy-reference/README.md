@@ -18,6 +18,8 @@ What the captures show (in `actions.json`):
 - the ad privacy form answers success and shows nothing where no form is required (B14);
 - one Android back key closes the popup and, depending on a race, the menu too (B17): each capture records which happened.
 
+Since analytics default-on (2026-11-24, [spec](../../../specs/analytics-default-on.md)) the native row reads 이용 통계 · 꺼짐 / 켜짐 (Usage analytics · Off / On) and the popup's title 이용 통계, from native resources; the consent popup compared here is the one the opt-in regions keep. The captures keep the Cordova texts: `client/` is unchanged, so recapturing would show the same label, and the label's pixels are part of the recorded tolerances (B34 in `tools/corpus/differences.md`).
+
 ## Tests
 
 - `PrivacyScreenshotTest` (app, Robolectric native graphics, SDK 34): the three states against the PNGs, rendered at 384×762 dp and density 2; each comparison passes within the tolerance recorded for it (`ImageDiff`). The popup's body lines equal the capture's line boxes. Renders and difference overlays go to `app/build/privacy-compare/`.

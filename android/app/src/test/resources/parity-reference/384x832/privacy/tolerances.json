@@ -11,37 +11,37 @@
   "heightDifference": 0
  },
  "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
- "why": "Four-size Korean/English menu choice states and analytics popup. Inspected both narrow-language popups and the wide English menu overlay: body line breaks, popup extent and buttons match; residuals are glyph rasterization/advances. Historical margins retained; every compared height matches. Privacy fit and behavior tests remain separate. 2026-11-15 (#2990): menu cases re-measured after the privacy rows moved to the end of the side menu; native and Cordova show the same rows, the residuals are glyph rasterization.",
+ "why": "Four-size Korean/English menu choice states and analytics popup. Inspected both narrow-language popups and the wide English menu overlay: body line breaks, popup extent and buttons match; residuals are glyph rasterization/advances. Historical margins retained; every compared height matches. Privacy fit and behavior tests remain separate. 2026-11-15 (#2990): menu cases re-measured after the privacy rows moved to the end of the side menu; native and Cordova show the same rows, the residuals are glyph rasterization. 2026-11-24 (analytics default-on, B34): failing cases re-measured after the native menu row became 이용 통계 · 꺼짐 / 켜짐 (Usage analytics · Off / On) and the popup title 이용 통계, native texts the Cordova captures (선택적 이용 통계 · 꺼짐 / 동의함) cannot show; the added residual is that row's and title's text.",
  "cases": {
   "en-US/menu-off": {
    "heightDifference": 0,
-   "strong": 0.005077,
-   "mean": 1.628
+   "strong": 0.008966,
+   "mean": 2.115
   },
   "en-US/analytics-popup": {
    "heightDifference": 0,
-   "strong": 0.003082,
-   "mean": 1.623
+   "strong": 0.004961,
+   "mean": 2.074
   },
   "en-US/menu-allowed": {
    "heightDifference": 0,
-   "strong": 0.00593,
-   "mean": 1.732
+   "strong": 0.008314,
+   "mean": 2.011
   },
   "ko-KR/menu-off": {
    "heightDifference": 0,
-   "strong": 0.009307,
-   "mean": 2.291
+   "strong": 0.011055,
+   "mean": 2.483
   },
   "ko-KR/analytics-popup": {
    "heightDifference": 0,
-   "strong": 0.013527,
-   "mean": 5.006
+   "strong": 0.016386,
+   "mean": 5.259
   },
   "ko-KR/menu-allowed": {
    "heightDifference": 0,
-   "strong": 0.008822,
-   "mean": 2.273
+   "strong": 0.010796,
+   "mean": 2.477
   }
  }
 }

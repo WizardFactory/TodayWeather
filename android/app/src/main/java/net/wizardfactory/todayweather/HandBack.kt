@@ -71,6 +71,10 @@ class HandBackWriter(private val suite: SharedPreferences, private val consent: 
  * mirror there (which removes the choice) withdraws. Before anything was handed over, the grant stands; a grant made
  * there is not carried over, as the first migration carries none. Runs before the choice applies ([EarlyStartProvider]);
  * each write of the choice is handed back at once ([HandBackWriter.watchConsent]), so a grant here is in the suite first.
+ *
+ * Without a choice here the region default applies (analytics default-on, 2026-11-24) and nothing is adopted: the suite
+ * is backed up while this app's choice is not, so a suite choice cannot tell a fallback build's withdrawal on this
+ * device from an old device's choice after a restore, and a restore must leave the region default.
  */
 object HandBackConsent {
     fun beforeStart(context: Context) {

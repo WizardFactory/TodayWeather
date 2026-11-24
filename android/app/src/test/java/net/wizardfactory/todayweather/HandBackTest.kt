@@ -123,6 +123,18 @@ class HandBackTest {
         assertEquals(listOf(null, "서울"), cities())
     }
 
+    /** The app's writer hands back each written choice through the real preference files. */
+    @Test
+    fun theAppsWriterHandsBackTheWrittenChoice() {
+        val writer = HandBackWriter.of(context)
+        writer.watchConsent(context.getSharedPreferences(ConsentStore.CHOICE_FILE, Context.MODE_PRIVATE)) { it() }
+        writer.write(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1))
+        ConsentStore(context).write(true)
+        assertEquals("true", suite.getString(CordovaHandBack.CONSENT, null))
+        ConsentStore(context).write(false)
+        assertEquals("false", suite.getString(CordovaHandBack.CONSENT, null))
+    }
+
     @Test
     fun aGrantStandsAtTheStartOnlyWhileTheSuiteSaysTrue() {
         val consent = ConsentStore(context)
@@ -139,24 +151,49 @@ class HandBackTest {
         val own = CordovaHandBack.marker(5, CordovaHandBack.NATIVE)
         grant()
         start(null, null)
-        assertTrue("nothing handed over yet: an earlier grant stands", consent.startChoice())
+        assertEquals("nothing handed over yet: an earlier grant stands", "true", consent.startChoice())
         start(own, "true")
-        assertTrue("its own hand-back", consent.startChoice())
+        assertEquals("its own hand-back", "true", consent.startChoice())
         start(claim, "true")
-        assertTrue("a fallback build that kept the grant", consent.startChoice())
+        assertEquals("a fallback build that kept the grant", "true", consent.startChoice())
         start(claim, "false")
-        assertFalse("withdrawn in the fallback build", consent.startChoice())
+        assertEquals("withdrawn in the fallback build", "false", consent.startChoice())
         grant()
         start(own, "false")
-        assertFalse("withdrawn there while that build could not read the hand-back (so did not claim it)", consent.startChoice())
+        assertEquals("withdrawn there while that build could not read the hand-back (so did not claim it)", "false", consent.startChoice())
         grant()
         start(claim, null)
-        assertFalse("no choice there (a mirror that failed removes it): off", consent.startChoice())
-        choices.edit().remove(ConsentStore.KEY).commit()
-        start(claim, "false")
-        assertNull("no grant here: nothing is written", consent.storedChoice())
+        assertEquals("no choice there (a mirror that failed removes it): off", "false", consent.startChoice())
         consent.write(false)
         start(claim, "true")
-        assertFalse("a grant there is not carried over", consent.startChoice())
+        assertEquals("a grant there is not carried over", "false", consent.startChoice())
+    }
+
+    /**
+     * Without a choice here the region default applies (analytics default-on, 2026-11-24) and no suite choice is adopted:
+     * the suite is backed up while this app's choice is not, so a restore (with a native or a fallback build's marker)
+     * must leave the region default (CODEX-3178-2).
+     */
+    @Test
+    fun withoutAChoiceHereNoSuiteChoiceIsAdopted() {
+        val consent = ConsentStore(context)
+        val choices = context.getSharedPreferences(ConsentStore.CHOICE_FILE, Context.MODE_PRIVATE)
+        fun start(marker: String?, choice: String?): String? {
+            choices.edit().remove(ConsentStore.KEY).commit()
+            val edit = suite.edit()
+            if (marker != null) edit.putString(CordovaHandBack.MARKER, marker) else edit.remove(CordovaHandBack.MARKER)
+            if (choice != null) edit.putString(CordovaHandBack.CONSENT, choice) else edit.remove(CordovaHandBack.CONSENT)
+            edit.commit()
+            HandBackConsent.beforeStart(context)
+            return consent.storedChoice()
+        }
+        val claim = """{"schema":1,"generation":4,"writer":"cordova","complete":true,"keys":[]}"""
+        val own = CordovaHandBack.marker(5, CordovaHandBack.NATIVE)
+        assertNull("a fallback build's claim may be restored from a backup", start(claim, "false"))
+        assertNull("a native marker may be restored from a backup", start(own, "false"))
+        assertNull("a grant there is not carried over: the region default applies", start(claim, "true"))
+        assertNull("no choice there", start(claim, null))
+        assertNull("nothing handed over: no fallback choice to keep", start(null, "false"))
+        assertNull("an unusable marker", start("{", "false"))
     }
 }

@@ -11,37 +11,37 @@
   "heightDifference": 0
  },
  "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
- "why": "Four-size Korean/English menu choice states and analytics popup. Inspected both narrow-language popups and the wide English menu overlay: body line breaks, popup extent and buttons match; residuals are glyph rasterization/advances. Historical margins retained; every compared height matches. Privacy fit and behavior tests remain separate.",
+ "why": "Four-size Korean/English menu choice states and analytics popup. Inspected both narrow-language popups and the wide English menu overlay: body line breaks, popup extent and buttons match; residuals are glyph rasterization/advances. Historical margins retained; every compared height matches. Privacy fit and behavior tests remain separate. 2026-11-24 (analytics default-on, B34): failing cases re-measured after the native menu row became 이용 통계 · 꺼짐 / 켜짐 (Usage analytics · Off / On) and the popup title 이용 통계, native texts the Cordova captures (선택적 이용 통계 · 꺼짐 / 동의함) cannot show; the added residual is that row's and title's text.",
  "cases": {
   "ko-KR/menu-off": {
    "heightDifference": 0,
-   "strong": 0.009161,
-   "mean": 2.357
+   "strong": 0.011507,
+   "mean": 2.578
   },
   "ko-KR/analytics-popup": {
    "heightDifference": 0,
-   "strong": 0.014971,
-   "mean": 5.173
+   "strong": 0.016318,
+   "mean": 5.475
   },
   "ko-KR/menu-allowed": {
    "heightDifference": 0,
-   "strong": 0.009141,
-   "mean": 2.345
+   "strong": 0.011235,
+   "mean": 2.571
   },
   "en-US/menu-off": {
    "heightDifference": 0,
-   "strong": 0.005891,
-   "mean": 1.902
+   "strong": 0.010032,
+   "mean": 2.363
   },
   "en-US/analytics-popup": {
    "heightDifference": 0,
-   "strong": 0.003535,
-   "mean": 1.866
+   "strong": 0.005529,
+   "mean": 2.293
   },
   "en-US/menu-allowed": {
    "heightDifference": 0,
-   "strong": 0.007711,
-   "mean": 2.088
+   "strong": 0.01053,
+   "mean": 2.427
   }
  }
 }

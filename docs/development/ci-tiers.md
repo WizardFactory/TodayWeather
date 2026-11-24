@@ -6,7 +6,7 @@ Checks run in two tiers. **PR CI** answers "may this change merge?" within minut
 | --- | --- | --- |
 | Question | May this change merge? | Is this commit fit to release? |
 | Runs on | Every pull request that touches the target's paths, and the push to `master` | A named commit on manual dispatch, and nightly on `master` when the target changed |
-| Time | About 10 minutes of wall time per workflow at most | No budget; job timeouts only |
+| Time | Track time to feedback per target. Ten minutes is a reference point | No budget; job timeouts only |
 | Contents | Source and snapshot consistency checks, unit and JVM tests, a build | Everything PR CI runs, on the same commit, plus emulator, simulator and browser suites, release-variant lint and builds, size, language and OS-version matrices |
 | Needs | No emulator, simulator, device, provider network or secret | Hosted emulators and simulators; still no secret unless the target's release document names a protected environment |
 | A failure stops | The merge of that pull request | The release: no candidate is tagged from a commit without a passed run |
@@ -15,8 +15,8 @@ Checks run in two tiers. **PR CI** answers "may this change merge?" within minut
 
 ## Placing a check
 
-1. A check goes to PR CI when it is hermetic and fast: it reads the checkout, needs no device and no network beyond dependency downloads, and keeps the workflow within the time above.
-2. A check goes to release CI when it needs an emulator, a simulator, a real browser session against a deployed site or a matrix of sizes, languages or OS versions, or when it would take the workflow past the PR time.
+1. A check goes to PR CI when it is hermetic and fast: it reads the checkout, needs no device and no network beyond dependency downloads, and its result helps the author decide whether the change can merge.
+2. A check goes to release CI when it needs an emulator, a simulator, a real browser session against a deployed site or a matrix of sizes, languages or OS versions, or when its cost is justified by integration or release risk.
 3. Moving a check out of PR CI requires its place in release CI in the same change. No coverage is dropped to save time.
 4. Release CI reruns the PR checks on the commit it verifies. PR CI is path-filtered, so it may never have run on that exact commit.
 5. When release CI keeps finding one kind of defect, add a fast check of that kind to PR CI (a JVM or unit test of the same rule) and keep the slow one.
@@ -25,6 +25,18 @@ Checks run in two tiers. **PR CI** answers "may this change merge?" within minut
 
 A check that needs a private input, a physical device or store access belongs to neither tier. It is a manual gate of the target's runbook, with its evidence referenced in the release notes.
 
+## Merge, nightly and release decisions
+
+The November 24 design treats PR latency as a feedback measure. Keep a reliable twelve-minute build when it catches merge defects. Record both time waiting for a runner and time executing. Prioritize changes using the time to the last required result and the regressions caught.
+
+| Decision | Input and evidence | Owner and outcome |
+| --- | --- | --- |
+| Merge a change | Changed targets, including shared inputs, their PR checks and any pre-merge checks required for the impact. Bind extra visual checks to the latest PR head. | The PR author supplies results and the reviewer checks scope and revision before merge. A newer push supersedes earlier evidence. |
+| Detect a regression on master | Run the target's full verification when relevant inputs changed. Reuse the release suite and selectors for full coverage. Record the assessed SHA and distinguish a skipped nightly from a completed test run. | The target maintainer investigates a failure, holds that target's next candidate and verifies the fix. A recurring failure should gain a small PR regression test. |
+| Qualify a release candidate | Run the target's release procedure for the exact source and artifact identity. Store apps require a successful full verification on the named SHA, including the base PR checks. Link the run in the release record. | The operator checks the evidence before tagging or building the store candidate and carries out the runbook's signing, device and rollout steps. |
+
+Android and iOS already share full verification between nightly and manual dispatch. For the WebApp, preserve the successful master-push artifact, its digest, the guarded deployment and the post-upload live smoke. For server1, retain the service and gather host runbooks. Server2 verifies its musl candidate ahead of a future rollout. The target inventory below distinguishes existing automation from operator checks. The first proposed change to pre-merge coverage is limited to the [iOS forecast header pilot](../../plans/issue-3089.md#forecast-header-pilot). [iOS decision flow at the pre-pilot revision](diagrams/ios-ci-decisions.html) · [Editable source](diagrams/ios-ci-decisions.json) · [Target release runbooks](../operations/github-releases.md)
+
 ## Targets
 
 Durations are the wall time of successful pull-request runs read from GitHub Actions on 2026-11-23 (the last 12 to 20 runs of each workflow unless a row says otherwise), queueing included: from the run's creation to the completion of its successful attempt, so a rerun counts from the first attempt's creation.
@@ -32,9 +44,9 @@ Durations are the wall time of successful pull-request runs read from GitHub Act
 | Target | PR CI | Measured | Release CI | State |
 | --- | --- | --- | --- | --- |
 | Android app (`android/`) | [Android](../../.github/workflows/android.yml) | median 1.8 min, longest 9.4 min | [Android release verification](../../.github/workflows/android-release.yml) | Split as described below |
-| iOS app (`ios/`) | [iOS](../../.github/workflows/ios.yml) | Before the split: median 99.7 min, longest 202.1 min with macOS runner queueing; 43 and 51 min of job time after [#3131](https://github.com/WizardFactory/TodayWeather/pull/3131). After ([#3157](https://github.com/WizardFactory/TodayWeather/pull/3157), one run): 22.3 min, made of 10.0 min macOS queueing and a 12.3 min job | [iOS release verification](../../.github/workflows/ios-release.yml) | Split as described below. Still over the PR time: the macOS queue and the 12-minute job (dependency resolution, build and package tests). [#3089](https://github.com/WizardFactory/TodayWeather/issues/3089) continues with the job's time |
+| iOS app (`ios/`) | [iOS](../../.github/workflows/ios.yml) | Before the split: median 99.7 min, longest 202.1 min with macOS runner queueing; 43 and 51 min of job time after [#3131](https://github.com/WizardFactory/TodayWeather/pull/3131). After ([#3157](https://github.com/WizardFactory/TodayWeather/pull/3157), one run): 22.3 min, made of 10.0 min macOS queueing and a 12.3 min job | [iOS release verification](../../.github/workflows/ios-release.yml) | Split as described below. Measure queue time separately from package tests and compilation in [#3089](https://github.com/WizardFactory/TodayWeather/issues/3089) |
 | Webapp (`web/`, `packages/`) | [Web app](../../.github/workflows/web.yml), [Design system](../../.github/workflows/design-system.yml) | median 3.0 and 3.6 min | [Webapp guarded release](../../.github/workflows/web-release.yml) checks the Release, the artifact and the live site after upload; [Web live smoke](../../.github/workflows/web-live-smoke.yml) | Split |
-| Backend server1 (`server/`) | [Gather offline](../../.github/workflows/gather-offline.yml), [RSS offline](../../.github/workflows/rss-offline.yml) | median 16.9 and 2.2 min | None in Actions: an operator rollout per host ([GitHub Releases](../operations/github-releases.md)) | Gather offline is over the PR time |
+| Backend server1 (`server/`) | [Gather offline](../../.github/workflows/gather-offline.yml), [RSS offline](../../.github/workflows/rss-offline.yml) | median 16.9 and 2.2 min | None in Actions: an operator rollout per host ([GitHub Releases](../operations/github-releases.md)) | Gather offline is the longer of the two checks |
 | Backend server2 (`server2/`) | [Server2](../../.github/workflows/server2.yml) | median 54.0 min, longest 169.1 min before sharding; median 16.0 min (5 runs from 2026-11-23 05:00 UTC) after [#3140](https://github.com/WizardFactory/TodayWeather/pull/3140) and [#3148](https://github.com/WizardFactory/TodayWeather/pull/3148) | The same workflow builds and verifies the musl candidate | Sharded; [#3139](https://github.com/WizardFactory/TodayWeather/issues/3139) continues |
 | Repository | [Repository artifacts](../../.github/workflows/artifact-policy.yml) | median 0.7 min | — | PR CI only |
 
@@ -104,4 +116,4 @@ Start it and read it as for Android, from a branch or tag at the commit: `gh wor
 gh workflow run ios-release.yml --ref <branch> -f ref=<full SHA of the head>
 ```
 
-PR CI no longer runs the screenshot suites, so this run is what keeps a visual regression out of `master`. The branch must be in this repository and contain `ios-release.yml`; a branch made before the workflow existed merges `master` first. For a pull request from a fork, a maintainer first reviews its diff at one head, because the run executes that code with this repository's permissions. Only then does the maintainer push that reviewed full SHA, and no other, to a branch here (`git push origin <reviewed full SHA>:refs/heads/verify/<name>`), run release verification from that branch with the same SHA, link the run, and delete the branch. A commit pushed to the fork after the review is reviewed again before it runs. A run started by a pull request event, which happens only when the pull request changes the release workflow itself, checks GitHub's merge commit and not the head, so it is not this run. Only a change that cannot alter what is drawn may skip it: tools, documents, CI, and tests that do not touch rendering. The nightly run catches the rest, for changes under the iOS PR workflow's paths.
+PR CI no longer runs the screenshot suites, so this run is what keeps a visual regression out of `master`. The branch must be in this repository and contain `ios-release.yml`; a branch made before the workflow existed merges `master` first. For a pull request from a fork, a maintainer first reviews its diff at one head, because the run executes that code with this repository's permissions. Only then does the maintainer push that reviewed full SHA, and no other, to a branch here (`git push origin <reviewed full SHA>:refs/heads/verify/<name>`), run release verification from that branch with the same SHA, link the run, and delete the branch. A commit pushed to the fork after the review is reviewed again before it runs. A run started by a pull request event, which happens when the pull request changes the release workflow or a forecast header pilot input, checks GitHub's merge commit and not the head, so it is not this run. Only a change that cannot alter what is drawn may skip it: tools, documents, CI, and tests that do not touch rendering. The nightly run catches the rest, for changes under the iOS PR workflow's paths.

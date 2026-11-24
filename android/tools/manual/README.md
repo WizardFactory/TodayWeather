@@ -38,14 +38,16 @@ shared with another run. Screenshot pulling on failure is diagnostic evidence;
 a section passes only when instrumentation reports exactly one successful test.
 
 The sections are `firstLaunch`, `weatherAndAir`, `places`, `alarms`, `settings`,
-`nation`, and `privacyAndShare`. Places/units are seeded for later sections; all
+`nation`, `privacyAndShare` and `analyticsOptIn` (run with `-e analyticsRegion DE`: the consent
+popup of an opt-in region). Places/units are seeded for later sections; all
 weather, geocoding and nationwide data is read from the configured service, and
 search predictions come from the configured Places SDK. Photo feed access is
 opted in only by the joint `manual=true`, `weather=production`, `photos=feed`
 arguments; other device tests retain their empty photo-feed URL.
 
 Product push requests are intercepted by `TestTodayWeatherApp`, and no FCM token
-argument is supplied. Analytics is kept off and checked at every capture. The
+argument is supplied. The test application's analytics SDK sends nothing (`SilentAnalyticsSdk`,
+checked at every capture); the menu shows the region's usage analytics default. The
 alarm-edit flow discards its edits; the share flow stops at Android's chooser.
 Google SDKs (Places, test ads, consent, Firebase installation/configuration and
 messaging) may contact their services. This is not a claim that all SDK traffic is
