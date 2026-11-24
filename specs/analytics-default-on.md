@@ -23,7 +23,7 @@ Consumes the [intent](../intent/analytics-default-on.md) (AK, 2026-11-24; Refs #
 - The Cordova hand-back and fallback path is historical: releases no longer consider Cordova compatibility (AK, 2026-11-24). It keeps compiling and its existing behavior, with no new guarantee.
 - The design reads and writes the choice only through the platform's preference API; it does not parse preference files itself or keep extra recovery records.
 
-The same check as a function, in the order the apps apply it:
+The same check as a function, in the order the apps apply it. `stored` is the value after the collection-state check: a stored `"true"` that the collection-state record does not confirm has already been read as `"false"`.
 
 ```
 collects(stored, region) = stored == "true"                      if stored is present
