@@ -28,6 +28,7 @@ export const SCOPES = {
       ["minSdk / targetSdk", FILL],
       ["APK SHA-256", FILL],
       ["Signing certificate SHA-256", `${FILL} (equal to the certificate of the installed store release)`],
+      ["R8 mapping SHA-256", `${FILL} (mapping.txt of the build)`],
       ["Release CI run", `${FILL} (Android release verification, passed on the source commit)`],
       ["Device gate", `${FILL} (private evidence reference)`],
     ],

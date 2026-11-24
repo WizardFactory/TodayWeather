@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The release build's resource shrinker removes resources that no code or resource names. chartTexts and
+     forecastTexts look up the imported Cordova catalog (client_strings.xml) by key with getIdentifier, from key lists
+     such as ForecastPage.KEYS, so every LOC_* string stays. In the release source set only: the shrinker reads this file and drops it from the
+     release APK, and debug builds, which are not shrunk, do not get it. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@string/LOC_*" />

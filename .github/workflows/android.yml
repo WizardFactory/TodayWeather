@@ -184,10 +184,11 @@ jobs:
         run: |
           sh android/tools/emulator/test-instrumentation-passed.sh
           sh android/tools/release-ci/test-runners.sh
-      - name: Release export and build wrapper (test repositories, stand-in gradlew)
+      - name: Release export, build wrapper and R8 check (test repositories, stand-in gradlew, made APKs)
         run: |
           python3 android/tools/release/test_export_candidate.py
           sh android/tools/release/test-gradle-release.sh
+          python3 android/tools/release/test_check_r8.py
   without-client:
     name: Build and test without client/
     runs-on: ubuntu-latest
