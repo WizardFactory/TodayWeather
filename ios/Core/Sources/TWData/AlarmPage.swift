@@ -70,7 +70,8 @@ public enum AlarmPopup: Equatable, Sendable {
 @MainActor
 @Observable
 public final class AlarmPage {
-    @ObservationIgnored private let holder: AppStateHolder
+    /// The saved state (the app passes `UnsavedPlaces.alarmAccess`: opening for a saved place selects it, #3097).
+    @ObservationIgnored private let holder: any PlaceState
     @ObservationIgnored private let notifications: any NotificationAccess
     /// Posts the saved list of the place at an index, after the registrations before it (`PushSync.postPlace`).
     @ObservationIgnored private let post: (Int) -> Void
@@ -88,7 +89,7 @@ public final class AlarmPage {
     @ObservationIgnored public private(set) var permissionCheck: Task<Void, Never>?
     @ObservationIgnored public private(set) var saving: Task<Void, Never>?
 
-    public init(holder: AppStateHolder, notifications: any NotificationAccess, post: @escaping (Int) -> Void,
+    public init(holder: any PlaceState, notifications: any NotificationAccess, post: @escaping (Int) -> Void,
                 openSettings: @escaping () -> Void, now: @escaping () -> Date = Date.init,
                 zone: @escaping () -> TimeZone = { TimeZone.current }) {
         self.holder = holder

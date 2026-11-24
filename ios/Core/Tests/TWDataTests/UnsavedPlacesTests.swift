@@ -285,4 +285,54 @@ struct UnsavedPlacesTests {
         #expect(holder.state?.places == [Self.current, oldHome, newHome])
         #expect(holder.state?.placeIndex == 2, "the row selected before, not the earlier one of its name")
     }
+
+    /// CODEX-3190-15: S09 opened for a saved place selects it (`setCityIndex(fav)`), so the unsaved place is no longer the
+    /// selected one: the weather pages show that place, and a new start opens it. Alarm saves select nothing.
+    @Test func openingAPlacesAlarmsSelectsIt() {
+        let holder = Self.holder(Self.started([Self.current, Self.london, Self.busan], index: 2))
+        let unsaved = UnsavedPlaces(holder: holder)
+        unsaved.show(Self.seoul)
+        unsaved.selectingAccess.change { $0.placeIndex = 1 }
+        #expect(holder.state?.placeIndex == 1)
+        #expect(unsaved.unsaved?.selected == false)
+        #expect(unsaved.state?.placeIndex == 1)
+        unsaved.change { $0.placeIndex = 3 }
+        unsaved.selectingAccess.change { $0.expandShortChart = $0.expandShortChart }
+        #expect(unsaved.unsaved?.selected == true)
+    }
+
+    /// CODEX-3190-16: O03's search turns off the current position, the only enabled saved place, through the pages: the
+    /// unsaved place becomes the selected one and the saved selection none (-1), not the disabled row.
+    @Test func turningOffTheCurrentPositionFromThePagesSelectsTheUnsavedOne() {
+        let holder = Self.holder(Self.started([Self.current], index: 0))
+        let unsaved = UnsavedPlaces(holder: holder)
+        unsaved.show(Self.seoul)
+        unsaved.change { $0.placeIndex = 0 }
+        unsaved.change { $0 = PlaceList.disableCurrent($0, true) }
+        #expect(holder.state?.placeIndex == -1)
+        #expect(unsaved.unsaved?.selected == true)
+        #expect(unsaved.add() == 1)
+    }
+
+    /// CODEX-3190-15: S09 opened for the saved place the selection already names still selects it.
+    @Test func openingTheAlarmsOfTheSavedSelectionSelectsIt() {
+        let holder = Self.holder(Self.started())
+        let unsaved = UnsavedPlaces(holder: holder)
+        unsaved.show(Self.seoul)
+        unsaved.selectingAccess.change { $0.placeIndex = 1 }
+        #expect(unsaved.unsaved?.selected == false)
+        #expect(unsaved.state?.placeIndex == 1)
+    }
+
+    /// CODEX-3190-19: S01's add finishing after a link showed an unsaved place over S01 selects the added place, and the
+    /// unsaved place gives way.
+    @Test func anS01AddFinishingAfterALinkSelectsTheAddedPlace() {
+        let holder = Self.holder(AppState())
+        let unsaved = UnsavedPlaces(holder: holder)
+        unsaved.show(Self.seoul)
+        unsaved.selectingAccess.change { s in s = PlaceList.add(s, Self.london).map(PlaceList.closeStart) ?? s }
+        #expect(holder.state?.places.last == Self.london && holder.state?.placeIndex == 1)
+        #expect(unsaved.unsaved?.selected == false)
+        #expect(unsaved.state?.placeIndex == 1)
+    }
 }

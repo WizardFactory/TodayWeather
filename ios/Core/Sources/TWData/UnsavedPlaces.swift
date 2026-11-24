@@ -73,6 +73,35 @@ public final class UnsavedPlaces: PlaceState {
     /// S02's view of the saved state (`SavedAccess`).
     @ObservationIgnored public private(set) lazy var savedAccess = SavedAccess(owner: self)
 
+    /// The saved state for S09 and S01, whose changes may select a saved place: S09 opened for a place
+    /// (`setCityIndex(fav)`), S01's add (`closeStart`). A change that sets the saved selection, to the same index too, is the
+    /// user's choice of that saved place, so the unsaved place is no longer the selected one (CODEX-3190-15, -19). Whether a
+    /// change sets it is read by applying it once more to the state with no selection; the changes are pure. Other changes
+    /// (the alarm records) select nothing.
+    @MainActor
+    public final class SelectingAccess: PlaceState {
+        unowned let owner: UnsavedPlaces
+
+        init(owner: UnsavedPlaces) {
+            self.owner = owner
+        }
+
+        public var state: AppState? { owner.holder.state }
+
+        public func change(_ update: (inout AppState) -> Void) {
+            guard var probe = owner.holder.state else { return owner.holder.change(update) }
+            probe.placeIndex = Int.min
+            update(&probe)
+            owner.holder.change(update)
+            guard probe.placeIndex != Int.min, let now = owner.unsaved, let after = owner.holder.state,
+                  UnsavedPlaces.enabledSelection(after) != nil else { return }
+            owner.unsaved = Unsaved(place: now.place, selected: false)
+        }
+    }
+
+    /// S09's and S01's view of the saved state (`SelectingAccess`).
+    @ObservationIgnored public private(set) lazy var selectingAccess = SelectingAccess(owner: self)
+
     @ObservationIgnored public let holder: AppStateHolder
 
     /// The unsaved place with its selection; nil when none is shown.
@@ -198,13 +227,20 @@ public final class UnsavedPlaces: PlaceState {
             return holder.change(update)
         }
         let last = before.places.count - 1
-        let selectedAfter = after.placeIndex == last
+        var left = after
+        left.places.removeLast()
+        // The unsaved place is selected when the change selects it, or when the saved selection it leaves names no enabled
+        // saved place (O03's search turning off the only enabled current position, CODEX-3190-16).
+        let selectedAfter = after.placeIndex == last || Self.enabledSelection(left) == nil
         unsaved = Unsaved(place: after.places[last], selected: selectedAfter)
         holder.change { s in
-            var changed = after
-            changed.places.removeLast()
-            // While the unsaved place is selected, the saved selection stays the one before it.
-            changed.placeIndex = after.placeIndex == last ? s.placeIndex : after.placeIndex
+            var changed = left
+            if selectedAfter {
+                // The saved selection stays the one before it, or the first enabled row (else -1) when the change turned
+                // it off.
+                changed.placeIndex = s.placeIndex
+                changed.placeIndex = Self.savedSelection(s, changed)
+            }
             s = changed
         }
     }

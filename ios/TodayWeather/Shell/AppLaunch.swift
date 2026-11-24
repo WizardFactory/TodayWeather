@@ -219,8 +219,10 @@ final class AppLaunch {
     /// visit; a save posts through IN-04's push service; the return starts the tabs' pages anew (`cache: false`).
     private func makeAlarms(_ shell: ShellModel, weather: WeatherScreens) -> AlarmsScreens {
         let holder = self.holder
+        // S09 opened for a saved place selects it; through the selecting view an unsaved place gives way (CODEX-3190-15).
+        let saved: any PlaceState = unsaved?.selectingAccess ?? holder
         let alarms = AlarmsScreens(shell: shell, makePage: {
-            AlarmPage(holder: holder, notifications: UserNotificationAccess(available: FirebasePush.configured),
+            AlarmPage(holder: saved, notifications: UserNotificationAccess(available: FirebasePush.configured),
                       post: { index in AppStartup.shared.push?.postPlace(index) },
                       openSettings: { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } })
         }, postList: { AppStartup.shared.push?.postList() })
@@ -350,7 +352,9 @@ final class AppLaunch {
     /// bundled towns), and its close.
     private func makeStartPage(_ shell: ShellModel, location: any AppLocation) -> StartPage {
         let locale = self.locale
-        let flow = StartFlow(holder: holder, repository: repository,
+        // S01's add selects the place it saves; through the selecting view an unsaved place shown over S01 by a link gives
+        // way (CODEX-3190-19).
+        let flow = StartFlow(holder: unsaved?.selectingAccess ?? holder, repository: repository,
                              geocode: GeocodeClient(baseURL: environment.serverURL, http: weatherHTTP),
                              location: location, acceptLanguage: { locale.acceptLanguage }, telemetry: AppLaunch.weatherTelemetry)
         return StartPage(shell: shell, flow: flow, search: makePlaceSearch(), towns: towns, closed: { [weak self] in self?.startClosed() })
