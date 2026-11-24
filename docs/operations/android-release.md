@@ -121,7 +121,7 @@ On a physical phone that has the current store release installed with real state
 
 1. Places, the selected place, units, settings and alarms are those of the store release.
 2. The app registers its push token once per alarm with the same device ID, and a scheduled notification arrives and opens the app on its place.
-3. The analytics choice is the one made before the update, and without an opt-in the app sends no Analytics event. Crash reports are a separate matter: Crashlytics collects them whatever the analytics choice is (`firebase_crashlytics_collection_enabled` in the manifest), as the Cordova build did, and the Play declarations of step 7 must say so.
+3. The analytics choice is the one made before the update. Without a stored choice, a phone with a region outside the EEA, the UK and Switzerland collects by default (from the release that includes the analytics default-on change); in those regions the app sends no Analytics event without an opt-in. Crash reports are a separate matter: Crashlytics collects them whatever the analytics choice is (`firebase_crashlytics_collection_enabled` in the manifest), as the Cordova build did, and the Play declarations of step 7 must say so.
 4. After consent, real ads load in the forecast and the interstitial follows its cap. No test ad appears.
 5. Current position, place search, the weather, air and nationwide pages, sharing and the widget work against production.
 6. The app starts without a crash after a restart of the phone.
