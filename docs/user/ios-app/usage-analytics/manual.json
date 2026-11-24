@@ -1,0 +1,48 @@
+{
+  "title": "TodayWeather for iOS · Usage analytics",
+  "scenario": "Read whether usage analytics is on and change it from the side menu. Whether it starts on depends on the Region in iOS Settings (General > Language & Region): outside the European Economic Area, the United Kingdom and Switzerland it is on until you turn it off; there it stays off until you agree. The Korean screens come from the app's shell in a test on an iOS 26.5 simulator (402×874 pt), with no Firebase project.",
+  "steps": [
+    {
+      "title": "Find the row in Korea",
+      "instruction": "Open the side menu and scroll to the end. With the Region set to Korea, read 이용 통계 (Usage analytics).",
+      "screenshot": "kr-menu.png",
+      "caption": "The row reads 이용 통계 · 켜짐 (On): analytics is on because no choice has been made yet.",
+      "expected": "Ads, crash diagnostics and notifications are separate from this row."
+    },
+    {
+      "title": "Turn analytics off",
+      "instruction": "Tap 이용 통계. The popup explains that analytics stays on unless you turn it off here. Tap 끄기 (Turn off).",
+      "screenshot": "kr-popup.png",
+      "caption": "켜기 (Turn on) keeps it on and records that choice.",
+      "expected": "The popup closes and nothing more is collected."
+    },
+    {
+      "title": "Confirm it is off",
+      "instruction": "Read the row again.",
+      "screenshot": "kr-after.png",
+      "caption": "The row reads 이용 통계 · 꺼짐 (Off).",
+      "expected": "Your choice is kept on later starts until you change it here."
+    },
+    {
+      "title": "Find the row in Germany",
+      "instruction": "With the Region set to Germany (or another EEA country, the United Kingdom or Switzerland), open the side menu and scroll to the end.",
+      "screenshot": "de-menu.png",
+      "caption": "The row reads 이용 통계 · 꺼짐 (Off) until you agree.",
+      "expected": "Nothing is collected before you agree."
+    },
+    {
+      "title": "Agree to analytics",
+      "instruction": "Tap 이용 통계. The popup asks for your consent. Tap 동의 (Agree), or 거부 / 철회 (Decline) to keep it off.",
+      "screenshot": "de-popup.png",
+      "caption": "The same consent question as before this change.",
+      "expected": "The popup closes."
+    },
+    {
+      "title": "Confirm it is on",
+      "instruction": "Read the row again.",
+      "screenshot": "de-after.png",
+      "caption": "The row reads 이용 통계 · 켜짐 (On) after you agree.",
+      "expected": "You can withdraw at any time from the same row."
+    }
+  ]
+}
