@@ -10,7 +10,7 @@ and [release runbook](cordova-store-release.md) remain the maintained operating 
 
 Issue intake predates several completed preparations. Operator **주식회사 플라잉**,
 privacy contact **김동환 / 제품팀**, inbox **todayweather@wizardfactory.net**, optional
-default-off Analytics with withdrawal, separate ad choices and KO/EN/JA documents
+default-off Analytics with withdrawal (changed on 2026-11-24 to on by default outside the EEA, the UK and Switzerland; see [monetization](monetization.md#usage-analytics-on-by-default-2026-11-24-2660)), separate ad choices and KO/EN/JA documents
 were recorded in the [2026-10-01 decision log](https://github.com/WizardFactory/TodayWeather/issues/2660#issuecomment-5925373802).
 The operator confirmed 90-day server request/error logs on 2026-10-02; the
 [source update](https://github.com/WizardFactory/TodayWeather/issues/2660#issuecomment-5946365764)
