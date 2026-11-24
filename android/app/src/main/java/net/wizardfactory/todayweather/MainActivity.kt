@@ -754,10 +754,9 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     /** S09's visits (#2893); a save changes the state at once and posts in the app's scope (`_postPushList` was not awaited). */
     val alarms = AlarmsHost { scope, openSettings ->
-        // S09 opened for a saved place selects it; through the preview's alarm view, so an unsaved place gives way
-        // (CODEX-3190-15).
-        AlarmPage(preview.selectingAccess, twApp.notifications, post = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.postPlace(index) } },
-            openSettings = openSettings, scope = scope)
+        // S09 opened for a saved place selects it, the user's choice: an unsaved place gives way (CODEX-3190-15).
+        AlarmPage(twApp.appState, twApp.notifications, post = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.postPlace(index) } },
+            openSettings = openSettings, scope = scope, chosen = preview::savedChosen)
     }
 
     /** O06 of this app open: shown once (`showAlertInfoEvent` after the start); OK's post goes in the app's scope. */
@@ -771,9 +770,10 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     /** The start page's visit of this app open (S01, #2889). */
     val start: StartPage by lazy {
-        // S01's add selects the place it saves; through the selecting view an unsaved place shown over S01 by a link gives
-        // way (CODEX-3190-19).
-        StartPage(StartFlow(preview.selectingAccess, twApp.weather, twApp.geocode, twApp.location, ::languages, telemetry, cityUpdated), viewModelScope)
+        // S01's add selects the place it saves, the user's choice: an unsaved place shown over S01 by a link gives way
+        // (CODEX-3190-19).
+        StartPage(StartFlow(twApp.appState, twApp.weather, twApp.geocode, twApp.location, ::languages, telemetry, cityUpdated,
+            chosen = preview::savedChosen), viewModelScope)
     }
 
     /** `locationOn`: location services turned on while the app is open reload a selected current position. */

@@ -491,13 +491,15 @@ class LinkPreviewTest {
         val saved = Memory(started.copy(places = listOf(current, london, busan), placeIndex = 2))
         val preview = LinkPreview(saved)
         preview.show(seoul)
-        preview.selectingAccess.change { it.copy(placeIndex = 1) }
+        // S09's open: `setCityIndex(fav)` on the saved state, then its signal.
+        saved.change { it.copy(placeIndex = 1) }
+        preview.savedChosen()
         assertEquals(1, saved.value.placeIndex)
         assertEquals(false, preview.unsaved.value?.selected)
         assertEquals(1, preview.current()!!.placeIndex)
-        // A save of the alarms (push records only) changes no selection.
+        // A save of the alarms (push records only) sends no signal and changes no selection.
         preview.change { it.copy(placeIndex = 3) }
-        preview.selectingAccess.change { it.copy(push = it.push) }
+        saved.change { it.copy(push = it.push) }
         assertEquals(true, preview.unsaved.value?.selected)
     }
 
@@ -523,7 +525,8 @@ class LinkPreviewTest {
         val saved = Memory(started.copy(places = listOf(current, london), placeIndex = 1))
         val preview = LinkPreview(saved)
         preview.show(seoul)
-        preview.selectingAccess.change { it.copy(placeIndex = 1) }
+        saved.change { it.copy(placeIndex = 1) }
+        preview.savedChosen()
         assertEquals(false, preview.unsaved.value?.selected)
         assertEquals(1, preview.current()!!.placeIndex)
     }
@@ -537,9 +540,8 @@ class LinkPreviewTest {
         val saved = Memory(AppState())
         val preview = LinkPreview(saved)
         preview.show(seoul)
-        preview.selectingAccess.change { s ->
-            (net.wizardfactory.todayweather.core.storage.PlaceList.add(s, london) ?: s).closeStart()
-        }
+        saved.change { s -> (net.wizardfactory.todayweather.core.storage.PlaceList.add(s, london) ?: s).closeStart() }
+        preview.savedChosen()
         assertEquals(london.name, saved.value.places[saved.value.placeIndex].name)
         assertEquals(false, preview.unsaved.value?.selected)
         assertEquals(saved.value.placeIndex, preview.current()!!.placeIndex)

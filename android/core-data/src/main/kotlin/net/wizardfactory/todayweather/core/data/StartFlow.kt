@@ -55,6 +55,8 @@ class StartFlow(
     private val telemetry: Telemetry = Telemetry.NONE,
     /** `window.updateCityInfo(index)`, which `updateCity` calls: the push records of the place follow it. */
     private val cityUpdated: (Int) -> Unit = {},
+    /** A place was saved and selected (an add, or the current position on S01): the user's choice of a saved place. */
+    private val chosen: () -> Unit = {},
 ) {
     /** What the position lookup ended in: the geocoded position, or the message of its failure. */
     sealed interface Located {
@@ -119,6 +121,7 @@ class StartFlow(
                 if (PlaceList.add(s, saved) == null) return Outcome.Alert(ALREADY_ADDED)
                 state.change { current -> PlaceList.add(current, saved)?.closeStart() ?: current }
                 telemetry.track("favorite_change", mapOf("action" to "add"))
+                chosen()
                 Outcome.Added
             }
             is LoadResult.Failed -> Outcome.Alert(if (result.unconvertible) ALREADY_ADDED else FAILED_WEATHER)
@@ -202,6 +205,7 @@ class StartFlow(
                     enabled.copy(places = enabled.places.mapIndexed { i, p -> if (i == enabled.placeIndex) updateCity(p, place, source) else p }).closeStart()
                 }
                 if (updated >= 0) cityUpdated(updated)
+                chosen()
                 Outcome.Added
             }
             is LoadResult.Failed -> {

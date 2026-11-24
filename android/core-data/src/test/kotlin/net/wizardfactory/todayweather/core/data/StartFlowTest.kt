@@ -61,7 +61,7 @@ class StartFlowTest {
     }
 
     private class Setup(val state: Memory, val flow: StartFlow, val requests: MutableList<String>, val events: MutableList<String>,
-                        val loading: MutableList<Boolean>, val updated: MutableList<Int>)
+                        val loading: MutableList<Boolean>, val updated: MutableList<Int>, val chosen: MutableList<Unit>)
 
     private fun TestScope.setup(device: Device = Device(true, PermissionStatus.GRANTED), http: HttpGet? = null): Setup {
         val requests = mutableListOf<String>()
@@ -73,8 +73,10 @@ class StartFlowTest {
         val repository = WeatherRepository(base, null, recording, { testScheduler.currentTime }, StandardTestDispatcher(testScheduler))
         val updated = mutableListOf<Int>()
         val loading = mutableListOf<Boolean>()
-        val flow = StartFlow(state, repository, GeocodeClient(base, recording), device, { listOf("ko-KR") }, telemetry, cityUpdated = { updated += it })
-        return Setup(state, flow, requests, events, loading, updated)
+        val chosen = mutableListOf<Unit>()
+        val flow = StartFlow(state, repository, GeocodeClient(base, recording), device, { listOf("ko-KR") }, telemetry, cityUpdated = { updated += it },
+            chosen = { chosen += Unit })
+        return Setup(state, flow, requests, events, loading, updated, chosen)
     }
 
     @Test
@@ -96,6 +98,7 @@ class StartFlowTest {
         assertEquals(JsonPrimitive(1), t.state.value.cordovaExtras["startVersion"])
         assertEquals(listOf("location_permission:granted"), t.events, "no favorite_change for the current position")
         assertEquals(listOf(0), t.updated, "updateCityInfo(0)")
+        assertEquals(1, t.chosen.size, "a saved place is the user's choice (CODEX-3190-19)")
         assertEquals(listOf(true, false), t.loading)
     }
 
@@ -172,6 +175,8 @@ class StartFlowTest {
         val unreadable = setup(http = HttpGet { url, _ -> if ("/geocode/" in url) geocodeBody else "{}" })
         assertEquals(StartFlow.Outcome.Alert(StartFlow.ALREADY_ADDED), unreadable.flow.useCurrentLocation())
         assertTrue(unreadable.state.value.places.single().disable)
+        // A failure chooses nothing (CODEX-3190-21).
+        assertEquals(0, failed.chosen.size + unreadable.chosen.size)
     }
 
     @Test
@@ -188,9 +193,10 @@ class StartFlowTest {
         assertEquals(1, s.placeIndex)
         assertEquals(JsonPrimitive(1), s.cordovaExtras["startVersion"])
         assertEquals(listOf("favorite_change:add"), t.events)
-        // The same place again is already added.
+        // The same place again is already added, and chooses nothing.
         assertEquals(StartFlow.Outcome.Alert(StartFlow.ALREADY_ADDED), t.flow.addShortcut(seoul))
         assertEquals(2, t.state.value.places.size)
+        assertEquals(1, t.chosen.size)
     }
 
     @Test
