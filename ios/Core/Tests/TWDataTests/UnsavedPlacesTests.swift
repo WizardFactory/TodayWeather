@@ -65,7 +65,7 @@ struct UnsavedPlacesTests {
         unsaved.show(Self.seoul)
         unsaved.change { $0.placeIndex = 0 }
         #expect(holder.state?.placeIndex == 0)
-        #expect(unsaved.unsaved == UnsavedPlaces.Unsaved(place: Self.seoul, selected: false, returnTo: Self.london))
+        #expect(unsaved.unsaved == UnsavedPlaces.Unsaved(place: Self.seoul, selected: false))
         #expect(unsaved.state?.places == [Self.current, Self.london, Self.seoul])
         #expect(unsaved.state?.placeIndex == 0)
         #expect(!unsaved.isSelected(try #require(unsaved.state)))
@@ -82,7 +82,7 @@ struct UnsavedPlacesTests {
         unsaved.show(Self.seoul)
         unsaved.change { $0.placeIndex = 1 }
         unsaved.show(Self.busan)
-        #expect(unsaved.unsaved == UnsavedPlaces.Unsaved(place: Self.busan, selected: true, returnTo: Self.london))
+        #expect(unsaved.unsaved == UnsavedPlaces.Unsaved(place: Self.busan, selected: true))
         #expect(unsaved.state?.places == [Self.current, Self.london, Self.busan])
     }
 
@@ -220,15 +220,69 @@ struct UnsavedPlacesTests {
         #expect(unsaved.add() == 1)
     }
 
-    /// Moving onto the unsaved place remembers the saved place it came from.
-    @Test func swipingOntoItRemembersTheSavedPlace() {
+    /// Moving onto the unsaved place keeps the saved selection on the saved place it came from, which a new start opens.
+    @Test func swipingOntoItKeepsTheSavedPlaceItCameFrom() {
         let holder = Self.holder(Self.started([Self.current, Self.london, Self.busan], index: 2))
         let unsaved = UnsavedPlaces(holder: holder)
         unsaved.show(Self.seoul)
-        #expect(unsaved.unsaved?.returnTo == Self.busan)
+        #expect(holder.state?.placeIndex == 2)
         unsaved.change { $0.placeIndex = 1 }
         unsaved.change { $0.placeIndex = 3 }
-        #expect(unsaved.unsaved?.returnTo == Self.london)
+        #expect(unsaved.unsaved?.selected == true)
         #expect(holder.state?.placeIndex == 1)
+    }
+
+    /// CODEX-3190-2: without the place to return to, the saved selection is the first enabled row, never a disabled one
+    /// that Cordova's `setFirstCityIndex` (row 0 or 1) would name.
+    @Test func theFallbackIsTheFirstEnabledRow() {
+        var off = Self.current
+        off.disable = true
+        var hidden = Self.london
+        hidden.disable = true
+        let daegu = Place(currentPosition: false, disable: false, name: "대구", address: "대구광역시 중구", location: Location(lat: 35.871, long: 128.601))
+        let holder = Self.holder(Self.started([off, hidden, Self.busan, daegu], index: 2))
+        let unsaved = UnsavedPlaces(holder: holder)
+        unsaved.show(Self.seoul)
+        unsaved.savedAccess.change { $0 = PlaceList.remove($0, 2) }
+        #expect(holder.state?.places == [off, hidden, daegu])
+        #expect(holder.state?.placeIndex == 2, "Daegu, the first enabled row")
+    }
+
+    /// CODEX-3190-10: the place to return to is found by its coordinates too, not only its name and address.
+    @Test func thePlaceToReturnToIsFoundByItsCoordinates() {
+        let homeA = Place(currentPosition: false, disable: false, name: "Home", location: Location(lat: 10, long: 20))
+        let homeB = Place(currentPosition: false, disable: false, name: "Home", location: Location(lat: 40, long: 20))
+        let holder = Self.holder(Self.started([Self.current, Self.london, homeA, homeB], index: 3))
+        let unsaved = UnsavedPlaces(holder: holder)
+        unsaved.show(Self.seoul)
+        unsaved.savedAccess.change { $0 = PlaceList.remove($0, 1) }
+        #expect(holder.state?.places == [Self.current, homeA, homeB])
+        #expect(holder.state?.placeIndex == 2, "the Home at 40°")
+    }
+
+    /// CODEX-3190-13: an old saved place without coordinates gets them from a response later; it is still the place to
+    /// return to (coordinates are compared only when both places have them).
+    @Test func aPlaceWhoseCoordinatesArriveLaterIsStillTheOneToReturnTo() {
+        let hoehyeon = Place(currentPosition: false, disable: false, name: "회현동", address: "대한민국 서울특별시 중구 회현동", country: "KR")
+        let holder = Self.holder(Self.started([Self.current, Self.london, hoehyeon], index: 2))
+        let unsaved = UnsavedPlaces(holder: holder)
+        unsaved.show(Self.seoul)
+        holder.change { $0.places[2].location = Location(lat: 37.56, long: 126.98) }
+        unsaved.savedAccess.change { $0 = PlaceList.remove($0, 1) }
+        #expect(holder.state?.placeIndex == 1, "회현동")
+    }
+
+    /// CODEX-3190-14: an earlier saved place of the same name and address without coordinates does not stand in for the
+    /// place to return to: S02's change keeps the very row selected before, wherever it moves.
+    @Test func anEarlierPlaceOfTheSameNameDoesNotStandIn() {
+        let oldHome = Place(currentPosition: false, disable: false, name: "회현동", address: "대한민국 서울특별시 중구 회현동", country: "KR")
+        var newHome = oldHome
+        newHome.location = Location(lat: 37.56, long: 126.98)
+        let holder = Self.holder(Self.started([Self.current, oldHome, Self.london, newHome], index: 3))
+        let unsaved = UnsavedPlaces(holder: holder)
+        unsaved.show(Self.seoul)
+        unsaved.savedAccess.change { $0 = PlaceList.remove($0, 2) }
+        #expect(holder.state?.places == [Self.current, oldHome, newHome])
+        #expect(holder.state?.placeIndex == 2, "the row selected before, not the earlier one of its name")
     }
 }

@@ -34,7 +34,7 @@ struct PlacesPageTests {
         let popups: Popups
 
         final class Removed { var indices: [Int] = [] }
-        final class Popups { var shown: [StartFlow.Outcome] = []; var added = 0 }
+        final class Popups { var shown: [StartFlow.Outcome] = []; var opened: [Place] = []; var goPages = 0 }
 
         init(_ location: LocationDouble, places: [Place], selected: Int = 1, records: [JSONObject] = [],
              store: any AppStateSaving = MemoryStore(), byURL: @escaping (URL) -> ScriptedWeatherHTTP.Behavior? = { _ in nil }) throws {
@@ -64,7 +64,8 @@ struct PlacesPageTests {
                               location: location, acceptLanguage: { "ko-KR,ko;q=0.9" }, telemetry: events.telemetry,
                               removeAlarms: { removed.indices.append($0) })
             page.onPopup = { popups.shown.append($0) }
-            page.onAdded = { popups.added += 1 }
+            page.onOpen = { popups.opened.append($0) }
+            page.onOpened = { popups.goPages += 1 }
         }
 
         var paths: [String] { http.attempts.map { $0.url.path(percentEncoded: true) } }
@@ -217,7 +218,8 @@ struct PlacesPageTests {
 
     // MARK: Find by location and the adds
 
-    @Test func findByLocationGivesTheGeocodedRowAndAddsItAsAPlace() async throws {
+    /// #3180: a chosen result is not saved; it opens as the unsaved place (`onOpen`), then `goPage` follows (`onOpened`).
+    @Test func findByLocationGivesTheGeocodedRowAndOpensItUnsaved() async throws {
         let f = try Fixture(LocationDouble(system: .authorizedWhenInUse, fixes: [StartFlowTests.cityHall]), places: [.currentPositionPlaceholder, seoul])
         var overlay: [Bool] = []
         f.page.findByLocation()
@@ -227,15 +229,14 @@ struct PlacesPageTests {
         #expect(overlay == [true, false])
         #expect(f.page.found?["address"] == "서울특별시 중구 회현동")
         #expect(f.page.finds == 1, "each found position is counted, so the search shows it even under the same name")
-        f.page.addFound()
+        f.page.openFound()
         #expect(f.page.found == nil)
         await f.settle()
-        #expect(f.popups.added == 1)
-        let added = try #require(f.state.places.last)
-        #expect(!added.currentPosition && added.name == "회현동" && added.address == "서울특별시 중구 회현동")
-        #expect(f.state.placeIndex == 2, "the new place is selected")
-        #expect(f.state.cordovaExtras["startVersion"] == .number(1), "S01's gate is not touched")
-        #expect(f.events.outcomes("favorite_change", "action") == ["add"])
+        #expect(f.popups.goPages == 1)
+        let opened = try #require(f.popups.opened.last)
+        #expect(!opened.currentPosition && opened.name == "회현동" && opened.address == "서울특별시 중구 회현동")
+        #expect(f.state.places.count == 2, "nothing is saved")
+        #expect(f.events.outcomes("favorite_change", "action") == [])
     }
 
     /// The find-by-location failures as TabCtrl's O03 `search` shows them on iOS, by the status SearchCtrl recorded into
@@ -280,35 +281,30 @@ struct PlacesPageTests {
         #expect(f.location.prompts == 1 && f.page.found != nil && f.popups.shown.isEmpty)
     }
 
-    @Test func aPredictionIsGeocodedByItsTermsAndAdded() async throws {
+    @Test func aPredictionIsGeocodedByItsTermsAndOpened() async throws {
         let f = try Fixture(LocationDouble(system: .authorizedWhenInUse), places: [.currentPositionPlaceholder, seoul])
-        f.page.addPrediction(fullText: "London, UK", firstMatch: 0, word: "Lon")
+        f.page.openPrediction(fullText: "London, UK", firstMatch: 0, word: "Lon")
         await f.settle()
-        #expect(f.paths.first == "/geocode/v000903/addr/London,UK")
-        #expect(f.popups.added == 1)
-        #expect(f.state.places.last?.name == "London" && f.state.placeIndex == 2)
+        #expect(f.paths == ["/geocode/v000903/addr/London,UK"], "the weather loads on the page, not here")
+        #expect(f.popups.goPages == 1)
+        #expect(f.popups.opened.last?.name == "London")
+        #expect(f.state.places.count == 2, "nothing is saved")
     }
 
-    @Test func aTownIsAddedWithoutAGeocodeAndADuplicateShowsO09() async throws {
+    /// A town opens with the address and name SearchCtrl builds, without a request; choosing it again opens it again
+    /// (there is no "already added" alert any more, #3180).
+    @Test func aTownOpensWithoutARequestEveryTimeItIsChosen() async throws {
         let f = try Fixture(LocationDouble(system: .authorizedWhenInUse), places: [.currentPositionPlaceholder, seoul])
         let busan = BundledTown(first: "부산광역시", second: "", third: "", lat: 35.18, long: 129.08)
-        f.page.addTown(busan)
+        f.page.openTown(busan)
         await f.settle()
-        #expect(f.paths == ["/weather/v000903/coord/35.18,129.08"])
-        #expect(f.state.places.last?.name == "부산광역시" && f.state.places.last?.address == "대한민국 부산광역시")
-        f.page.addTown(busan)
+        f.page.openTown(busan)
         await f.settle()
-        #expect(f.popups.shown == [.alert("LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED")])
-        #expect(f.popups.added == 1)
-    }
-
-    @Test func aFailedWeatherRequestShowsO09AndAddsNothing() async throws {
-        let f = try Fixture(LocationDouble(system: .authorizedWhenInUse), places: [.currentPositionPlaceholder, seoul]) { url in
-            url.path.hasPrefix("/weather/") ? .fail(0, 503) : nil
-        }
-        f.page.addTown(BundledTown(first: "부산광역시", second: "", third: "", lat: 35.18, long: 129.08))
-        await f.settle()
-        #expect(f.popups.shown == [.alert("LOC_FAIL_TO_GET_WEATHER_INFO")])
+        #expect(f.paths.isEmpty)
+        #expect(f.popups.opened.map(\.name) == ["부산광역시", "부산광역시"])
+        #expect(f.popups.opened.last?.address == "대한민국 부산광역시")
+        #expect(f.popups.opened.last?.location == Location(lat: 35.18, long: 129.08))
+        #expect(f.popups.shown.isEmpty && f.popups.goPages == 2)
         #expect(f.state.places.count == 2)
     }
 
@@ -317,9 +313,9 @@ struct PlacesPageTests {
         let f = try Fixture(LocationDouble(system: .authorizedWhenInUse), places: [.currentPositionPlaceholder, seoul]) { url in
             url.path.hasPrefix("/geocode/") ? .fail(0, 500) : nil
         }
-        f.page.addPrediction(fullText: "London, UK", firstMatch: 0, word: "Lon")
+        f.page.openPrediction(fullText: "London, UK", firstMatch: 0, word: "Lon")
         await f.settle()
-        #expect(f.popups.shown.isEmpty && f.popups.added == 0 && !f.page.loading)
+        #expect(f.popups.shown.isEmpty && f.popups.opened.isEmpty && f.popups.goPages == 0 && !f.page.loading)
     }
 
     // MARK: goPage and persistence
@@ -350,8 +346,10 @@ struct PlacesPageTests {
                             places: [.currentPositionPlaceholder, seoul, london], store: store)
         f.page.open()
         await f.settle()
-        f.page.addTown(BundledTown(first: "부산광역시", second: "", third: "", lat: 35.18, long: 129.08))
-        await f.settle()
+        // Busan saved by the star of the weather header (#3180), which selects it.
+        let busan = Place(currentPosition: false, disable: false, name: "부산광역시", address: "대한민국 부산광역시",
+                          location: Location(lat: 35.18, long: 129.08))
+        f.holder.change { $0 = PlaceList.add($0, busan).map(PlaceList.selectLast) ?? $0 }
         f.page.delete(2)
         f.page.setCurrentPosition(true)
         await f.settle()
@@ -361,7 +359,7 @@ struct PlacesPageTests {
         #expect(restarted.places.map(\.name) == ["회현동", "회현동", "부산광역시"])
         #expect(restarted.places[0].currentPosition && !restarted.places[0].disable, "slot 0 is the current position")
         #expect(!restarted.places[1].currentPosition)
-        // 부산광역시 (3) was selected by its add; deleting London before it made the number equal the count, so
+        // 부산광역시 (3) was selected by its star; deleting London before it made the number equal the count, so
         // `setFirstCityIndex` chose 서울 (the current position was still off), as Cordova's `removeCity` does.
         #expect(restarted.placeIndex == 1)
         #expect(restarted == f.state)

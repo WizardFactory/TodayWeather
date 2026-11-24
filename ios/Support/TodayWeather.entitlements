@@ -6,6 +6,11 @@
 	<!-- APNs for Firebase Cloud Messaging (IN-04). Debug uses the development APNs environment. -->
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- Universal Links for link.todayweather.ai only (#3097, specs/deeplink.md §3.1); never todayweather.ai or app.todayweather.ai. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:link.todayweather.ai</string>
+	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.net.wizardfactory.todayweather</string>

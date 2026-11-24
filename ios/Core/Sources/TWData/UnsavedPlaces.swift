@@ -25,23 +25,21 @@ extension AppStateHolder: PlaceState {}
 /// show and a change never interleave and nothing waits on a lock (CODEX-3190-1, -8).
 ///
 /// The unsaved place is the selected one when it was selected last, or when the saved selection names no enabled saved
-/// place. While it is selected, S02's changes (`savedAccess`) keep the saved selection on the saved place selected before
-/// it (`Unsaved.returnTo`), else the first enabled one, else none, so the next start opens that place (#3180) and never a
-/// deleted or disabled row (CODEX-3190-2).
+/// place. While it is selected, the saved selection stays on the saved row selected before it, and S02's changes
+/// (`savedAccess`) follow that row to where the change put it (a delete keeps the other rows in order), else select the
+/// first enabled row, else none, so the next start opens that place (#3180) and never a deleted or disabled row
+/// (CODEX-3190-2). No place is matched by its fields (CODEX-3190-10, -13, -14).
 @MainActor
 @Observable
 public final class UnsavedPlaces: PlaceState {
-    /// The unsaved place; `selected` when it was selected last; `returnTo`, the saved place selected before it, which a
-    /// new start opens.
+    /// The unsaved place; `selected` when it was selected last.
     public struct Unsaved: Equatable, Sendable {
         public var place: Place
         public var selected: Bool
-        public var returnTo: Place?
 
-        public init(place: Place, selected: Bool, returnTo: Place? = nil) {
+        public init(place: Place, selected: Bool) {
             self.place = place
             self.selected = selected
-            self.returnTo = returnTo
         }
     }
 
@@ -56,15 +54,17 @@ public final class UnsavedPlaces: PlaceState {
 
         public var state: AppState? { owner.holder.state }
 
-        /// While the unsaved place is selected, a delete or a disable keeps the saved selection on `returnTo` when it
-        /// stays enabled, else on the first enabled place, else on none (-1). Otherwise Cordova's rules apply as they are.
+        /// While the unsaved place is selected, a delete or a disable keeps the saved selection on the row it named before
+        /// the change when that row stays and is enabled, else on the first enabled row, else on none (-1). Otherwise
+        /// Cordova's rules apply as they are.
         public func change(_ update: (inout AppState) -> Void) {
             let now = owner.unsaved
             owner.holder.change { s in
+                let before = s
                 update(&s)
                 // Judged after the change: turning off the only enabled place makes the unsaved place the selected one.
                 if let now, UnsavedPlaces.selected(s, now) {
-                    s.placeIndex = UnsavedPlaces.savedSelection(s, returnTo: now.returnTo)
+                    s.placeIndex = UnsavedPlaces.savedSelection(before, s)
                 }
             }
         }
@@ -89,12 +89,7 @@ public final class UnsavedPlaces: PlaceState {
     public func show(_ place: Place) {
         var enabled = place
         enabled.disable = false
-        let returnTo: Place? = if let now = unsaved, let base = holder.state, Self.selected(base, now) {
-            now.returnTo
-        } else {
-            holder.state.flatMap(Self.enabledSelection)
-        }
-        unsaved = Unsaved(place: enabled, selected: true, returnTo: returnTo)
+        unsaved = Unsaved(place: enabled, selected: true)
     }
 
     public func clear() {
@@ -172,14 +167,24 @@ public final class UnsavedPlaces: PlaceState {
         return state.places[state.placeIndex]
     }
 
-    /// The saved selection while the unsaved place is selected: `returnTo` when enabled, else the first enabled place,
-    /// else -1.
-    static func savedSelection(_ state: AppState, returnTo: Place?) -> Int {
-        let back = returnTo.map { PlaceList.indexOf(state.places, $0) } ?? -1
-        if back >= 0 && !state.places[back].disable { return back }
-        let disabled = state.places.map(\.disable)
-        if PlaceIndex.enabledCount(disabled) == 0 { return -1 }
-        return PlaceIndex.first(disabled, current: -1)
+    /// The saved selection after S02 changed `before` into `after` while the unsaved place is selected: the row `before`'s
+    /// selection named, followed to its place in `after` (a delete removes one row and keeps the others in order; a change
+    /// in place keeps the list's length), when it is enabled; else the first enabled row (not `setFirstCityIndex`, which
+    /// names row 0 or 1 even when disabled); else -1.
+    static func savedSelection(_ before: AppState, _ after: AppState) -> Int {
+        var back = -1
+        if before.places.indices.contains(before.placeIndex) {
+            let i = before.placeIndex
+            if after.places.count == before.places.count {
+                back = i
+            } else if after.places.count == before.places.count - 1 {
+                // One row removed: the first index where the lists differ is the removed row.
+                let removed = after.places.indices.first { before.places[$0] != after.places[$0] } ?? after.places.count
+                back = i == removed ? -1 : i > removed ? i - 1 : i
+            }
+        }
+        if back >= 0 && !after.places[back].disable { return back }
+        return after.places.firstIndex { !$0.disable } ?? -1
     }
 
     public func change(_ update: (inout AppState) -> Void) {
@@ -194,9 +199,7 @@ public final class UnsavedPlaces: PlaceState {
         }
         let last = before.places.count - 1
         let selectedAfter = after.placeIndex == last
-        // Moving onto the unsaved place remembers the saved place it came from.
-        let returnTo = selectedAfter && !Self.selected(base, now) ? Self.enabledSelection(base) : now.returnTo
-        unsaved = Unsaved(place: after.places[last], selected: selectedAfter, returnTo: returnTo)
+        unsaved = Unsaved(place: after.places[last], selected: selectedAfter)
         holder.change { s in
             var changed = after
             changed.places.removeLast()
@@ -260,5 +263,57 @@ public enum LinkRoutes {
         let index = matchSaved ? nearbySaved(state, place) : -1
         return index >= 0 ? .weather(view: view, pollutant: pollutant, index: index, unsaved: nil)
             : .weather(view: view, pollutant: pollutant, index: nil, unsaved: place)
+    }
+}
+
+/// Applies `link.todayweather.ai` links over the saved state (specs/deeplink.md §6.2), once the migration has finished:
+/// a saved place within 0.01° is selected and loaded (`openPlace`, `reloadEvent 'deeplink'`); another place shows unsaved
+/// (`UnsavedPlaces.show`) and loads (`reload`), replacing an unsaved place shown before. On the start page (S01) every
+/// place link shows unsaved over it without closing it, and page links and `/open` are ignored (§6.2.3 "defer or
+/// ignore"). An unknown catalog city changes nothing. The app then closes what covers the tabs and shows the route's tab
+/// or page. Port of the Android `LinkOpener` (#3096); the app applies each link at once on the main actor, so no queue.
+@MainActor
+public final class LinkOpener {
+    private let unsaved: UnsavedPlaces
+    private let openPlace: (Int) -> Void
+    private let reload: () -> Void
+
+    public init(unsaved: UnsavedPlaces, openPlace: @escaping (Int) -> Void, reload: @escaping () -> Void) {
+        self.unsaved = unsaved
+        self.openPlace = openPlace
+        self.reload = reload
+    }
+
+    /// Applies `target`: the route the app shows, or nil when the link changes nothing.
+    @discardableResult
+    public func open(_ target: DeepLinkTarget) -> LinkRoutes.Route? {
+        guard let saved = unsaved.holder.state else { return nil }
+        let start = StartGate.shows(saved.cordovaExtras["startVersion"])
+        guard let route = LinkRoutes.route(target, saved, matchSaved: !start) else { return nil }
+        switch route {
+        case .app, .page:
+            if start { return nil }
+        case .weather(_, _, let index, let place):
+            if let place {
+                unsaved.show(place)
+                reload()
+            } else if let index {
+                // The saved place is selected; an unsaved place opened earlier stays in the list.
+                openPlace(index)
+            }
+        }
+        return route
+    }
+
+    /// A place chosen in the search (#3180): the saved place within 0.01° is selected (the enabled current position
+    /// included), else the place shows without being saved. The search loads it and chooses the tab (`goPage`).
+    public func show(_ place: Place) {
+        guard let saved = unsaved.holder.state else { return }
+        let index = LinkRoutes.nearbySaved(saved, place, withCurrentPosition: true)
+        if index < 0 {
+            unsaved.show(place)
+        } else {
+            unsaved.change { $0.placeIndex = index }
+        }
     }
 }

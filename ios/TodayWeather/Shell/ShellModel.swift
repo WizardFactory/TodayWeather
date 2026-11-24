@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import TWDomain
 import TWStorage
 
@@ -34,6 +35,10 @@ final class ShellModel {
     private(set) var menuOpen = false
     /// The popups in order; the first shows (Ionic shows one popup at a time and the next after it closes).
     private(set) var popups: [Popup] = []
+    /// A short notice over the tabs (#3180: the star saved a place), gone after `noticeDuration`.
+    private(set) var notice: String?
+    @ObservationIgnored private var noticeTask: Task<Void, Never>?
+    static let noticeDuration = Duration.seconds(2)
 
     let holder: AppStateHolder
     let locale: ShellLocale
@@ -53,6 +58,9 @@ final class ShellModel {
     /// A deliberate transition, after the no-place/start handler has had first refusal.
     @ObservationIgnored var onForecastTap: (ShellTab) -> Bool = { _ in false }
     private(set) var selectionRevision = 0
+
+    /// The places as the weather pages show them: the saved state, or with an unsaved place as its last place (#3097).
+    @ObservationIgnored var shownState: () -> AppState? = { nil }
 
     /// An entry event after the migration (IN-04, IN-14 and IN-16 handle notification taps and links).
     @ObservationIgnored var onEntry: (EntryEvent) -> Void = { _ in }
@@ -135,6 +143,18 @@ final class ShellModel {
         if row == .version { return }
         if row.closesMenu { menuOpen = false }
         onMenuRow(row)
+    }
+
+    /// Shows `text` as the short notice, in place of one shown, and announces it to VoiceOver.
+    func showNotice(_ text: String) {
+        notice = text
+        noticeTask?.cancel()
+        noticeTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: Self.noticeDuration)
+            guard !Task.isCancelled else { return }
+            self?.notice = nil
+        }
+        UIAccessibility.post(notification: .announcement, argument: text)
     }
 
     /// Shows a popup after those already shown.

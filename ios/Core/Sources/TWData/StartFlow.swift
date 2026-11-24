@@ -53,7 +53,7 @@ public final class StartFlow {
     public static let alreadyAdded = "LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED"
     public static let failedWeather = "LOC_FAIL_TO_GET_WEATHER_INFO"
 
-    private let holder: AppStateHolder
+    private let holder: any PlaceState
     private let repository: WeatherRepository
     private let geocode: GeocodeClient
     private let location: any LocationAccess
@@ -66,7 +66,7 @@ public final class StartFlow {
     /// `gLocationAuthorizationStatus`: the status the page recorded last.
     public private(set) var recorded: LocationPermission?
 
-    public init(holder: AppStateHolder, repository: WeatherRepository, geocode: GeocodeClient, location: any LocationAccess,
+    public init(holder: any PlaceState, repository: WeatherRepository, geocode: GeocodeClient, location: any LocationAccess,
                 acceptLanguage: @escaping () -> String, telemetry: WeatherTelemetry? = nil, closesStart: Bool = true) {
         self.holder = holder
         self.repository = repository
@@ -86,23 +86,36 @@ public final class StartFlow {
     /// A chosen Places prediction: named by `PredictionName`, geocoded by `query` (S01: its full text,
     /// `getGeoInfoByAddr(description)`); a failed geocode shows nothing.
     public func addPrediction(fullText: String, firstMatch: Int?, word: String, query: String? = nil) async -> Outcome {
-        let name = PredictionName.of(fullText: fullText, firstMatch: firstMatch, word: word)
-        guard let geoInfo = await geocode.byAddress(query ?? fullText, acceptLanguage: acceptLanguage()) else { return .none }
-        var place = GeocodeClient.place(geoInfo, currentPosition: false)
-        place.name = name
+        guard let place = await predictionPlace(fullText: fullText, firstMatch: firstMatch, word: word, query: query) else {
+            return .none
+        }
         return await add(place)
     }
 
-    /// A geocoded place added as an ordinary place with its own name (S02's find-by-location row, IN-11).
-    public func addGeoInfo(_ geoInfo: JSONObject) async -> Outcome {
-        await add(GeocodeClient.place(geoInfo, currentPosition: false))
+    /// The place of a chosen Places prediction, named and geocoded as `addPrediction` does; nil when the geocode failed.
+    public func predictionPlace(fullText: String, firstMatch: Int?, word: String, query: String? = nil) async -> Place? {
+        let name = PredictionName.of(fullText: fullText, firstMatch: firstMatch, word: word)
+        guard let geoInfo = await geocode.byAddress(query ?? fullText, acceptLanguage: acceptLanguage()) else { return nil }
+        var place = GeocodeClient.place(geoInfo, currentPosition: false)
+        place.name = name
+        return place
+    }
+
+    /// A geocoded place as an ordinary place with its own name (S02's find-by-location row, IN-11).
+    public static func geoInfoPlace(_ geoInfo: JSONObject) -> Place {
+        GeocodeClient.place(geoInfo, currentPosition: false)
     }
 
     /// A chosen bundled town, with the address and name StartCtrl builds; no geocode request.
     public func addTown(_ town: BundledTown) async -> Outcome {
+        await add(Self.townPlace(town))
+    }
+
+    /// The place of a bundled town: the address and name StartCtrl builds, and its coordinates.
+    public static func townPlace(_ town: BundledTown) -> Place {
         let info = town.placeInfo
-        return await add(Place(currentPosition: false, disable: false, name: info.name, address: info.address,
-                               country: info.country, location: Location(lat: info.lat, long: info.long)))
+        return Place(currentPosition: false, disable: false, name: info.name, address: info.address,
+                     country: info.country, location: Location(lat: info.lat, long: info.long))
     }
 
     /// `saveCity` then `addCity`: an existing place, or a body that does not convert, is "already added".

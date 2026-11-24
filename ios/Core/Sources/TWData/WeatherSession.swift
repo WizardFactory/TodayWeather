@@ -41,7 +41,9 @@ public final class WeatherSession {
     }
 
     @ObservationIgnored public let repository: WeatherRepository
-    @ObservationIgnored private let holder: AppStateHolder
+    /// The state the pages read and change: the holder, or `UnsavedPlaces` over it (#3097), whose unsaved place is the
+    /// last place of the list.
+    @ObservationIgnored private let holder: any PlaceState
     @ObservationIgnored private let acceptLanguage: () -> String
     @ObservationIgnored private let photos: () -> WeatherPhotos?
     @ObservationIgnored private let loadPhotos: () -> Void
@@ -79,7 +81,7 @@ public final class WeatherSession {
     /// each applied response. The weather pages apply the selected place on each.
     public private(set) var applies = 0
 
-    public init(repository: WeatherRepository, holder: AppStateHolder, acceptLanguage: @escaping () -> String,
+    public init(repository: WeatherRepository, holder: any PlaceState, acceptLanguage: @escaping () -> String,
                 photos: @escaping () -> WeatherPhotos? = { nil }, loadPhotos: @escaping () -> Void = {},
                 clock: any AppClock = SystemClock(), random: @escaping () -> Double = { Double.random(in: 0..<1) },
                 telemetry: WeatherTelemetry? = nil, location: (any LocationAccess)? = nil) {
@@ -94,6 +96,9 @@ public final class WeatherSession {
         self.location = location
         autoSearch = location?.servicesEnabled ?? false
     }
+
+    /// The state as the pages see it (with an unsaved place, its last place).
+    public var state: AppState? { holder.state }
 
     /// The selected place, as `WeatherInfo.getCityOfIndex(getCityIndex())`.
     public var selected: Place? {
