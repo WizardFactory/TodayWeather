@@ -11,36 +11,36 @@
   "heightDifference": 0
  },
  "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the captures in privacy-reference/<lang>",
- "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts, larger for the Korean popup's ten lines and bold buttons than for the About popup. Geometry follows the WebView: the popup is AN-12's Ionic popup (250 dp, 49 dp head, the body on `line-height: normal` lines of 20 dp, buttons of 112.5 by 45 dp 5 dp apart at 0.87 opacity, a label too long for its button wrapping there as Chrome wraps the English 'Decline / withdraw'), its body broken where Chrome breaks it (chromeLines: the ten Korean and twelve English lines match the capture's line boxes in analytics-popup.json), and the menu is AN-07's. 2026-11-15 (#2990): menu cases re-measured after the privacy rows moved to the end of the side menu; native and Cordova show the same rows, the residuals are glyph rasterization.",
+ "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts, larger for the Korean popup's ten lines and bold buttons than for the About popup. Geometry follows the WebView: the popup is AN-12's Ionic popup (250 dp, 49 dp head, the body on `line-height: normal` lines of 20 dp, buttons of 112.5 by 45 dp 5 dp apart at 0.87 opacity, a label too long for its button wrapping there as Chrome wraps the English 'Decline / withdraw'), its body broken where Chrome breaks it (chromeLines: the ten Korean and twelve English lines match the capture's line boxes in analytics-popup.json), and the menu is AN-07's. 2026-11-15 (#2990): menu cases re-measured after the privacy rows moved to the end of the side menu; native and Cordova show the same rows, the residuals are glyph rasterization. 2026-11-24 (analytics default-on, B34): failing cases re-measured after the native menu row became 이용 통계 · 꺼짐 / 켜짐 (Usage analytics · Off / On) and the popup title 이용 통계, native texts the Cordova captures (선택적 이용 통계 · 꺼짐 / 동의함) cannot show; the added residual is that row's and title's text.",
  "cases": {
   "en-US/analytics-popup": {
-   "strong": 0.00309,
-   "mean": 1.623,
+   "strong": 0.004655,
+   "mean": 2.001,
    "heightDifference": 0
   },
   "en-US/menu-allowed": {
-   "strong": 0.00594,
-   "mean": 1.733,
+   "strong": 0.008314,
+   "mean": 2.011,
    "heightDifference": 0
   },
   "en-US/menu-off": {
-   "strong": 0.00508,
-   "mean": 1.629,
+   "strong": 0.007955,
+   "mean": 1.971,
    "heightDifference": 0
   },
   "ko-KR/analytics-popup": {
-   "strong": 0.013527,
-   "mean": 5.006,
+   "strong": 0.016386,
+   "mean": 5.259,
    "heightDifference": 0
   },
   "ko-KR/menu-allowed": {
-   "strong": 0.00883,
-   "mean": 2.273,
+   "strong": 0.010796,
+   "mean": 2.477,
    "heightDifference": 0
   },
   "ko-KR/menu-off": {
-   "strong": 0.00931,
-   "mean": 2.291,
+   "strong": 0.011055,
+   "mean": 2.483,
    "heightDifference": 0
   }
  }

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Native-only usage analytics texts (analytics default-on, AK 2026-11-24). Not generated: import_client_assets.py writes
+     only client_strings.xml. The opt-in regions' consent text and buttons (analytics_consent_*) are the
+     imported LOC_ANALYTICS_DETAIL, LOC_ANALYTICS_DENY and LOC_ANALYTICS_ALLOW texts in en, ko and ja, and translations
+     of them in de, zh-CN and zh-TW, whose imported catalogs show English (AK 2026-11-24). See android/README.md, "Imported client assets". -->
+<resources>
+    <string name="analytics_label">利用状況分析</string>
+    <string name="analytics_on">オン</string>
+    <string name="analytics_off">オフ</string>
+    <string name="analytics_detail">アプリの改善のため、Google Firebase Analyticsで画面の利用、天気取得の結果、アプリ・端末・インストール情報を収集します。独自イベントには実際の位置、住所、プッシュトークン、端末UUIDを含めません。利用状況分析はこのメニューでオフにしない限りオンで、オフにしても天気を利用できます。分析データの広告利用は許可しません。広告・障害診断・通知は別に処理されます。</string>
+    <string name="analytics_turn_off">オフにする</string>
+    <string name="analytics_turn_on">オンにする</string>
+    <string name="analytics_consent_detail">アプリの改善のため、Google Firebase Analyticsで画面の利用、天気取得の結果、アプリ・端末・インストール情報を収集することに同意しますか？独自イベントには実際の位置、住所、プッシュトークン、端末UUIDを含めません。同意しなくても天気を利用でき、このメニューでいつでも撤回できます。分析データの広告利用は許可しません。広告・障害診断・通知は別に処理されます。</string>
+    <string name="analytics_consent_deny">拒否 / 撤回</string>
+    <string name="analytics_consent_allow">同意する</string>
+</resources>

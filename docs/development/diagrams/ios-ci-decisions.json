@@ -1,0 +1,235 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "iOS verification decisions",
+    "locale": "en",
+    "quality_profile": "standard",
+    "output": "docs/development/diagrams/ios-ci-decisions.html",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "e9429140cbd099ca6aab524180b8a4ff5cf69a1d"
+    }
+  },
+  "lanes": [
+    {
+      "id": "pr",
+      "label": "Pull request"
+    },
+    {
+      "id": "night",
+      "label": "Nightly"
+    },
+    {
+      "id": "rc",
+      "label": "Release candidate"
+    }
+  ],
+  "mainPath": [
+    "candidate",
+    "verify",
+    "archive"
+  ],
+  "nodes": [
+    {
+      "id": "change",
+      "label": "Review changes",
+      "sublabel": "latest PR head",
+      "lane": "pr",
+      "col": 0,
+      "type": "external",
+      "width": 175,
+      "sources": [
+        {
+          "path": "docs/development/ci-tiers.md",
+          "line": 101,
+          "end_line": 107
+        }
+      ]
+    },
+    {
+      "id": "check",
+      "label": "PR checks",
+      "sublabel": "build and Core tests",
+      "lane": "pr",
+      "col": 1,
+      "type": "backend",
+      "width": 175,
+      "sources": [
+        {
+          "path": ".github/workflows/ios.yml",
+          "line": 189,
+          "end_line": 212
+        }
+      ]
+    },
+    {
+      "id": "merge",
+      "label": "Merge decision",
+      "sublabel": "visual evidence if required",
+      "lane": "pr",
+      "col": 2,
+      "type": "security",
+      "width": 175,
+      "sources": [
+        {
+          "path": "docs/development/ci-tiers.md",
+          "line": 101,
+          "end_line": 107
+        }
+      ]
+    },
+    {
+      "id": "master",
+      "label": "Master inputs",
+      "sublabel": "since prior success",
+      "lane": "night",
+      "col": 0,
+      "type": "external",
+      "width": 175,
+      "sources": [
+        {
+          "path": ".github/workflows/ios-release.yml",
+          "line": 73,
+          "end_line": 88
+        }
+      ]
+    },
+    {
+      "id": "nightly",
+      "label": "Full suite",
+      "sublabel": "when inputs change",
+      "lane": "night",
+      "col": 1,
+      "type": "backend",
+      "width": 175,
+      "sources": [
+        {
+          "path": ".github/workflows/ios-release.yml",
+          "line": 93,
+          "end_line": 120
+        }
+      ]
+    },
+    {
+      "id": "triage",
+      "label": "Triage failures",
+      "sublabel": "target maintainer",
+      "lane": "night",
+      "col": 2,
+      "type": "security",
+      "width": 175,
+      "sources": [
+        {
+          "path": "docs/development/ci-tiers.md",
+          "line": 19,
+          "end_line": 26
+        }
+      ]
+    },
+    {
+      "id": "candidate",
+      "label": "Candidate SHA",
+      "sublabel": "manual dispatch",
+      "lane": "rc",
+      "col": 0,
+      "type": "external",
+      "width": 175,
+      "sources": [
+        {
+          "path": ".github/workflows/ios-release.yml",
+          "line": 59,
+          "end_line": 72
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "label": "Full suite",
+      "sublabel": "require both jobs",
+      "lane": "rc",
+      "col": 1,
+      "type": "backend",
+      "width": 175,
+      "sources": [
+        {
+          "path": ".github/workflows/ios-release.yml",
+          "line": 137,
+          "end_line": 155
+        }
+      ]
+    },
+    {
+      "id": "archive",
+      "label": "Archive",
+      "sublabel": "operator and device gates",
+      "lane": "rc",
+      "col": 2,
+      "type": "security",
+      "width": 175,
+      "sources": [
+        {
+          "path": "ios/README.md",
+          "line": 613,
+          "end_line": 624
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "change-check",
+      "from": "change",
+      "to": "check",
+      "variant": "default"
+    },
+    {
+      "id": "check-merge",
+      "from": "check",
+      "to": "merge",
+      "variant": "default"
+    },
+    {
+      "id": "master-nightly",
+      "from": "master",
+      "to": "nightly",
+      "variant": "default"
+    },
+    {
+      "id": "nightly-triage",
+      "from": "nightly",
+      "to": "triage",
+      "variant": "default"
+    },
+    {
+      "id": "candidate-verify",
+      "from": "candidate",
+      "to": "verify",
+      "variant": "emphasis"
+    },
+    {
+      "id": "verify-archive",
+      "from": "verify",
+      "to": "archive",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Forecast header pilot",
+      "items": [
+        "Compare selected and full suites on the same PR head.",
+        "The full result decides the merge throughout the pilot."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Evidence for a release",
+      "items": [
+        "A skipped nightly records no test execution.",
+        "Archive the exact commit with a successful full run."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Native-only usage analytics texts (analytics default-on, AK 2026-11-24). Not generated: import_client_assets.py writes
+     only client_strings.xml. The opt-in regions' consent text and buttons (analytics_consent_*) are the
+     imported LOC_ANALYTICS_DETAIL, LOC_ANALYTICS_DENY and LOC_ANALYTICS_ALLOW texts in en, ko and ja, and translations
+     of them in de, zh-CN and zh-TW, whose imported catalogs show English (AK 2026-11-24). See android/README.md, "Imported client assets". -->
+<resources>
+    <string name="analytics_label">이용 통계</string>
+    <string name="analytics_on">켜짐</string>
+    <string name="analytics_off">꺼짐</string>
+    <string name="analytics_detail">앱 개선을 위해 Google Firebase Analytics로 화면 이용, 날씨 조회 결과, 앱·기기·설치 정보를 수집합니다. 실제 위치·주소·푸시 토큰·기기 UUID는 사용자 정의 통계에 보내지 않습니다. 이용 통계는 이 메뉴에서 끄지 않는 한 켜져 있으며, 꺼도 날씨 조회를 사용할 수 있습니다. 통계의 광고 활용은 허용하지 않습니다. 광고·오류 진단·알림은 별도로 처리됩니다.</string>
+    <string name="analytics_turn_off">끄기</string>
+    <string name="analytics_turn_on">켜기</string>
+    <string name="analytics_consent_detail">앱 개선을 위해 Google Firebase Analytics로 화면 이용, 날씨 조회 결과, 앱·기기·설치 정보를 수집하는 데 동의하시겠습니까? 실제 위치·주소·푸시 토큰·기기 UUID는 사용자 정의 통계에 보내지 않습니다. 동의하지 않아도 날씨 조회를 사용할 수 있으며, 이 메뉴에서 언제든 철회할 수 있습니다. 통계의 광고 활용은 허용하지 않습니다. 광고·오류 진단·알림은 별도로 처리됩니다.</string>
+    <string name="analytics_consent_deny">거부 / 철회</string>
+    <string name="analytics_consent_allow">동의</string>
+</resources>

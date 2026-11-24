@@ -56,7 +56,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The usage analytics popup in a small window at font scale 1.3 with a banner (#2894, review round 1 F2): as Ionic's
+ * The usage analytics popup, in the opt-in regions and where it is on by default, in a small window at font scale 1.3 with a
+ * banner (#2894, review round 1 F2): as Ionic's
  * `.popup` it stays within 90 % of the area above the banner, its body scrolls, and its two buttons show whole (a long
  * label wraps and the buttons grow) and work; no text is cut or ellipsized ([ShellFit]).
  */
@@ -74,26 +75,56 @@ class PrivacyFitTest {
 
     // AN-18c: all existing states at each parity display size, in both language subclasses.
     @Test @Config(qualifiers = "ko-rKR-w384dp-h832dp-port-xhdpi", fontScale = 1f)
-    fun parity384Korean() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    fun parity384Korean() = fits(R.string.analytics_consent_allow, mustScroll = false)
     @Test @Config(qualifiers = "en-rUS-w384dp-h832dp-port-xhdpi", fontScale = 1f)
-    fun parity384English() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    fun parity384English() = fits(R.string.analytics_consent_allow, mustScroll = false)
     @Test @Config(qualifiers = "ko-rKR-w360dp-h780dp-port-xhdpi", fontScale = 1f)
-    fun parity360Korean() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    fun parity360Korean() = fits(R.string.analytics_consent_allow, mustScroll = false)
     @Test @Config(qualifiers = "en-rUS-w360dp-h780dp-port-xhdpi", fontScale = 1f)
-    fun parity360English() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    fun parity360English() = fits(R.string.analytics_consent_allow, mustScroll = false)
     @Test @Config(qualifiers = "ko-rKR-w412dp-h892dp-port-xhdpi", fontScale = 1f)
-    fun parity412Korean() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    fun parity412Korean() = fits(R.string.analytics_consent_allow, mustScroll = false)
     @Test @Config(qualifiers = "en-rUS-w412dp-h892dp-port-xhdpi", fontScale = 1f)
-    fun parity412English() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    fun parity412English() = fits(R.string.analytics_consent_allow, mustScroll = false)
     @Test @Config(qualifiers = "ko-rKR-w320dp-h694dp-port-xhdpi", fontScale = 1f)
-    fun parity320Korean() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    fun parity320Korean() = fits(R.string.analytics_consent_allow, mustScroll = false)
     @Test @Config(qualifiers = "en-rUS-w320dp-h694dp-port-xhdpi", fontScale = 1f)
-    fun parity320English() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    fun parity320English() = fits(R.string.analytics_consent_allow, mustScroll = false)
 
-    @Test @Config(qualifiers = "ko-rKR-w320dp-h480dp-port", fontScale = 1.3f) fun koreanSmallWindowLargeText() = fits(R.string.LOC_ANALYTICS_ALLOW)
-    @Test @Config(qualifiers = "en-rUS-w320dp-h480dp-port", fontScale = 1.3f) fun englishSmallWindowLargeText() = fits(R.string.LOC_ANALYTICS_ALLOW)
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h480dp-port", fontScale = 1.3f) fun koreanSmallWindowLargeText() = fits(R.string.analytics_consent_allow)
+    @Test @Config(qualifiers = "en-rUS-w320dp-h480dp-port", fontScale = 1.3f) fun englishSmallWindowLargeText() = fits(R.string.analytics_consent_allow)
 
-    private fun fits(allow: Int, mustScroll: Boolean = true) {
+    // Where usage analytics is on by default (analytics default-on, 2026-11-24): the native text with 끄기 and 켜기.
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h694dp-port-xhdpi", fontScale = 1f)
+    fun defaultOn320Korean() = fits(R.string.analytics_turn_on, mustScroll = false, optIn = false)
+    @Test @Config(qualifiers = "en-rUS-w320dp-h694dp-port-xhdpi", fontScale = 1f)
+    fun defaultOn320English() = fits(R.string.analytics_turn_on, mustScroll = false, optIn = false)
+    @Test @Config(qualifiers = "ja-rJP-w320dp-h694dp-port-xhdpi", fontScale = 1f)
+    fun defaultOn320Japanese() = fits(R.string.analytics_turn_on, mustScroll = false, optIn = false)
+    @Test @Config(qualifiers = "de-rDE-w320dp-h694dp-port-xhdpi", fontScale = 1f)
+    fun defaultOn320German() = fits(R.string.analytics_turn_on, mustScroll = false, optIn = false)
+    @Test @Config(qualifiers = "zh-rCN-w320dp-h694dp-port-xhdpi", fontScale = 1f)
+    fun defaultOn320SimplifiedChinese() = fits(R.string.analytics_turn_on, mustScroll = false, optIn = false)
+    @Test @Config(qualifiers = "zh-rTW-w320dp-h694dp-port-xhdpi", fontScale = 1f)
+    fun defaultOn320TraditionalChinese() = fits(R.string.analytics_turn_on, mustScroll = false, optIn = false)
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h480dp-port", fontScale = 1.3f)
+    fun defaultOnKoreanSmallWindowLargeText() = fits(R.string.analytics_turn_on, optIn = false)
+    @Test @Config(qualifiers = "en-rUS-w320dp-h480dp-port", fontScale = 1.3f)
+    fun defaultOnEnglishSmallWindowLargeText() = fits(R.string.analytics_turn_on, optIn = false)
+    @Test @Config(qualifiers = "de-rDE-w320dp-h480dp-port", fontScale = 1.3f)
+    fun defaultOnGermanSmallWindowLargeText() = fits(R.string.analytics_turn_on, optIn = false)
+
+    // The consent popup's own translations (AK 2026-11-24).
+    @Test @Config(qualifiers = "de-rDE-w320dp-h694dp-port-xhdpi", fontScale = 1f)
+    fun consent320German() = fits(R.string.analytics_consent_allow, mustScroll = false)
+    @Test @Config(qualifiers = "zh-rCN-w320dp-h694dp-port-xhdpi", fontScale = 1f)
+    fun consent320SimplifiedChinese() = fits(R.string.analytics_consent_allow, mustScroll = false)
+    @Test @Config(qualifiers = "zh-rTW-w320dp-h694dp-port-xhdpi", fontScale = 1f)
+    fun consent320TraditionalChinese() = fits(R.string.analytics_consent_allow, mustScroll = false)
+    @Test @Config(qualifiers = "de-rDE-w320dp-h480dp-port", fontScale = 1.3f)
+    fun consentGermanSmallWindowLargeText() = fits(R.string.analytics_consent_allow)
+
+    private fun fits(allow: Int, mustScroll: Boolean = true, optIn: Boolean = true) {
         val seoul = Place(false, false, "회현동", "대한민국 서울특별시 중구 회현동", "KR", Location(37.56, 126.98))
         val memory = object : StateAccess {
             val flow = MutableStateFlow(AppState(places = listOf(seoul), placeIndex = 0, units = UnitSettings.defaults("KR")))
@@ -103,7 +134,7 @@ class PrivacyFitTest {
         val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { _, _ -> seoulBody }, io = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
         val chosen = mutableListOf<Boolean>()
-        val privacy = PrivacyActions(MutableStateFlow(false), { chosen += it; true }) {}
+        val privacy = PrivacyActions(MutableStateFlow(false), { chosen += it; true }, optIn) {}
         rule.setContent {
             val state by memory.flow.collectAsState()
             val entries by repository.weather.collectAsState()

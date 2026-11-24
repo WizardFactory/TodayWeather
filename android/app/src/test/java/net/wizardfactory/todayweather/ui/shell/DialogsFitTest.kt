@@ -64,7 +64,7 @@ abstract class DialogsFitTest {
         val alerts = listOf(R.string.LOC_PRIVACY_SAVE_FAILED, R.string.LOC_AD_PRIVACY_UNAVAILABLE,
             R.string.LOC_FAIL_TO_GET_WEATHER_INFO, R.string.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED)
         val confirmationsEnd = 5 + confirmations.size
-        val total = confirmationsEnd + alerts.size + 4
+        val total = confirmationsEnd + alerts.size + 5
         fun text(id: Int) = rule.activity.getString(id)
         rule.setContent {
             Box(Modifier.fillMaxSize()) {
@@ -76,8 +76,8 @@ abstract class DialogsFitTest {
                     4 -> SourceDialog("airkorea", texts) {}
                     in 5 until confirmationsEnd -> LocationRetryPopup(confirmations[i - 5], {}, {})
                     in confirmationsEnd until confirmationsEnd + alerts.size -> IonicAlert(if (i-confirmationsEnd < 2) "TodayWeather" else text(R.string.LOC_ERROR), listOf(text(alerts[i-confirmationsEnd])), text(R.string.LOC_OK), {})
-                    total - 4 -> IonicPopup(text(R.string.LOC_ANALYTICS_CHOICE), listOf(text(R.string.LOC_ANALYTICS_DETAIL)),
-                        listOf(PopupButton(text(R.string.LOC_ANALYTICS_DENY)) {}, PopupButton(text(R.string.LOC_ANALYTICS_ALLOW)) {}), {})
+                    total - 5 -> AnalyticsPopup(optIn = true, {}, {})
+                    total - 4 -> AnalyticsPopup(optIn = false, {}, {})
                     total - 3 -> IonicPopup(text(R.string.LOC_WEATHER_ALERT), text(R.string.LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION).split('\n', limit = 2),
                         listOf(PopupButton(text(R.string.LOC_CLOSE)) {}, PopupButton(text(R.string.LOC_OK)) {}), {})
                     total - 2 -> IonicPopup(text(R.string.LOC_WEATHER), listOf("A long weather message. ".repeat(30)), listOf(PopupButton(text(R.string.LOC_OK)) {}), {})
