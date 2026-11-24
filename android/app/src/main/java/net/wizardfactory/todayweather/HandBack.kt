@@ -72,9 +72,11 @@ class HandBackWriter(private val suite: SharedPreferences, private val consent: 
  * there is not carried over, as the first migration carries none. Runs before the choice applies ([EarlyStartProvider]);
  * each write of the choice is handed back at once ([HandBackWriter.watchConsent]), so a grant here is in the suite first.
  *
- * Without a choice here the region default applies (analytics default-on, 2026-11-24), so a withdrawal made there is
- * kept as this app's choice: a native hand-back removes the suite's choice when this app has none, so once anything
- * was handed over a `"false"` there came from the fallback build.
+ * Without a choice here the region default applies (analytics default-on, 2026-11-24), so a withdrawal made in a
+ * fallback build that claimed the state (a `cordova` marker) is kept as this app's choice; a write that fails is recorded
+ * as a pending withdrawal ([ConsentStore.write]). Under a native marker a `"false"` without a choice here is not
+ * adopted: the suite is backed up while this app's choice is not, so after a restore it may be the old device's choice,
+ * and a restore leaves the region default (as does a fallback build that could not claim the state).
  */
 object HandBackConsent {
     fun beforeStart(context: Context) {
@@ -82,10 +84,10 @@ object HandBackConsent {
         val stored = store.storedChoice()
         if (stored != "true" && stored != null) return
         val suite = context.getSharedPreferences(CordovaMigration.SUITE, Context.MODE_PRIVATE)
-        if (CordovaHandBack.parse(runCatching { suite.getString(CordovaHandBack.MARKER, null) }.getOrNull()) == null) return
+        val marker = CordovaHandBack.parse(runCatching { suite.getString(CordovaHandBack.MARKER, null) }.getOrNull()) ?: return
         val there = runCatching { suite.getString(CordovaHandBack.CONSENT, null) }.getOrNull()
         if (stored == null) {
-            if (there == "false") store.write(false)
+            if (marker.writer == CordovaHandBack.CORDOVA && there == "false") store.write(false)
             return
         }
         if (there == "true") return

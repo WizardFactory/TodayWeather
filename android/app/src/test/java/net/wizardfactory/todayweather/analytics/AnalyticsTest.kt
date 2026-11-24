@@ -117,7 +117,7 @@ class AnalyticsTest {
         val a = analytics(sdk, "KR")
         sdk.calls.clear()
         assertTrue(a.setCollectionEnabled(false))
-        assertEquals(collectionOff, sdk.calls)
+        assertEquals(collectionOff + collectionOff, sdk.calls)
         assertFalse(a.choice.value)
         assertFalse(a.track("weather_fetch", fetch))
         assertEquals("false", choices.getString(ConsentStore.KEY, null))
@@ -141,6 +141,60 @@ class AnalyticsTest {
         val next = Sdk()
         assertTrue(analytics(next, "KR").choice.value, "the next start applies the default again")
         assertEquals(collectionOn, next.calls)
+    }
+
+    @Test
+    fun aWithdrawalThatCannotBeWrittenHoldsWhereTheDefaultIsOn() {
+        for (failure in listOf("everything", "puts")) {
+            choices.fail = false
+            choices.failPuts = false
+            choices.edit().remove(ConsentStore.KEY).commit()
+            val a = analytics(Sdk(), "KR")
+            assertTrue(a.choice.value)
+            if (failure == "everything") choices.fail = true else choices.failPuts = true
+            assertFalse(a.setCollectionEnabled(false), failure)
+            assertEquals(null, choices.getString(ConsentStore.KEY, null), failure)
+            assertTrue(collection.getBoolean(ConsentStore.DECLINED, false), "the withdrawal is recorded beside the collection state ($failure)")
+            choices.fail = false
+            choices.failPuts = false
+            val restarted = Sdk()
+            assertFalse(analytics(restarted, "KR").choice.value, "the region default does not turn it back on ($failure)")
+            assertEquals(collectionOff, restarted.calls)
+            assertEquals("false", choices.getString(ConsentStore.KEY, null), "and the withdrawal is written now ($failure)")
+            assertFalse(collection.contains(ConsentStore.DECLINED), failure)
+        }
+        // A grant written later clears nothing it should not: it collects after a restart.
+        assertTrue(analytics(Sdk(), "KR").setCollectionEnabled(true))
+        assertTrue(analytics(Sdk(), "KR").choice.value)
+    }
+
+    @Test
+    fun aPendingWithdrawalWinsOverAStaleGrant() {
+        choices.edit().putString(ConsentStore.KEY, "true").commit()
+        collection.edit().putBoolean(ConsentStore.ENABLED, true).putBoolean(ConsentStore.DECLINED, true).commit()
+        assertFalse(analytics(Sdk(), "KR").choice.value)
+        assertEquals("false", choices.getString(ConsentStore.KEY, null))
+    }
+
+    @Test
+    fun anUnreadableChoiceDoesNotCollect() {
+        choices.edit().putBoolean(ConsentStore.KEY, true).commit()
+        val sdk = Sdk()
+        assertFalse(analytics(sdk, "KR").choice.value, "a stored value of another type is not 'no choice'")
+        assertEquals(collectionOff, sdk.calls)
+    }
+
+    @Test
+    fun theCollectionStateIsRecordedBeforeTheSdkCollects() {
+        collection.fail = true
+        val sdk = Sdk()
+        val a = analytics(sdk, "KR")
+        assertFalse(a.choice.value)
+        assertEquals(collectionOn.dropLast(1) + collectionOff, sdk.calls, "the SDK is never told to collect")
+        assertEquals(null, choices.getString(ConsentStore.KEY, null))
+        sdk.calls.clear()
+        assertFalse(a.setCollectionEnabled(true))
+        assertFalse("collection true" in sdk.calls)
     }
 
     @Test
@@ -168,7 +222,7 @@ class AnalyticsTest {
         a.setCollectionEnabled(true)
         sdk.calls.clear()
         assertTrue(a.setCollectionEnabled(false))
-        assertEquals(listOf("collection false", "analytics storage denied"), sdk.calls)
+        assertEquals(collectionOff + collectionOff, sdk.calls, "the SDK stops before the choice is written, then the choice applies")
         assertFalse(a.track("weather_fetch", fetch))
         assertEquals("false", choices.getString(ConsentStore.KEY, null))
 

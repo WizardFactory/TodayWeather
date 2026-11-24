@@ -52,7 +52,7 @@ internal class ManualWalk(val rule: AndroidComposeTestRule<*, MainActivity>) {
     fun capture(name: String, system: Boolean = false) {
         if (!system) rule.waitForIdle()
         Thread.sleep(600)
-        assertTrue("manual captures send no analytics", app.analyticsSdk() === SilentAnalyticsSdk)
+        assertTrue("manual captures send no analytics", app.analyticsSdkInUse === SilentAnalyticsSdk)
         val ads = adsOff()
         if (ads) {
             assertEquals("an ad-free capture never starts the Ads SDK", 0, NoAdsPlatform.sdkStarts.get())

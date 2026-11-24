@@ -47,7 +47,9 @@ class FirebaseAnalyticsSdk(private val context: Context) : AnalyticsSdk {
  * The usage analytics choice (`twAnalyticsConsentV1`) and the SDK's collection state, in two private preference files
  * written with `commit()`. The Cordova app kept the choice in WebView storage and the plugin persisted the collection
  * flag on its own: a grant restores at the start only when both still hold it, so a withdrawal whose choice could not
- * be written still holds after a restart when the collection state was written.
+ * be written still holds after a restart when the collection state was written. Since the region default
+ * (2026-11-24) a missing choice can collect, so a withdrawal that could not be written is also recorded beside the
+ * collection state ([DECLINED]) and counts as `"false"` at the next start.
  */
 class ConsentStore(private val choices: SharedPreferences, private val collection: SharedPreferences) {
     constructor(context: Context) : this(
@@ -56,21 +58,33 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
     )
 
     /**
-     * The stored choice at the start (`init`): `"true"`, `"false"`, none, or a value nothing here writes. A grant the
-     * collection state does not confirm is withdrawn and written so.
+     * The stored choice at the start (`init`): `"true"`, `"false"`, none, or another value ([UNREADABLE] when the
+     * choice cannot be read), which does not collect. A recorded withdrawal that could not be written is `"false"`
+     * and is written now; a grant the collection state does not confirm is withdrawn and written so.
      */
     fun startChoice(): String? {
-        val stored = runCatching { choices.getString(KEY, null) }.getOrNull()
+        if (runCatching { collection.getBoolean(DECLINED, false) }.getOrDefault(false)) {
+            write(false)
+            return "false"
+        }
+        val stored = runCatching { choices.getString(KEY, null) }.getOrElse { return UNREADABLE }
         if (stored != "true") return stored
         if (runCatching { collection.getBoolean(ENABLED, false) }.getOrDefault(false)) return stored
         write(false)
         return "false"
     }
 
-    /** Writes the choice (`persistChoice`); when that fails it removes the choice, so an old grant cannot survive. */
+    /**
+     * Writes the choice (`persistChoice`); when that fails it removes the choice, so an old grant cannot survive, and
+     * records a withdrawal beside the collection state ([DECLINED]), so the region default cannot turn it back on.
+     */
     fun write(value: Boolean): Boolean {
-        if (choices.edit().putString(KEY, value.toString()).commit()) return true
+        if (choices.edit().putString(KEY, value.toString()).commit()) {
+            if (runCatching { collection.contains(DECLINED) }.getOrDefault(true)) collection.edit().remove(DECLINED).commit()
+            return true
+        }
         choices.edit().remove(KEY).commit()
+        if (!value) collection.edit().putBoolean(DECLINED, true).commit()
         Log.w(TAG, "collection storage_write_failed")
         return false
     }
@@ -84,6 +98,12 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
     companion object {
         const val KEY = "twAnalyticsConsentV1"
         const val ENABLED = "collectionEnabled"
+
+        /** A withdrawal whose choice could not be written (in the collection file). */
+        const val DECLINED = "declinePending"
+
+        /** [startChoice] when the stored choice cannot be read. */
+        const val UNREADABLE = "unreadable"
         const val CHOICE_FILE = "tw_analytics_consent"
         const val COLLECTION_FILE = "tw_analytics_collection"
     }
@@ -134,13 +154,15 @@ class Analytics(
     }
 
     /**
-     * The choice of the dialog (`setCollectionEnabled`): collection stops at once, the choice is written, then applied.
-     * False when it could not be fully applied (`LOC_PRIVACY_SAVE_FAILED`); the choice is then off.
+     * The choice of the dialog (`setCollectionEnabled`): collection stops at once (a withdrawal also turns the SDK off
+     * and denies every consent type before any file is written), the choice is written, then applied. False when it
+     * could not be fully applied (`LOC_PRIVACY_SAVE_FAILED`); the choice is then off.
      */
     @Synchronized
     fun setCollectionEnabled(value: Boolean): Boolean {
         enabled = false
         pendingScreen = null
+        if (!value) stopSdk()
         val saved = store.write(value)
         choiceFlow.value = saved && value
         return applyCollection(choiceFlow.value) && saved
@@ -189,32 +211,38 @@ class Analytics(
     }
 
     /**
-     * Collection off, the consent mode, then collection on when collecting; any failure leaves everything off and, for a
-     * stored or chosen value ([storeOnFailure]), writes a withdrawal.
+     * Collection off and the consent mode first, then the collection state; when collecting, the state is recorded before
+     * the SDK collects. Any failure turns the SDK off and denies every consent type before it writes anything, and, for a
+     * stored or chosen value ([storeOnFailure]), then writes a withdrawal.
      */
     private fun applyCollection(value: Boolean, storeOnFailure: Boolean = true): Boolean {
         enabled = false
         lastScreen = null
         try {
             sdk.setCollectionEnabled(false)
-            store.recordCollection(false)
             sdk.setConsent(value)
+            store.recordCollection(false)
             if (!value) return true
-            sdk.setCollectionEnabled(true)
             check(store.recordCollection(true)) { "collection state not written" }
+            sdk.setCollectionEnabled(true)
             enabled = true
             pendingScreen?.let(::screen)
             return true
         } catch (e: Exception) {
+            stopSdk()
             choiceFlow.value = false
             pendingScreen = null
-            if (storeOnFailure) store.write(false)
             Log.w(TAG, "collection write_failed")
-            runCatching { sdk.setCollectionEnabled(false) }
             store.recordCollection(false)
-            runCatching { sdk.setConsent(false) }.onFailure { Log.w(TAG, "collection rollback_failed") }
+            if (storeOnFailure) store.write(false)
             return false
         }
+    }
+
+    /** The SDK off with every consent type denied, each call on its own so one failure does not skip the other. */
+    private fun stopSdk() {
+        runCatching { sdk.setCollectionEnabled(false) }.onFailure { Log.w(TAG, "collection rollback_failed") }
+        runCatching { sdk.setConsent(false) }.onFailure { Log.w(TAG, "collection rollback_failed") }
     }
 
     companion object {

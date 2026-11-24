@@ -42,7 +42,7 @@ class EarlyStartProvider : ContentProvider() {
     override fun onCreate(): Boolean {
         AnalyticsGuard.beforeFirebase(context!!)
         HandBackConsent.beforeStart(context!!)
-        (context!!.applicationContext as TodayWeatherApp).analytics.start()
+        (context!!.applicationContext as TodayWeatherApp).startAnalytics()
         return true
     }
 

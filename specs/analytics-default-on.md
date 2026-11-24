@@ -11,7 +11,7 @@ Consumes the [intent](../intent/analytics-default-on.md) (AK, 2026-11-24; Refs #
 
 ## Rule
 
-1. A stored `"true"` collects. Any other stored value (`"false"`, or a value the app never writes) does not collect.
+1. A stored `"true"` collects. Any other stored value (`"false"`, a value the app never writes, or a value that cannot be read) does not collect. Two existing failure fallbacks turn a stored value into `"false"` before this step, and the apps keep them: a stored `"true"` counts only while the app's own record of the SDK's collection state confirms it (Android AN-15; otherwise it is rewritten as `"false"`), and a withdrawal whose `"false"` could not be written is recorded beside that collection state and written as `"false"` at the next start, so the region default never turns a withdrawal back on.
 2. Without a stored choice, the device region decides: collect when the region is a known region outside the opt-in regions; otherwise do not collect.
 3. A region is known when, after trimming, it is two ASCII letters (in any case) that form one of the 249 officially assigned ISO 3166-1 alpha-2 codes. An empty or missing region, a UN M.49 number (`150`, `419`), and reserved or user-assigned codes (`EU`, `UK`, `EL`, `IC`, `EA`, `XK`, `XA`, `ZZ` …) are unknown and keep the opt-in.
 4. Applying the region default writes nothing to the stored choice, so the stored values keep meaning "the user chose". The region is evaluated again at each start while no choice is stored.
@@ -42,6 +42,7 @@ The EU territories are part of the EU and so of the EEA; listing their codes kee
 - **Not collecting**: all four denied; collection disabled.
 - **Nothing before the decision**: the SDK's own collection stays disabled (manifest or plist default off, persisted SDK flags cleared before the SDK starts) and every consent type denied until the decision is applied. The app then disables collection, sets the consent signals and, when collecting, enables collection.
 - **Failure**: a failure while enabling leaves collection disabled and every type denied. When the value came from a stored or chosen value the app stores `"false"` (as before); when it came from the region default it stores nothing, so the next start applies the default again.
+- **Order of writes**: when collecting, the app records the collection state before it lets the SDK collect; on a withdrawal or a failure it turns the SDK off and denies every type before it writes any file.
 
 ## Menu and popup
 
@@ -54,7 +55,7 @@ The EU territories are part of the EU and so of the EEA; listing their codes kee
 
 - The stored choice and the SDK state stay excluded from backup and device transfer; after a restore no choice is stored, so the region default applies.
 - An update from the Cordova app carries no choice (the Cordova choice was only in WebView storage), so the region default applies.
-- Rollback hand-back (Android AN-17): the handed-back text is the stored value (`"true"`, `"false"` or none), as before; an absent choice means "region default" in the native app and "off" in the fallback Cordova build. A native grant stands at the start only while the suite's choice says `"true"` once anything was handed over (unchanged). New: when the native app has no stored choice and the suite holds `"false"` after a hand-over, that withdrawal made in the fallback build becomes the native stored `"false"`, so the default does not turn it back on.
+- Rollback hand-back (Android AN-17): the handed-back text is the stored value (`"true"`, `"false"` or none), as before; an absent choice means "region default" in the native app and "off" in the fallback Cordova build. A native grant stands at the start only while the suite's choice says `"true"` once anything was handed over (unchanged). New: when the native app has no stored choice and a fallback build claimed the state (a `cordova` marker) with `"false"`, that withdrawal becomes the native stored `"false"`, so the default does not turn it back on. Under a native marker a suite `"false"` is not adopted: the suite is backed up and the native choice is not, so it may be the old device's choice after a restore, which must leave the region default. A withdrawal in a fallback build that could not claim the state is therefore not carried over either (as a grant made there is not).
 
 ## User scenarios
 
@@ -66,7 +67,8 @@ The EU territories are part of the EU and so of the EEA; listing their codes kee
 | ADO-US4 | German user allows usage analytics | ADO-US2 | Menu → popup → Allow; restart | Collection on; `"true"` stored; on after the restart | Save fails: alert, collection off | ADO3 |
 | ADO-US5 | User with an unknown region | System locale without a region (for example `en`) or `es-419` | Open the app | Nothing collected; consent popup | – | ADO2 |
 | ADO-US6 | User restores a backup on a new phone | Backup from a device with a stored choice | Restore; open the app | No stored choice; the region default applies | – | ADO6 |
-| ADO-US7 | User returns from a rollback build | Fallback Cordova build withdrew analytics after a hand-over; no native choice | Install the native app again; open it | Off; `"false"` stored natively | – | ADO6 |
+| ADO-US7 | User returns from a rollback build | Fallback Cordova build claimed the state and withdrew analytics; no native choice | Install the native app again; open it | Off; `"false"` stored natively | The fallback build could not claim the state: the region default applies | ADO6 |
+| ADO-US8 | Korean user turns usage analytics off while storage fails | ADO-US1; the choice file cannot be written | Menu → 끄기; restart | Alert; off now; the pending withdrawal keeps it off after the restart and is written then | Both files unwritable: as before, nothing can be kept | ADO3, ADO4 |
 
 ## Verification
 

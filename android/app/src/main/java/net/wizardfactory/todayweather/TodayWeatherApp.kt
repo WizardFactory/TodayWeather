@@ -81,6 +81,13 @@ open class TodayWeatherApp : Application() {
         Analytics(analyticsSdk(), ConsentStore(this), if (BuildConfig.RELEASE_ADS) "production" else "development", ::deviceRegion)
     }
 
+    /**
+     * Applies the usage analytics decision; EarlyStartProvider calls it before Firebase starts, after the guard. The
+     * device tests' application starts it once their instrumentation arguments are known (they arrive after the
+     * content providers); collection stays off until then.
+     */
+    open fun startAnalytics() = analytics.start()
+
     /** The Cordova data migration, started on every process start; it does nothing after the first one. */
     val migration: Deferred<AppState> by lazy { appScope.async(Dispatchers.IO) { migrate() } }
 

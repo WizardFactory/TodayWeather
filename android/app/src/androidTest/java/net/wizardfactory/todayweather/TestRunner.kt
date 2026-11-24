@@ -33,6 +33,9 @@ import org.junit.runners.model.Statement
 class TestRunner : AndroidJUnitRunner() {
     override fun onCreate(arguments: Bundle?) {
         args = arguments ?: Bundle()
+        // The content providers (EarlyStartProvider, Firebase) ran before this; the guard kept collection off and the
+        // usage analytics decision waits for the arguments it reads.
+        (targetContext.applicationContext as TestTodayWeatherApp).startAnalyticsWithArguments()
         super.onCreate(arguments)
     }
 
@@ -85,7 +88,16 @@ class TestTodayWeatherApp : TodayWeatherApp() {
         BuildConfig.WEATHER_PHOTOS_URL else ""
     override fun deviceRegion() = TestRunner.args.getString("analyticsRegion") ?: super.deviceRegion()
     // Manual and store captures read live data but never send analytics.
-    override fun analyticsSdk() = if (TestRunner.args.getString("manual") == "true") SilentAnalyticsSdk else super.analyticsSdk()
+    override fun analyticsSdk() = (if (TestRunner.args.getString("manual") == "true") SilentAnalyticsSdk else super.analyticsSdk())
+        .also { analyticsSdkInUse = it }
+
+    /** The SDK the usage analytics of this process uses (set when it is created at the start). */
+    @Volatile var analyticsSdkInUse: net.wizardfactory.todayweather.analytics.AnalyticsSdk? = null
+        private set
+
+    // EarlyStartProvider runs before TestRunner.onCreate has the arguments: the decision waits for them.
+    override fun startAnalytics() {}
+    fun startAnalyticsWithArguments() = analytics.start()
     // An ad-free capture (manual and store screenshots, #3122): no consent request, no SDK start, no ads.
     override fun adsPlatform() = if (adsOff()) NoAdsPlatform else super.adsPlatform()
     override fun tokenSource() = TokenSource { TestRunner.args.getString("token") }
