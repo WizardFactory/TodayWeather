@@ -88,6 +88,8 @@ on:
       - "android/app/src/main/res/font/ionicons.ttf"
       - "android/app/provenance/cordova-fonts.json"
       - "android/core-domain/src/test/resources/corpus/**"
+      - "specs/deeplink.golden.json"
+      - "packages/weather-core/src/index.ts"
       - "client/www/js/service.push.js"
       - "client/www/js/service.weatherutil.js"
       - "android/core-domain/src/test/resources/chart-reference/**"

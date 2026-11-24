@@ -73,34 +73,14 @@ public final class UnsavedPlaces: PlaceState {
     /// S02's view of the saved state (`SavedAccess`).
     @ObservationIgnored public private(set) lazy var savedAccess = SavedAccess(owner: self)
 
-    /// The saved state for S09 and S01, whose changes may select a saved place: S09 opened for a place
-    /// (`setCityIndex(fav)`), S01's add (`closeStart`). A change that sets the saved selection, to the same index too, is the
-    /// user's choice of that saved place, so the unsaved place is no longer the selected one (CODEX-3190-15, -19). Whether a
-    /// change sets it is read by applying it once more to the state with no selection; the changes are pure. Other changes
-    /// (the alarm records) select nothing.
-    @MainActor
-    public final class SelectingAccess: PlaceState {
-        unowned let owner: UnsavedPlaces
-
-        init(owner: UnsavedPlaces) {
-            self.owner = owner
-        }
-
-        public var state: AppState? { owner.holder.state }
-
-        public func change(_ update: (inout AppState) -> Void) {
-            guard var probe = owner.holder.state else { return owner.holder.change(update) }
-            probe.placeIndex = Int.min
-            update(&probe)
-            owner.holder.change(update)
-            guard probe.placeIndex != Int.min, let now = owner.unsaved, let after = owner.holder.state,
-                  UnsavedPlaces.enabledSelection(after) != nil else { return }
-            owner.unsaved = Unsaved(place: now.place, selected: false)
-        }
+    /// The user chose a saved place outside the pages: S09 opened for it (`setCityIndex(fav)`), or S01 saved one. When the
+    /// saved selection names an enabled place, the unsaved place is no longer the selected one, so the pages show the chosen
+    /// place and a new start opens it (CODEX-3190-15, -19). The callers say so themselves; nothing is inferred from their
+    /// changes (CODEX-3190-20, -21).
+    public func savedChosen() {
+        guard let now = unsaved, now.selected, let s = holder.state, Self.enabledSelection(s) != nil else { return }
+        unsaved = Unsaved(place: now.place, selected: false)
     }
-
-    /// S09's and S01's view of the saved state (`SelectingAccess`).
-    @ObservationIgnored public private(set) lazy var selectingAccess = SelectingAccess(owner: self)
 
     @ObservationIgnored public let holder: AppStateHolder
 

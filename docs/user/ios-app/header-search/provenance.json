@@ -1,0 +1,52 @@
+{
+  "capture": {
+    "test": "HeaderSearchManualCaptureTests",
+    "runner": "app-hosted test, iPhone 17 simulator (iOS 26.5), Xcode 27.2",
+    "window": "402x874 pt rendered at 3x, resized to 720 px wide",
+    "language": "ko-KR",
+    "theme": "light",
+    "date": "2026-11-24",
+    "font_for_pdf": "NanumGothic (macOS system font asset NanumGothic.ttc), not distributed"
+  },
+  "screenshots": {
+    "saved-place.png": {
+      "sha256": "2336b615193d4eb5d4d217acc862e2d80df63a49e9b76030f0f25428f77364e7",
+      "size": [
+        720,
+        1565
+      ]
+    },
+    "search.png": {
+      "sha256": "43f9805492b0dde46396668fe57d70abb852d987225f966ffd66fd322f1ca0a7",
+      "size": [
+        720,
+        1565
+      ]
+    },
+    "unsaved-place.png": {
+      "sha256": "4a05c67a941f7dfccaec3b6c8278eb4d82df96b8df3ee59882ee9cc64dce770e",
+      "size": [
+        720,
+        1565
+      ]
+    },
+    "added-place.png": {
+      "sha256": "2726d25e7a4462978d0876d3d7d0c4d22119bec263445154a0a47e4d999769d8",
+      "size": [
+        720,
+        1565
+      ]
+    }
+  },
+  "manual_sha256": "f29755facb323e0a79d8368818db84c1e91130793d713eb9bb0e16f81418106a",
+  "pdf_sha256": "223203a06a9f80339df8ea9972c41c673018a3b7877d7d0cb60eba7269f211d2",
+  "sources": {
+    "ios/TodayWeatherTests/HeaderSearchManualCaptureTests.swift": "d8a1ff6e046f058a09f084aa24bd5add8c7a9439a67b3358a15d594bf752792b",
+    "ios/TodayWeather/Weather/WeatherScreens.swift": "0974f25c05db7f96b6b573f2dfaa13d1966cf7ca234b482e78743281bea99092",
+    "ios/TodayWeather/Shell/ShellView.swift": "5e1a35399969eb119ca3715d1d732373ad0153a3852999350bbbbea0a57796d7",
+    "ios/TodayWeather/Weather/BubblesSpinner.swift": "5271a7f07acbc689407e25ef464226d2feef1bbdde6faf8dbe6ff21a9907bc09",
+    "ios/TodayWeather/Places/PlacesScreens.swift": "a79f51893c854f1d5bba7c6379c2b1c908ebc0851a90df3dd6ea04cb340b8d31",
+    "ios/TodayWeather/Weather/LinkTexts.swift": "93e51cb9f847cc14d4790e0aef40adeb77714ae3508d251c784897eba2be2197",
+    "ios/TodayWeatherTests/PlacesReference/places-kma-seoul.input.json": "ec2a645f69200df2609792d64d9c9ea90dafaa2d1daadbf2566df1d75a7b6b31"
+  }
+}

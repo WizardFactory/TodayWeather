@@ -156,4 +156,80 @@ struct DeepLinkLaunchTests {
         #expect(launch.unsaved?.unsaved?.selected == false)
         #expect(launch.shell?.selected == .forecast)
     }
+
+    /// CODEX-3195-3: a place link while the weather's retry confirmation (O03) is open closes it and loads the linked
+    /// place; the confirmation would otherwise stop every reload.
+    @Test func aPlaceLinkClosesTheRetryConfirmationAndLoads() async throws {
+        let server = WeatherTabTests.Server { _ in .fail(0, 503) }
+        let launch = AppLaunch(store: MemoryStore(),
+                               environment: .init(preferredLanguages: ["ko-KR"], photosURL: nil, version: "test",
+                                                  serverURL: "https://server.test.invalid"),
+                               weatherHTTP: server, weatherCache: nil,
+                               location: { TestLocation(system: .authorizedWhenInUse) }, placeSearch: { nil })
+        launch.migrationFinished(ShellFixture.state())
+        let session = try #require(launch.weather?.session)
+        #expect(await HostedShellTests.AirLiveTests.wait(10) { session.retry })
+        let before = server.requests.count
+        try Self.open(launch, "https://link.todayweather.ai/place/busan")
+        #expect(!session.retry, "the confirmation closed")
+        #expect(await HostedShellTests.AirLiveTests.wait(10) { server.requests.count > before }, "the linked place loads")
+        #expect(server.requests.last.map { $0.0.absoluteString.contains("/coord/35.179,129.076") } == true)
+    }
+
+    /// CODEX-3195-5: an S01 add still loading when a place link shows the tabs over S01 finishes S01's close: the added
+    /// place is saved and selected, S01 is closed, and the unsaved place gives way (CODEX-3190-19).
+    @Test func anS01AddFinishingAfterAPlaceLinkClosesS01() async throws {
+        let body = try References.data("places-kma-seoul.input.json")
+        let server = WeatherTabTests.Server { _ in .answer(0.5, body) }
+        let launch = AppLaunch(store: MemoryStore(),
+                               environment: .init(preferredLanguages: ["ko-KR"], photosURL: nil, version: "test",
+                                                  serverURL: "https://server.test.invalid"),
+                               weatherHTTP: server, weatherCache: nil,
+                               location: { TestLocation(system: .authorizedWhenInUse) }, placeSearch: { nil })
+        var start = ShellFixture.state(startVersion: nil)
+        start.places = [.currentPositionPlaceholder]
+        start.placeIndex = -1
+        launch.migrationFinished(start)
+        let page = try #require(launch.startPage)
+        page.addShortcut(CityShortcuts.forScreenHeight(800).first!)
+        try Self.open(launch, "https://link.todayweather.ai/place/jeju")
+        #expect(launch.shell?.screen == .tab(.forecast) && launch.unsaved?.unsaved?.selected == true)
+        #expect(await HostedShellTests.AirLiveTests.wait(10) { launch.startPage == nil }, "S01 closed itself")
+        #expect(!StartGate.shows(launch.holder.state?.cordovaExtras["startVersion"]))
+        #expect(launch.holder.state?.places.last?.name == "서울")
+        #expect(launch.unsaved?.unsaved?.selected == false, "the added place is the selected one")
+    }
+}
+
+extension HostedShellTests {
+    /// The weather header in a narrow window (#3180, #3097).
+    @MainActor
+    struct HeaderFitTests {
+        /// CODEX-3195-6: in a 320 pt window with larger text and a long name, the header keeps every control whole, inside the
+        /// window and apart: menu, the name, the search button (44 × 44 pt), the star and share.
+        @Test func theHeaderFitsANarrowWindowWithALongName() async throws {
+            let long = Place(currentPosition: false, disable: false, name: "경기도 성남시 분당구 정자일로 분당내곡로 아주 긴 이름",
+                             address: "대한민국 경기도 성남시 분당구", country: "KR", location: Location(lat: 37.383, long: 127.119))
+            let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul])
+            f.unsaved.show(long)
+            f.shell.select(.forecast)
+            let size = CGSize(width: 320, height: 568)
+            let view = ShellView(model: f.shell, content: { f.weather.content($0) }).environment(\.dynamicTypeSize, .xLarge)
+            let hosted = try HostedView(view, size: size)
+            defer { hosted.close() }
+            f.weather.handle(.launch)
+            try #require(await HostedShellTests.AirLiveTests.wait(10) { hosted.element("forecast-star") != nil })
+            try await hosted.settle()
+            func frame(_ id: String) throws -> CGRect { try #require(hosted.element(id)).accessibilityFrame }
+            let menu = try frame("shell-menu-button"), title = try frame("shell-title"), search = try frame("forecast-search")
+            let star = try frame("forecast-star"), share = try frame("forecast-share")
+            let window = hosted.window.frame
+            for (name, rect) in [("menu", menu), ("search", search), ("star", star), ("share", share)] {
+                #expect(window.contains(rect), "\(name) inside the window: \(rect)")
+            }
+            #expect(menu.maxX <= title.minX && title.maxX <= search.minX + 1, "menu, the name, then search: \(menu) \(title) \(search)")
+            #expect(search.maxX <= star.minX + 1 && star.maxX <= share.minX + 1, "search, star, share: \(search) \(star) \(share)")
+            #expect(search.width >= 44 && search.height >= 44, "touch size: \(search)")
+        }
+    }
 }

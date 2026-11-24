@@ -30,6 +30,8 @@ public final class PlacesPage {
     @ObservationIgnored private let telemetry: WeatherTelemetry?
     /// The action behind the overlay (find-by-location, an add, the first enable), while it runs.
     @ObservationIgnored public private(set) var action: Task<Void, Never>?
+    /// The visit closed: a late answer opens nothing.
+    @ObservationIgnored private var closed = false
 
     /// O03 `search` (`.confirm`) to show.
     @ObservationIgnored public var onPopup: (StartFlow.Outcome) -> Void = { _ in }
@@ -161,7 +163,11 @@ public final class PlacesPage {
         perform { [weak self] in self?.show(StartFlow.geoInfoPlace(geoInfo)) }
     }
 
+    /// Opens `place` unless it has neither usable coordinates nor an address: such a place could never load, and its star
+    /// would save it (CODEX-3195-4).
     private func show(_ place: Place) {
+        guard !closed, WeatherRequests.usesCoordinates(lat: place.location?.lat, address: place.address)
+                || !(place.address ?? "").isEmpty else { return }
         onOpen(place)
         onOpened()
     }
@@ -196,6 +202,11 @@ public final class PlacesPage {
     }
 
     /// One action at a time, behind the overlay.
+    /// The visit closed (the tab or a link took over): an answer still on its way opens nothing (CODEX-3195-2).
+    public func close() {
+        closed = true
+    }
+
     private func perform(_ body: @escaping @MainActor () async -> Void) {
         guard action == nil else { return }
         loading = true

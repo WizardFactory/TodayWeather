@@ -395,4 +395,22 @@ struct AlarmDomainGoldenTests {
         #expect(AlarmRow.text(20 * 3600 + 5 * 60) == "20:05")
         #expect(AlarmRow.text(0) == "0:00")
     }
+
+    /// CODEX-3190-15 (#3097): opening for a saved place selects it (`setCityIndex(fav)`) and says so, also when it is
+    /// already the selected one; an opening without a place says nothing.
+    @MainActor @Test func openingForASavedPlaceSaysItChoseIt() async throws {
+        let visit = AlarmVisit(places: AlarmsGolden.places(nil), selected: 1, token: "token-a", records: [],
+                               notifications: NotificationsDouble())
+        var chosen = 0
+        let page = AlarmPage(holder: visit.holder, notifications: NotificationsDouble(), post: { _ in }, openSettings: {},
+                             now: { AlarmsGolden.now }, zone: { AlarmsGolden.zone }, chosen: { chosen += 1 })
+        page.open(fav: 1)
+        #expect(chosen == 1, "the selected place again")
+        let other = AlarmPage(holder: visit.holder, notifications: NotificationsDouble(), post: { _ in }, openSettings: {},
+                              now: { AlarmsGolden.now }, zone: { AlarmsGolden.zone }, chosen: { chosen += 1 })
+        other.open(fav: nil)
+        #expect(chosen == 1, "no place, no choice")
+        await page.permissionCheck?.value
+        await other.permissionCheck?.value
+    }
 }

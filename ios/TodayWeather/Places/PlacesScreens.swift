@@ -95,6 +95,8 @@ final class PlacesScreens {
         if !shown && visitOpen {
             query.clear()
             searchFrom = nil
+            // A result still loading opens nothing once the tab is left (another tab, a link; CODEX-3195-2).
+            page.close()
         }
         visitOpen = shown
         // `OnSearchCurrentPosition`: each found position replaces the results with the found row, named in the input

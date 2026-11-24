@@ -219,12 +219,13 @@ final class AppLaunch {
     /// visit; a save posts through IN-04's push service; the return starts the tabs' pages anew (`cache: false`).
     private func makeAlarms(_ shell: ShellModel, weather: WeatherScreens) -> AlarmsScreens {
         let holder = self.holder
-        // S09 opened for a saved place selects it; through the selecting view an unsaved place gives way (CODEX-3190-15).
-        let saved: any PlaceState = unsaved?.selectingAccess ?? holder
+        // S09 opened for a saved place selects it, the user's choice: an unsaved place gives way (CODEX-3190-15).
+        let unsaved = self.unsaved
         let alarms = AlarmsScreens(shell: shell, makePage: {
-            AlarmPage(holder: saved, notifications: UserNotificationAccess(available: FirebasePush.configured),
+            AlarmPage(holder: holder, notifications: UserNotificationAccess(available: FirebasePush.configured),
                       post: { index in AppStartup.shared.push?.postPlace(index) },
-                      openSettings: { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } })
+                      openSettings: { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } },
+                      chosen: { [weak unsaved] in unsaved?.savedChosen() })
         }, postList: { AppStartup.shared.push?.postList() })
         weather.onBell = { [weak alarms, weak holder] in alarms?.open(fav: holder?.state?.placeIndex) }
         places?.onBell = { [weak alarms] index in alarms?.open(fav: index) }
@@ -318,7 +319,16 @@ final class AppLaunch {
     /// A place link over S01 shows the tabs without closing S01 (no `startVersion`); the star closes it. Links that change
     /// nothing (an unknown city, a page or `/open` over S01) leave the screens as they are.
     private func openLink(_ target: DeepLinkTarget) {
-        guard let shell, let weather, let route = linkOpener?.open(target) else { return }
+        guard let shell, let weather else { return }
+        switch target {
+        case .place, .coordinate:
+            // An open retry confirmation (O03) stops every reload; the link's place loads instead (CODEX-3195-3).
+            weather.session.closeRetry()
+            weather.session.closePositionRetry()
+        default:
+            break
+        }
+        guard let route = linkOpener?.open(target) else { return }
         closeForLink()
         switch route {
         case .app:
@@ -329,8 +339,8 @@ final class AppLaunch {
             let tab: ShellTab = view == .daily ? .dailyforecast : view == .air ? .air : .forecast
             weather.openLinkTab(tab, pollutant: pollutant)
             if case .start = shell.screen {
+                // S01 stays alive behind the tabs: an add it started still finishes and closes it (CODEX-3195-5).
                 startBypassed = true
-                startPage = nil
                 shell.closeStart()
             }
         }
@@ -352,9 +362,7 @@ final class AppLaunch {
     /// bundled towns), and its close.
     private func makeStartPage(_ shell: ShellModel, location: any AppLocation) -> StartPage {
         let locale = self.locale
-        // S01's add selects the place it saves; through the selecting view an unsaved place shown over S01 by a link gives
-        // way (CODEX-3190-19).
-        let flow = StartFlow(holder: unsaved?.selectingAccess ?? holder, repository: repository,
+        let flow = StartFlow(holder: holder, repository: repository,
                              geocode: GeocodeClient(baseURL: environment.serverURL, http: weatherHTTP),
                              location: location, acceptLanguage: { locale.acceptLanguage }, telemetry: AppLaunch.weatherTelemetry)
         return StartPage(shell: shell, flow: flow, search: makePlaceSearch(), towns: towns, closed: { [weak self] in self?.startClosed() })
@@ -385,6 +393,8 @@ final class AppLaunch {
     /// 'init'`).
     private func startClosed() {
         guard let shell else { return }
+        // S01 saved a place, the user's choice: an unsaved place a link showed over S01 gives way (CODEX-3190-19).
+        unsaved?.savedChosen()
         shell.select(.forecast)
         shell.closeStart()
         startPage = nil

@@ -381,7 +381,7 @@ final class WeatherScreens {
     }
 
     /// After the title: the spinner (O17) while the place loads, then the search button (#3180), which opens S02's
-    /// search from `tab`. The button keeps a 36 × 44 pt touch area.
+    /// search from `tab`. The button keeps a 44 × 44 pt touch area (CODEX-3195-6).
     private func titleAccessory(_ tab: ShellTab, colors: ShellColors) -> AnyView {
         let spinner = session.loadingSelected
         let search = linkTexts.search
@@ -394,7 +394,7 @@ final class WeatherScreens {
                 Text(Glyphs.iosSearch)
                     .font(Glyphs.ionicons(22)).foregroundStyle(colors.headerText.color)
                     .outlined(colors.headerOutline)
-                    .frame(width: 36, height: ShellMetrics.headerHeight)
+                    .frame(width: 44, height: ShellMetrics.headerHeight)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)

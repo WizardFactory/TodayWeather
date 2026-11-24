@@ -308,6 +308,27 @@ struct PlacesPageTests {
         #expect(f.state.places.count == 2)
     }
 
+    /// CODEX-3195-4: a geocode answer without coordinates or an address (`{}`) opens nothing: such a place could never
+    /// load, and its star would save it.
+    @Test func anAnswerWithoutALocationOpensNothing() async throws {
+        let f = try Fixture(LocationDouble(system: .authorizedWhenInUse), places: [.currentPositionPlaceholder, seoul]) { url in
+            url.path.hasPrefix("/geocode/") ? .answer(0, Data("{}".utf8)) : nil
+        }
+        f.page.openPrediction(fullText: "London, UK", firstMatch: 0, word: "Lon")
+        await f.settle()
+        #expect(f.popups.opened.isEmpty && f.popups.goPages == 0)
+        #expect(f.state.places.count == 2)
+    }
+
+    /// CODEX-3195-2: a result whose answer arrives after the visit closed (another tab or a link took over) opens nothing.
+    @Test func aLateAnswerAfterTheVisitClosedOpensNothing() async throws {
+        let f = try Fixture(LocationDouble(system: .authorizedWhenInUse), places: [.currentPositionPlaceholder, seoul])
+        f.page.openPrediction(fullText: "London, UK", firstMatch: 0, word: "Lon")
+        f.page.close()
+        await f.settle()
+        #expect(f.popups.opened.isEmpty && f.popups.goPages == 0)
+    }
+
     /// A failed geocode of a prediction shows nothing (Cordova only hides the overlay).
     @Test func aFailedGeocodeShowsNothing() async throws {
         let f = try Fixture(LocationDouble(system: .authorizedWhenInUse), places: [.currentPositionPlaceholder, seoul]) { url in

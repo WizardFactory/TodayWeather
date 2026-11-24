@@ -292,12 +292,15 @@ struct UnsavedPlacesTests {
         let holder = Self.holder(Self.started([Self.current, Self.london, Self.busan], index: 2))
         let unsaved = UnsavedPlaces(holder: holder)
         unsaved.show(Self.seoul)
-        unsaved.selectingAccess.change { $0.placeIndex = 1 }
+        // S09's open: `setCityIndex(fav)` on the saved state, then its signal.
+        holder.change { $0.placeIndex = 1 }
+        unsaved.savedChosen()
         #expect(holder.state?.placeIndex == 1)
         #expect(unsaved.unsaved?.selected == false)
         #expect(unsaved.state?.placeIndex == 1)
+        // An alarm save sends no signal and selects nothing.
         unsaved.change { $0.placeIndex = 3 }
-        unsaved.selectingAccess.change { $0.expandShortChart = $0.expandShortChart }
+        holder.change { $0.expandShortChart = $0.expandShortChart }
         #expect(unsaved.unsaved?.selected == true)
     }
 
@@ -319,7 +322,7 @@ struct UnsavedPlacesTests {
         let holder = Self.holder(Self.started())
         let unsaved = UnsavedPlaces(holder: holder)
         unsaved.show(Self.seoul)
-        unsaved.selectingAccess.change { $0.placeIndex = 1 }
+        unsaved.savedChosen()
         #expect(unsaved.unsaved?.selected == false)
         #expect(unsaved.state?.placeIndex == 1)
     }
@@ -330,7 +333,8 @@ struct UnsavedPlacesTests {
         let holder = Self.holder(AppState())
         let unsaved = UnsavedPlaces(holder: holder)
         unsaved.show(Self.seoul)
-        unsaved.selectingAccess.change { s in s = PlaceList.add(s, Self.london).map(PlaceList.closeStart) ?? s }
+        holder.change { s in s = PlaceList.add(s, Self.london).map(PlaceList.closeStart) ?? s }
+        unsaved.savedChosen()
         #expect(holder.state?.places.last == Self.london && holder.state?.placeIndex == 1)
         #expect(unsaved.unsaved?.selected == false)
         #expect(unsaved.state?.placeIndex == 1)
