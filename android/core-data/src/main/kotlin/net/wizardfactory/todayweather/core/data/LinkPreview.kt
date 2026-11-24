@@ -60,6 +60,25 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
         }
     }
 
+    /**
+     * The saved state for S09, which changes the saved places' alarms and, when it opens for a saved place, selects it
+     * (`setCityIndex(fav)`): that selection is the user's, so the unsaved place is no longer the selected one
+     * (CODEX-3190-15). Other changes (the alarm records) select nothing.
+     */
+    val alarmAccess: StateAccess = object : StateAccess {
+        override fun current(): AppState? = saved.current()
+
+        override fun change(update: (AppState) -> AppState) {
+            val now = shown.value
+            val before = saved.current()?.placeIndex
+            saved.change(update)
+            val after = saved.current() ?: return
+            if (now != null && after.placeIndex != before && enabledSelection(after) != null) {
+                shown.compareAndSet(now, now.copy(selected = false))
+            }
+        }
+    }
+
     /** Shows [place] (enabled) as the selected place, in place of an earlier unsaved one. */
     fun show(place: Place) {
         while (true) {
@@ -172,15 +191,23 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
                 return saved.change(update)
             }
             val last = before.places.lastIndex
-            val selectedAfter = after.placeIndex == last
+            // The unsaved place is selected when the change selects it, or when the saved selection it leaves names no
+            // enabled saved place (O03's search turning off the only enabled current position, CODEX-3190-16).
+            val leftSaved = after.copy(places = after.places.dropLast(1))
+            val selectedAfter = after.placeIndex == last || enabledSelection(leftSaved) == null
             // A show, a star or another change in between: compute again over what is shown now.
             if (!shown.compareAndSet(now, Unsaved(after.places.last(), selectedAfter))) continue
             saved.change { s ->
                 val changed = update(overlay(s, now))
                 if (changed.places.size != s.places.size + 1) return@change s
-                // While the unsaved place is selected, the saved selection stays the one before it.
-                val selection = if (changed.placeIndex == s.places.size) s.placeIndex else changed.placeIndex
-                changed.copy(places = changed.places.dropLast(1), placeIndex = selection)
+                // While the unsaved place is selected, the saved selection stays the one before it, followed to an
+                // enabled row (else the first enabled row, else -1) when the change turned it off.
+                val stripped = changed.copy(places = changed.places.dropLast(1))
+                if (changed.placeIndex == s.places.size || enabledSelection(stripped) == null) {
+                    stripped.copy(placeIndex = savedSelection(s, stripped.copy(placeIndex = s.placeIndex)))
+                } else {
+                    stripped
+                }
             }
             return
         }

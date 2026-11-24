@@ -479,4 +479,40 @@ class LinkPreviewTest {
         assertEquals(listOf(current, oldHome, newHome), saved.value.places)
         assertEquals(2, saved.value.placeIndex, "the row selected before, not the earlier one of its name")
     }
+
+    /**
+     * CODEX-3190-15: S09 opened for a saved place selects it (`setCityIndex(fav)`), so the unsaved place is no longer the
+     * selected one: the weather pages show that place, and a new start opens it.
+     */
+    @Test
+    fun openingAPlacesAlarmsSelectsIt() {
+        val busan = Place(false, false, "부산", "부산광역시 중구", "KR", Location(35.179, 129.076))
+        val saved = Memory(started.copy(places = listOf(current, london, busan), placeIndex = 2))
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        preview.alarmAccess.change { it.copy(placeIndex = 1) }
+        assertEquals(1, saved.value.placeIndex)
+        assertEquals(false, preview.unsaved.value?.selected)
+        assertEquals(1, preview.current()!!.placeIndex)
+        // A save of the alarms (push records only) changes no selection.
+        preview.change { it.copy(placeIndex = 3) }
+        preview.alarmAccess.change { it.copy(push = it.push) }
+        assertEquals(true, preview.unsaved.value?.selected)
+    }
+
+    /**
+     * CODEX-3190-16: O03's search turns off the current position, the only enabled saved place, through the pages: the
+     * unsaved place becomes the selected one and the saved selection none (-1), not the disabled row.
+     */
+    @Test
+    fun turningOffTheCurrentPositionFromThePagesSelectsTheUnsavedOne() {
+        val saved = Memory(started.copy(places = listOf(current), placeIndex = 0))
+        val preview = LinkPreview(saved)
+        preview.show(seoul)
+        preview.change { it.copy(placeIndex = 0) }
+        preview.change { net.wizardfactory.todayweather.core.storage.PlaceList.disableCurrent(it, true) }
+        assertEquals(-1, saved.value.placeIndex)
+        assertEquals(true, preview.unsaved.value?.selected)
+        assertEquals(1, preview.add())
+    }
 }

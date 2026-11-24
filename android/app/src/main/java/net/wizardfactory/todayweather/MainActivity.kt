@@ -754,7 +754,9 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     /** S09's visits (#2893); a save changes the state at once and posts in the app's scope (`_postPushList` was not awaited). */
     val alarms = AlarmsHost { scope, openSettings ->
-        AlarmPage(twApp.appState, twApp.notifications, post = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.postPlace(index) } },
+        // S09 opened for a saved place selects it; through the preview's alarm view, so an unsaved place gives way
+        // (CODEX-3190-15).
+        AlarmPage(preview.alarmAccess, twApp.notifications, post = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.postPlace(index) } },
             openSettings = openSettings, scope = scope)
     }
 
