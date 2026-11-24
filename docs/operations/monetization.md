@@ -244,6 +244,8 @@ AK decided on 2026-11-24 to turn usage analytics on by default in the native app
 - A stored choice wins: an earlier decline or withdrawal stays off. Applying the default writes no choice.
 - Analytics storage is granted only while collecting; ad storage, ad user data and ad personalization stay denied.
 - The menu row is "이용 통계" / "Usage analytics" / "利用状況分析" with on/off status.
+- AK, 2026-11-24: EU territories with their own ISO codes (GF, GP, MQ, RE, YT, MF, AX) count as EEA. A decline kept only in Cordova WebView storage, or a withdrawal made in a Cordova fallback build, is not carried over: those users get the region default, with no new consent prompt. The opt-in consent popup is shown in every app language (no English fallback).
+- AK approved the privacy, terms and support wording on 2026-11-24 (#3188). Publish the pages together with the first app release that has this behavior, not before.
 - A withdrawal that cannot be saved keeps collection off for that session and shows the save-failed notice; if it still cannot be persisted, the region default can apply at the next start (accepted residual).
 
 The privacy, terms and support pages state the same rules. Before a release with this behavior ships: publish the updated pages, update the Play Data safety answers (analytics data is collected by default outside the opt-in regions, with an opt-out) and re-check the App Store privacy answers. The section below records the earlier opt-in behavior, which still applies in the opt-in regions.
