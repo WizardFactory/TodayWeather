@@ -85,17 +85,17 @@ public final class UsageAnalytics {
 
     /// The choice of the dialog (`setCollectionEnabled`): collection stops at once and every consent type is denied
     /// before any file is written, then the choice is written and applied. False when it could not be fully applied
-    /// (`LOC_PRIVACY_SAVE_FAILED`); collection is then off for this run. A grant that cannot be written keeps the stored
-    /// choice as it was (a decline is never erased); a withdrawal that cannot be written removes the old choice, so no
-    /// grant survives. Accepted residual (2026-11-24): if neither can be persisted, the next start finds no choice and the
-    /// region default applies again.
+    /// (`LOC_PRIVACY_SAVE_FAILED`); collection is then off for this run. A choice that cannot be written keeps the stored
+    /// value as it was (`specs/analytics-default-on.md`): a decline is never erased, and an old grant is withdrawn at the
+    /// next start by the collection-state check, whose record now says off. Accepted residual (2026-11-24): without a
+    /// stored grant, a withdrawal that cannot be persisted gives way to the region default at the next start.
     @discardableResult
     public func setCollectionEnabled(_ value: Bool) -> Bool {
         enabled = false
         pendingScreen = nil
         sdk.setCollectionEnabled(false)
         sdk.setConsent(analytics: false)
-        let saved = value ? writeGrant() : writeChoice(false)
+        let saved = writeChoice(value)
         setChoice(saved && value)
         // A failed grant leaves both records as they were (CODEX-3187-4): off for this run, nothing rewritten.
         if value && !saved {
@@ -165,18 +165,11 @@ public final class UsageAnalytics {
         }
     }
 
-    /// Writes a withdrawal (`persistChoice`); when that fails it removes the choice, so an old grant cannot survive.
+    /// Writes the choice (`persistChoice`); when that fails the stored value stays as it was (shared spec, 2026-11-24): a
+    /// decline is never erased into "no choice", and an old grant is withdrawn at the next start by the collection-state
+    /// check.
     private func writeChoice(_ value: Bool) -> Bool {
         if records.writeChoice(value) { return true }
-        if !records.removeChoice() { log("collection storage_remove_failed") }
-        log("collection storage_write_failed")
-        return false
-    }
-
-    /// Writes a grant; when that fails the stored choice stays as it was, so a stored decline is never erased into "no
-    /// choice" (and with it into the region default).
-    private func writeGrant() -> Bool {
-        if records.writeChoice(true) { return true }
         log("collection storage_write_failed")
         return false
     }

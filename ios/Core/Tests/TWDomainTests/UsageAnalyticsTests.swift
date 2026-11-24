@@ -244,15 +244,23 @@ struct UsageAnalyticsTests {
         #expect(half.choice == "false", "the unconfirmed grant is withdrawn and written so")
     }
 
-    /// A choice that cannot be written: the old grant is removed, collection is off and the menu shows 꺼짐.
+    /// A withdrawal that cannot be written (`specs/analytics-default-on.md`, Withdrawal): collection is off at once and
+    /// the menu shows 꺼짐; the stored value stays as it was, and the old grant is withdrawn at the next start by the
+    /// collection-state check (its record now says off), also where the default is on.
     @Test func aFailedChoiceWriteWithdraws() {
         let records = MemoryRecords()
-        let (analytics, sdk, _) = make(records)
+        let (analytics, sdk, _) = make(records, region: "KR")
         analytics.start()
         analytics.setCollectionEnabled(true)
         records.failChoiceWrites = true
         #expect(!analytics.setCollectionEnabled(false), "LOC_PRIVACY_SAVE_FAILED")
-        #expect(!analytics.choice && records.choice == nil && sdk.collectionEnabled == false)
+        #expect(!analytics.choice && sdk.collectionEnabled == false)
+        #expect(records.choice == "true" && !records.collection, "the stored value stays; its record says off")
+        records.failChoiceWrites = false
+        let (restarted, restartedSdk, _) = make(records, region: "KR")
+        restarted.start()
+        #expect(!restarted.choice && restartedSdk.collectionEnabled == false, "withdrawn by the collection-state check")
+        #expect(records.choice == "false", "and written so")
 
         records.failChoiceWrites = true
         #expect(!analytics.setCollectionEnabled(true))
