@@ -7,7 +7,6 @@
     "\"vc-london-hourly\"",
     "\"vc-london-daily\""
   ],
-  "WeatherScreenshotTests/rankedForecastHeader(page:)": ["\"kma-seoul-hourly\"", "\"kma-seoul-daily\""],
   "MatrixScreenshotTests/weatherPages(size:language:)": [
     "\"375x667\", \"ko-KR\"",
     "\"375x667\", \"en-US\"",
@@ -17,5 +16,13 @@
   ],
   "WeatherTabTests/rankedSummaryUsesTheWeatherRequestAndKeepsAirAccessible()": [],
   "ForecastScopeTests/rankedSummaryExpiresAtSeoulMidnight()": [],
-  "ClockedDataTests/WeatherRequestTests/datedSummaryKeepsItsRequestWhenReopeningOffline()": []
+  "ClockedDataTests/WeatherRequestTests/datedSummaryKeepsItsRequestWhenReopeningOffline()": [],
+  "WeatherScreenshotTests/rankedForecastHeader(page:size:)": [
+    "\"kma-seoul-hourly\", \"375x667\"",
+    "\"kma-seoul-hourly\", \"393x852\"",
+    "\"kma-seoul-hourly\", \"440x956\"",
+    "\"kma-seoul-daily\", \"375x667\"",
+    "\"kma-seoul-daily\", \"393x852\"",
+    "\"kma-seoul-daily\", \"440x956\""
+  ]
 }

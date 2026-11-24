@@ -28,11 +28,11 @@ struct WeatherScreenshotTests {
         Attachment.record(png, named: "ios-fractional-header.png")
     }
 
-    @Test(arguments: ["kma-seoul-hourly", "kma-seoul-daily"])
-    func rankedForecastHeader(page: String) throws {
+    @Test(arguments: ["kma-seoul-hourly", "kma-seoul-daily"], ["375x667", "393x852", "440x956"])
+    func rankedForecastHeader(page: String, size: String) throws {
         let midnight = try #require(ISO8601DateFormatter().date(from: "2026-02-04T15:00:00Z"))
         let daylight = midnight.addingTimeInterval(-1)
-        let display = try MatrixScreenshotTests.display("375x667")
+        let display = try MatrixScreenshotTests.display(size)
 
         func header(_ text: String, at now: Date = daylight, name: String) throws -> Bitmap {
             let content = try Self.content(page, rankedSummary: text, now: now, metrics: display.metrics)
@@ -48,7 +48,7 @@ struct WeatherScreenshotTests {
             let view = Self.blockView(.header, content: content, page: page, headerTop: display.top)
             let bitmap = try render(view, width: display.width, scale: display.scale)
             let png = try #require(UIImage(cgImage: bitmap.image).pngData())
-            Attachment.record(png, named: "\(page)-\(name).png")
+            Attachment.record(png, named: "\(page)-\(size)-\(name).png")
             return bitmap
         }
 
@@ -62,9 +62,10 @@ struct WeatherScreenshotTests {
         func box(_ text: String) throws -> Bitmap {
             let content = try Self.content(page, rankedSummary: text, now: daylight, metrics: display.metrics)
             let width = display.width * 0.8
+            let colors = WeatherColors.of(.light, daily: content.type == .mid)
             let view = MainBox(page: content.page, metrics: display.metrics, theme: .light,
-                               colors: WeatherColors.of(.light, daily: content.type == .mid),
-                               s: TextScale(.large), width: width, perform: { _ in })
+                               colors: colors, s: TextScale(.large), width: width, perform: { _ in })
+                .background(colors.header.color)
             return try render(AnyView(view), width: width, scale: display.scale)
         }
         let one = try box("입춘")
@@ -72,6 +73,15 @@ struct WeatherScreenshotTests {
         let long = try box("입춘\n오늘 최저 영하 12도\n최고 영하 3도\n한파주의보")
         #expect(two.height > one.height)
         #expect(long.height == two.height, "The forecast summary must occupy at most two lines")
+
+        let referenceName = "ranked-summary-\(page)-\(size)"
+        let reference = try References.image(referenceName + ".png")
+        let diff = ImageDiff(native: long, reference: reference)
+        try diff.write(referenceName)
+        #expect(long.width == reference.width)
+        #expect(abs(diff.heightDifference) <= 1)
+        #expect(diff.strong <= 0.005, "\(referenceName) strong \(diff.strong)")
+        #expect(diff.mean <= 0.4, "\(referenceName) mean \(diff.mean)")
     }
 
     @Test(arguments: pages)
