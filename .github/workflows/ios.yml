@@ -15,6 +15,9 @@ on:
       - "android/app/provenance/cordova-fonts.json"
       # Source of ios/tools/import_corpus.py (the golden corpus copy).
       - "android/core-domain/src/test/resources/corpus/**"
+      # Sources of ios/tools/import_deeplink_golden.py (#3097: the shared deep link vectors and the web catalog).
+      - "specs/deeplink.golden.json"
+      - "packages/weather-core/src/index.ts"
       # Sources of ios/tools/push/generate.py (the Cordova iOS push requests).
       - "client/www/js/service.push.js"
       - "client/www/js/service.weatherutil.js"
@@ -172,10 +175,11 @@ jobs:
           node-version: "22"
       # The generators read client/ and android/ and run in the macOS jsc shell, so this check runs here, before
       # those directories are removed.
-      - name: Imported client assets, golden corpus, chart scenes, push requests and S09 goldens, weather request timing, air scales, settings steps, ad privacy entries, hand-back starts and the server route table are current
+      - name: Imported client assets, golden corpus, deep link vectors, chart scenes, push requests and S09 goldens, weather request timing, air scales, settings steps, ad privacy entries, hand-back starts and the server route table are current
         run: |
           python3 ios/tools/import_client_assets.py
           python3 ios/tools/import_corpus.py
+          python3 ios/tools/import_deeplink_golden.py
           python3 ios/tools/import_chart_reference.py
           python3 ios/tools/push/generate.py
           python3 ios/tools/weather/generate.py

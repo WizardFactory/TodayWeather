@@ -1,0 +1,178 @@
+[
+ {
+  "id": "seoul",
+  "name": "서울",
+  "address": "서울특별시 중구",
+  "country": "KR",
+  "lat": 37.567,
+  "lon": 126.978
+ },
+ {
+  "id": "busan",
+  "name": "부산",
+  "address": "부산광역시 중구",
+  "country": "KR",
+  "lat": 35.179,
+  "lon": 129.076
+ },
+ {
+  "id": "incheon",
+  "name": "인천",
+  "address": "인천광역시 남동구",
+  "country": "KR",
+  "lat": 37.456,
+  "lon": 126.705
+ },
+ {
+  "id": "daegu",
+  "name": "대구",
+  "address": "대구광역시 중구",
+  "country": "KR",
+  "lat": 35.871,
+  "lon": 128.601
+ },
+ {
+  "id": "daejeon",
+  "name": "대전",
+  "address": "대전광역시 서구",
+  "country": "KR",
+  "lat": 36.35,
+  "lon": 127.385
+ },
+ {
+  "id": "gwangju",
+  "name": "광주",
+  "address": "광주광역시 서구",
+  "country": "KR",
+  "lat": 35.16,
+  "lon": 126.852
+ },
+ {
+  "id": "ulsan",
+  "name": "울산",
+  "address": "울산광역시 남구",
+  "country": "KR",
+  "lat": 35.539,
+  "lon": 129.311
+ },
+ {
+  "id": "jeju",
+  "name": "제주",
+  "address": "제주특별자치도 제주시",
+  "country": "KR",
+  "lat": 33.499,
+  "lon": 126.531
+ },
+ {
+  "id": "gangneung",
+  "name": "강릉",
+  "address": "강원특별자치도 강릉시",
+  "country": "KR",
+  "lat": 37.752,
+  "lon": 128.876
+ },
+ {
+  "id": "suwon",
+  "name": "수원",
+  "address": "경기도 수원시",
+  "country": "KR",
+  "lat": 37.263,
+  "lon": 127.029
+ },
+ {
+  "id": "chuncheon",
+  "name": "춘천",
+  "address": "강원특별자치도 춘천시",
+  "country": "KR",
+  "lat": 37.881,
+  "lon": 127.73
+ },
+ {
+  "id": "cheongju",
+  "name": "청주",
+  "address": "충청북도 청주시",
+  "country": "KR",
+  "lat": 36.642,
+  "lon": 127.489
+ },
+ {
+  "id": "jeonju",
+  "name": "전주",
+  "address": "전북특별자치도 전주시",
+  "country": "KR",
+  "lat": 35.824,
+  "lon": 127.148
+ },
+ {
+  "id": "pohang",
+  "name": "포항",
+  "address": "경상북도 포항시",
+  "country": "KR",
+  "lat": 36.019,
+  "lon": 129.343
+ },
+ {
+  "id": "mokpo",
+  "name": "목포",
+  "address": "전라남도 목포시",
+  "country": "KR",
+  "lat": 34.811,
+  "lon": 126.392
+ },
+ {
+  "id": "yeosu",
+  "name": "여수",
+  "address": "전라남도 여수시",
+  "country": "KR",
+  "lat": 34.761,
+  "lon": 127.662
+ },
+ {
+  "id": "andong",
+  "name": "안동",
+  "address": "경상북도 안동시",
+  "country": "KR",
+  "lat": 36.569,
+  "lon": 128.729
+ },
+ {
+  "id": "tokyo",
+  "name": "도쿄",
+  "address": "Tokyo, Japan",
+  "country": "JP",
+  "lat": 35.69,
+  "lon": 139.692
+ },
+ {
+  "id": "london",
+  "name": "런던",
+  "address": "London, United Kingdom",
+  "country": "GB",
+  "lat": 51.507,
+  "lon": -0.128
+ },
+ {
+  "id": "new-york",
+  "name": "뉴욕",
+  "address": "New York, United States",
+  "country": "US",
+  "lat": 40.713,
+  "lon": -74.006
+ },
+ {
+  "id": "berlin",
+  "name": "베를린",
+  "address": "Berlin, Germany",
+  "country": "DE",
+  "lat": 52.52,
+  "lon": 13.405
+ },
+ {
+  "id": "singapore",
+  "name": "싱가포르",
+  "address": "Singapore",
+  "country": "SG",
+  "lat": 1.352,
+  "lon": 103.82
+ }
+]

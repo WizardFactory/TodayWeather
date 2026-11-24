@@ -8,9 +8,10 @@ import TWStorage
 
 /// The share message of the Cordova iOS app (IN-16, #2965; O16, V20) against `doTabShare` run in JavaScriptCore
 /// (Golden/share.json, written by ios/tools/share/generate.py with the sources' commits and hashes): the city line, the
-/// values joined as JavaScript joins them, the emoji, the summary, the link per `Util.language`, the city line alone when
-/// the weather lines throw, and nothing (the start choice) without a location. The texts come from the imported catalogs,
-/// as the app reads them.
+/// values joined as JavaScript joins them, the emoji, the summary, the city line alone when the weather lines throw, and
+/// nothing (the start choice) without a location. The texts come from the imported catalogs, as the app reads them. The
+/// Branch link per `Util.language` that the Cordova message ended with gave way to the `link.todayweather.ai` link of the
+/// shared place and tab (specs/deeplink.md §7, D35, #3097).
 struct ShareMessageTests {
     static let golden: JSONValue = {
         let url = Bundle.module.resourceURL!.appendingPathComponent("Golden/share.json")
@@ -53,7 +54,20 @@ struct ShareMessageTests {
         }
     }
 
-    /// Every case of the golden: the same message, or none where Cordova opened the start choice.
+    /// The Cordova message with its Branch link replaced by the place's `link.todayweather.ai` link for the Hourly tab:
+    /// the record's numeric `location.lat` and `location.long` and the message's first line as the name.
+    static func replacingBranchLink(_ message: String, city: JSONObject) -> String {
+        let link = DeepLink.shareURL(lat: city["location"]?["lat"]?.numberValue?.double,
+                                     lon: city["location"]?["long"]?.numberValue?.double,
+                                     name: String(message.prefix { $0 != "\n" }), view: .hourly, pollutant: nil)
+        var out = message
+        for branch in ["https://twa.app.link/wgVmUTfVoM", "https://twa.app.link/II1JstpVoM"] {
+            out = out.replacingOccurrences(of: " " + branch, with: " " + link)
+        }
+        return out
+    }
+
+    /// Every case of the golden: the same message (its link replaced), or none where Cordova opened the start choice.
     @Test func everyCaseAsTheCordovaCode() throws {
         let cases = try #require(Self.golden["cases"]?.arrayValue)
         #expect(cases.count == 47)
@@ -61,11 +75,12 @@ struct ShareMessageTests {
         for c in cases {
             let name = c["name"]?.stringValue ?? "?"
             let catalog = try #require(c["catalog"]?.stringValue)
-            let language = try #require(c["language"]?.stringValue)
-            let message = ShareMessage.build(c["city"]?.objectValue, texts: ShareMessage.Texts(Self.translate(catalog)),
-                                             language: language)
-            if let expected = c["message"]?.stringValue {
+            #expect(c["language"]?.stringValue != nil)
+            let message = ShareMessage.build(c["city"]?.objectValue, texts: ShareMessage.Texts(Self.translate(catalog)))
+            if let cordova = c["message"]?.stringValue {
                 shared += 1
+                let expected = Self.replacingBranchLink(cordova, city: try #require(c["city"]?.objectValue))
+                #expect(!expected.contains("twa.app.link"), "\(name)")
                 #expect(message == expected, "\(name)")
                 #expect(c["shareArguments"] == .array([.null, .null, .null]), "\(name): the text alone")
             } else {
@@ -86,10 +101,36 @@ struct ShareMessageTests {
             """.utf8))
         let entry = WeatherEntry(weather: try #require(weather.objectValue), loadedAt: Date(timeIntervalSince1970: 0))
         let record = cityRecord(place, entry)
-        #expect(ShareMessage.build(record, texts: ShareMessage.Texts(Self.translate("ko")), language: "ko-KR")
-                == "회현동\n현재 7.2˚ ⛅\n최고 12˚, 최저 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM")
+        #expect(ShareMessage.build(record, texts: ShareMessage.Texts(Self.translate("ko")))
+                == "회현동\n현재 7.2˚ ⛅\n최고 12˚, 최저 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n오늘날씨 https://link.todayweather.ai/place/seoul")
         // A current position without a location shares nothing.
-        #expect(ShareMessage.build(cityRecord(.currentPositionPlaceholder, nil), texts: ShareMessage.Texts(Self.translate("ko")),
-                                   language: "ko-KR") == nil)
+        #expect(ShareMessage.build(cityRecord(.currentPositionPlaceholder, nil), texts: ShareMessage.Texts(Self.translate("ko"))) == nil)
+    }
+
+    /// The link follows the shared place and tab: a catalog city within 0.04° by slug, else three-decimal coordinates
+    /// with the name the message starts with, else `/open` (specs/deeplink.md §7).
+    @Test func theLinkFollowsTheSharedPlaceAndTab() throws {
+        func city(_ name: String, _ lat: String, _ long: String) throws -> JSONObject {
+            try #require(JSONValue.parse(Data("""
+                {"name": "\(name)", "location": {"lat": \(lat), "long": \(long)},
+                 "currentWeather": {"t1h": 7, "skyIcon": "sun", "today": {"tmx": 12, "tmn": 3}}}
+                """.utf8)).objectValue)
+        }
+        let ko = ShareMessage.Texts(current: "현재", highest: "최고", lowest: "최저", app: "오늘날씨")
+        func link(_ city: JSONObject, _ view: WeatherView = .hourly, _ pollutant: String? = nil) -> String? {
+            ShareMessage.build(city, texts: ko, view: view, pollutant: pollutant)?.split(separator: " ").last.map(String.init)
+        }
+        let seoul = try city("회현동", "37.56", "126.98")
+        #expect(link(seoul) == "https://link.todayweather.ai/place/seoul")
+        #expect(link(seoul, .daily) == "https://link.todayweather.ai/place/seoul?view=daily")
+        #expect(link(seoul, .air, "pm25") == "https://link.todayweather.ai/air/seoul?pollutant=pm25")
+        #expect(link(seoul, .air, "aqi") == "https://link.todayweather.ai/air/seoul")
+        // Outside the catalog: three decimals and the name the message starts with.
+        #expect(link(try city("분당구", "37.38274", "127.11891"), .air, "o3")
+                == "https://link.todayweather.ai/loc?lat=37.383&lon=127.119&name=%EB%B6%84%EB%8B%B9%EA%B5%AC&view=air&pollutant=o3")
+        #expect(link(try city("Null Island", "-0.0001", "0")) == "https://link.todayweather.ai/loc?lat=0&lon=0&name=Null%20Island")
+        // Coordinates out of range or not numbers open the app only.
+        #expect(link(try city("x", "95", "127")) == "https://link.todayweather.ai/open")
+        #expect(link(try city("x", "\"37.5\"", "127")) == "https://link.todayweather.ai/open")
     }
 }
