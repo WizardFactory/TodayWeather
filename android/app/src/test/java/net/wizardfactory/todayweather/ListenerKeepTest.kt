@@ -9,7 +9,7 @@ import org.junit.Test
  * SharedPreferences keeps its change listeners only weakly, so the app holds each one in a field; R8 removes a field the
  * code only writes. The first 2.0.1 release build lost `HandBackWriter.consentListener`: after a garbage collection the
  * analytics choice no longer reached the hand-back suite, and `HandBackConsent` withdrew a grant at the next start. Such a
- * field carries `@field:Keep`, and `tools/release/check_r8.py` (`KEPT_FIELDS`) fails a release whose mapping lacks it.
+ * field carries `@field:Keep`, and `tools/release/check_r8.py` (`KEPT_FIELDS`) fails a release whose dex lacks it.
  * PR CI builds no release, so this test checks the sources: the one registration, its kept field and the release check.
  */
 class ListenerKeepTest {

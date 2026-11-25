@@ -40,8 +40,8 @@ Release APK only. Debug builds, CI builds and the instrumented suites are unchan
 
 | # | Change | Files | Check |
 | --- | --- | --- | --- |
-| 5 | Keep `HandBackWriter.consentListener` | `android/app/src/main/java/net/wizardfactory/todayweather/HandBack.kt` | R8 release build: field in `mapping.txt`; emulator scenarios S7, S8 |
-| 6 | Release check and source test | `android/tools/release/check_r8.py`, `test_check_r8.py`, `android/app/src/test/.../ListenerKeepTest.kt` | Tests red before the change (missing check, missing annotation), green after; `check_r8.py` against the first 2.0.1 build's mapping excerpt and the new build's mapping |
+| 5 | Keep `HandBackWriter.consentListener` | `android/app/src/main/java/net/wizardfactory/todayweather/HandBack.kt` | R8 release build: field in dex (`check_r8.py`); emulator scenarios S7, S8 |
+| 6 | Release check and source test | `android/tools/release/check_r8.py`, `test_check_r8.py`, `android/app/src/test/.../ListenerKeepTest.kt` | Tests red before the change (missing check, missing annotation), green after; `check_r8.py` against made APKs (the first 2.0.1 build's mapping of `HandBackWriter`, the fixed build's unrenamed class and field) and the real APKs of `30698192a` (FAIL) and the fix (ok) |
 | 7 | Documents | this spec, `android/README.md`, runbook step 4 | Links and anchors |
 
 | ID | User and goal | Steps | Expected | Failure |

@@ -15,14 +15,16 @@ The check passes when
 - R8 obfuscated and shrank the app's own classes (APP_PACKAGE): of the classes it kept, the mapping gives more a
   new name than their own (R8 run with -dontobfuscate renames none), and it maps some to `R8$$REMOVED$$CLASS$$<n>`,
   the name R8 9.x gives a class it removed (with -dontshrink it removes none);
-- every field of KEPT_FIELDS is in the mapping under its class, which R8 kept: the field holds a listener that a
-  registry keeps only weakly, and nothing reads it, so without its keep rule R8 removes it and the listener is collected.
+- every field of KEPT_FIELDS is in a dex file's field table, under the names the mapping gives its class and the field
+  (R8 writes no mapping line for a member it keeps under its own name): the field holds a listener that a registry
+  keeps only weakly, and nothing reads it, so without its keep rule R8 removes it and the listener is collected.
 Prints one ok or FAIL line per check, and the mapping file's SHA-256 for the release notes. Status 1: a check
 failed; 2: usage or an unreadable file.
 """
 import hashlib
 import json
 import re
+import struct
 import sys
 import zipfile
 
@@ -38,7 +40,7 @@ KEPT_FIELDS = (
     ("net.wizardfactory.todayweather.HandBackWriter", "consentListener"),
 )
 # A field in a mapping: `    <type> <name> -> <new name>`; methods have parameters and may have line numbers.
-FIELD_LINE = re.compile(r"^ {4}[^\s(#:]+ ([^\s(]+) -> \S+$")
+FIELD_LINE = re.compile(r"^ {4}[^\s(#:]+ ([^\s(]+) -> (\S+)$")
 
 
 def markers(data):
@@ -85,21 +87,60 @@ def own_classes(data):
     return kept, renamed, removed
 
 
-def kept_fields(data):
-    """The (class, field) pairs of KEPT_FIELDS that the mapping has: the field's line under its class's line."""
-    wanted = set(KEPT_FIELDS)
-    found = set()
+def mapped_names(data):
+    """For each (class, field) of KEPT_FIELDS, the names R8 gave them: the class's mapping line (None when R8 removed
+    the class), the field's line, or the original names where the mapping has no line for them."""
+    names = {pair: list(pair) for pair in KEPT_FIELDS}
     current = None
     for raw in data.decode("utf-8", "replace").splitlines():
         line = raw.rstrip("\r")
         if not line.startswith((" ", "#")):
             match = re.match(r"^(\S+) -> (\S+):$", line)
-            current = match.group(1) if match and not REMOVED.fullmatch(match.group(2)) else None
+            current = match.group(1) if match else None
+            for (owner, _), mapped in names.items():
+                if match and owner == current:
+                    mapped[0] = None if REMOVED.fullmatch(match.group(2)) else match.group(2)
             continue
         field = FIELD_LINE.match(line)
-        if current and field and (current, field.group(1)) in wanted:
-            found.add((current, field.group(1)))
-    return found
+        if current and field and (current, field.group(1)) in names:
+            names[(current, field.group(1))][1] = field.group(2)
+    return {pair: (mapped[0], mapped[1]) for pair, mapped in names.items()}
+
+
+def dex_fields(data):
+    """The (class descriptor, field name) pairs of a dex file's field_ids table; empty when the tables do not parse."""
+    try:
+        string_count, string_off, type_count, type_off = struct.unpack_from("<IIII", data, 0x38)
+        field_count, field_off = struct.unpack_from("<II", data, 0x50)
+
+        def string(index):
+            if index >= string_count:
+                raise IndexError(index)
+            offset = struct.unpack_from("<I", data, string_off + 4 * index)[0]
+            size = shift = 0
+            while True:  # uleb128 length in UTF-16 units, then MUTF-8 bytes ending in 0
+                byte = data[offset]
+                offset += 1
+                size |= (byte & 0x7f) << shift
+                shift += 7
+                if not byte & 0x80:
+                    break
+            return data[offset:data.index(b"\x00", offset)].decode("utf-8", "replace")
+
+        def type_name(index):
+            if index >= type_count:
+                raise IndexError(index)
+            return string(struct.unpack_from("<I", data, type_off + 4 * index)[0])
+
+        found = set()
+        for i in range(field_count):
+            class_index, _, name_index = struct.unpack_from("<HHI", data, field_off + 8 * i)
+            if name_index >= string_count:
+                raise IndexError(name_index)
+            found.add((type_name(class_index), string(name_index)))
+        return found
+    except (struct.error, IndexError, ValueError):
+        return set()
 
 
 def main(argv):
@@ -146,9 +187,10 @@ def main(argv):
           f"R8 renamed {renamed} of the app's {renamed + kept} classes ({APP_PACKAGE}*): not obfuscated")
     check(removed > 0, f"R8 removed {removed} of the app's classes",
           f"R8 removed none of the app's classes ({APP_PACKAGE}*): not shrunk")
-    present = kept_fields(mapping)
-    for owner, field in KEPT_FIELDS:
-        check((owner, field) in present, f"R8 kept {owner}.{field}",
+    fields = set().union(*(dex_fields(data) for data in dex.values())) if dex else set()
+    for (owner, field), (new_owner, new_field) in mapped_names(mapping).items():
+        present = new_owner is not None and ("L" + new_owner.replace(".", "/") + ";", new_field) in fields
+        check(present, f"R8 kept {owner}.{field}",
               f"R8 removed {owner}.{field}: the listener it holds is kept only weakly and can be collected")
     check(bool(recorded) and recorded == actual, "mapping content has the SHA-256 of its header",
           f"mapping content SHA-256 {actual}, its header records {recorded or 'none'}")

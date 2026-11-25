@@ -38,6 +38,6 @@ Out of scope: a release, signing, Play Console or Firebase actions; a minified i
 - Problem: SharedPreferences keeps its change listeners only weakly, and `HandBackWriter` holds the analytics choice's listener in a field the code only writes. R8 removed that field (`usage.txt`), so after a garbage collection a choice no longer reached the hand-back suite and `HandBackConsent` withdrew a grant at the next start: a German user who allowed usage analytics, or a user who turned it off and on again, was off after a restart. The debug build kept the grant.
 - Outcome and acceptance:
   - **AC5** In the R8 release build the field stays; on an emulator a grant made after a forced garbage collection reaches the suite and holds after a restart (de-DE allow; US off, then on).
-  - **AC6** `check_r8.py` fails a release whose mapping lacks a listener field the app keeps, and a PR-CI unit test fails when a preference listener is registered without a kept field listed in `check_r8.py`.
+  - **AC6** `check_r8.py` fails a release whose dex lacks a listener field the app keeps, and a PR-CI unit test fails when a preference listener is registered without a kept field listed in `check_r8.py`.
   - **AC7** The R8 spec, the Android README and the runbook describe the kept field and the check.
 - Exclusions: the analytics design and its accepted residuals (`specs/analytics-default-on.md`) are unchanged.

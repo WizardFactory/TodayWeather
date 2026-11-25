@@ -3,12 +3,14 @@
 The dex files hold the marker strings D8, R8 and L8 write, in the form of the 2.0.x builds (AGP 9.5, R8 9.5.29): the
 unminified release had `~~D8` markers, the minified one an `~~R8` marker with `pg-map-id` in the app's dex and
 `~~L8` with `~~R8` in the desugared library's dex. The mapping header is R8's, whose `pg_map_hash` is the SHA-256 of
-the lines after the header. The fields SharedPreferences holds a listener by (check_r8.KEPT_FIELDS) are in the
-mapping as R8 9.5.29 writes a field it keeps: an indented `<type> <name> -> <new name>` line under its class.
+the lines after the header. A field of check_r8.KEPT_FIELDS is looked up in the dex files' field table under the names
+the mapping gives its class and field; R8 9.5.29 writes no mapping line for a field it keeps under its own name (the
+fixed 2.0.1 build kept HandBackWriter and consentListener unrenamed, and the mapping lists neither member).
 """
 import hashlib
 import json
 from pathlib import Path
+import struct
 import subprocess
 import sys
 import tempfile
@@ -25,18 +27,52 @@ def marker(tool, **fields):
     return b'~~' + tool.encode() + json.dumps(body, separators=(',', ':')).encode()
 
 
-def dex(*markers):
-    return b'dex\n039\x00' + b'\x00' * 64 + b''.join(b'\x00' + m for m in markers)
+LISTENER_TYPE = 'Landroid/content/SharedPreferences$OnSharedPreferenceChangeListener;'
+
+
+def uleb128(value):
+    out = bytearray()
+    while True:
+        byte, value = value & 0x7f, value >> 7
+        out.append(byte | (0x80 if value else 0))
+        if not value:
+            return bytes(out)
+
+
+def dex(*markers, fields=(), strings=()):
+    """A dex file with a header, the string, type and field ID tables of `fields` ((class, type, name) descriptors)
+    and extra `strings`, then the markers."""
+    names = sorted({s for field in fields for s in field} | set(strings))
+    index = {s: i for i, s in enumerate(names)}
+    types = sorted({d for c, ty, _ in fields for d in (c, ty)})
+    type_index = {d: i for i, d in enumerate(types)}
+    string_ids_off = 0x70
+    type_ids_off = string_ids_off + 4 * len(names)
+    field_ids_off = type_ids_off + 4 * len(types)
+    data_off = field_ids_off + 8 * len(fields)
+    data, offsets = b'', []
+    for s in names:
+        offsets.append(data_off + len(data))
+        data += uleb128(len(s)) + s.encode() + b'\x00'
+    tables = (b''.join(struct.pack('<I', o) for o in offsets)
+              + b''.join(struct.pack('<I', index[d]) for d in types)
+              + b''.join(struct.pack('<HHI', type_index[c], type_index[ty], index[n]) for c, ty, n in fields))
+    body = tables + data + b''.join(b'\x00' + m for m in markers)
+    header = bytearray(b'dex\n039\x00' + b'\x00' * (0x70 - 8))
+    struct.pack_into('<II', header, 0x20, 0x70 + len(body), 0x70)
+    struct.pack_into('<I', header, 0x28, 0x12345678)
+    struct.pack_into('<IIII', header, 0x38, len(names), string_ids_off, len(types), type_ids_off)
+    struct.pack_into('<II', header, 0x50, len(fields), field_ids_off)
+    return bytes(header) + body
 
 
 # The app's classes as R8 maps them: kept by a rule, renamed, removed (R8 9.x names removed classes), and the class
-# whose field holds the analytics choice's listener, with that field kept.
-LISTENER_FIELD = (b'    android.content.SharedPreferences$OnSharedPreferenceChangeListener consentListener'
-                  b' -> consentListener\n')
+# whose field holds the analytics choice's listener; the field kept under its own name has no line.
 HAND_BACK = (b'net.wizardfactory.todayweather.HandBackWriter -> e.f:\n'
              b'# {"id":"sourceFile","fileName":"HandBack.kt"}\n'
-             b'    android.content.SharedPreferences suite -> a\n' + LISTENER_FIELD +
+             b'    android.content.SharedPreferences suite -> a\n'
              b'    1:4:boolean rewrite():44:44 -> b\n')
+KEPT = ('Le/f;', LISTENER_TYPE, 'consentListener')
 SHRUNK = (b'kotlin.Unit -> kotlin.Unit:\n'
           b'net.wizardfactory.todayweather.MainActivity -> net.wizardfactory.todayweather.MainActivity:\n'
           b'    void onCreate(android.os.Bundle) -> onCreate\n'
@@ -58,7 +94,7 @@ def mapping(map_id=APP_ID, body=SHRUNK, recorded=None):
     return header + body
 
 
-MINIFIED = {'classes.dex': dex(marker('R8', **{'pg-map-id': APP_ID, 'r8-mode': 'full'})),
+MINIFIED = {'classes.dex': dex(marker('R8', **{'pg-map-id': APP_ID, 'r8-mode': 'full'}), fields=[KEPT]),
             'classes2.dex': dex(marker('L8', backend='cf'), marker('R8', **{'pg-map-id': LIB_ID}))}
 
 
@@ -87,13 +123,20 @@ class CheckR8Test(unittest.TestCase):
         self.assertIn(f'- R8 mapping SHA-256: {hashlib.sha256(mapping()).hexdigest()}', out)
         self.assertIn('ok   R8 kept net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
 
-    def test_fails_when_r8_removed_a_listener_field(self):
-        status, out, _ = self.run_tool(MINIFIED, mapping(body=SHRUNK.replace(LISTENER_FIELD, b'')))
-        self.assertEqual(status, 1)
+    def app_dex(self, *fields, strings=()):
+        return {**MINIFIED, 'classes.dex': dex(marker('R8', **{'pg-map-id': APP_ID}), fields=fields, strings=strings)}
+
+    def assert_removed(self, entries, body=SHRUNK):
+        status, out, _ = self.run_tool(entries, mapping(body=body))
+        self.assertEqual(status, 1, out)
         self.assertIn('FAIL R8 removed net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
 
-    def test_fails_for_the_mapping_of_the_first_2_0_1_build(self):
-        # HandBackWriter as the 2.0.1 build of 30698192a mapped it (R8 9.5.29): the field was removed, the analytics
+    def test_fails_when_r8_removed_a_listener_field(self):
+        other = ('Le/f;', 'Landroid/content/SharedPreferences;', 'a')
+        self.assert_removed(self.app_dex(other))
+
+    def test_fails_for_the_first_2_0_1_build(self):
+        # HandBackWriter as the 2.0.1 build of 30698192a mapped it (R8 9.5.29), its dex without the field: the analytics
         # choice's listener was collected and a grant was withdrawn at the next start.
         first = (b'net.wizardfactory.todayweather.HandBackWriter -> ql1:\n'
                  b'# {"id":"sourceFile","fileName":"HandBack.kt"}\n'
@@ -102,23 +145,39 @@ class CheckR8Test(unittest.TestCase):
                  b'      # {"id":"com.android.tools.r8.residualsignature","signature":"Lwn;"}\n'
                  b'    net.wizardfactory.todayweather.core.storage.AppState last -> c\n'
                  b'    32:37:boolean write(net.wizardfactory.todayweather.core.storage.AppState):28 -> a\n')
-        status, out, _ = self.run_tool(MINIFIED, mapping(body=SHRUNK.replace(HAND_BACK, first)))
-        self.assertEqual(status, 1)
-        self.assertIn('FAIL R8 removed net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
+        self.assert_removed(self.app_dex(('Lql1;', 'Landroid/content/SharedPreferences;', 'a')),
+                            SHRUNK.replace(HAND_BACK, first))
 
-    def test_the_field_must_be_in_its_own_class(self):
-        for body in (SHRUNK.replace(HAND_BACK, b''),
-                     SHRUNK.replace(b'HandBackWriter -> e.f:', b'HandBackWriter -> R8$$REMOVED$$CLASS$$1:'),
-                     SHRUNK.replace(HAND_BACK, b'net.wizardfactory.todayweather.Other -> g.h:\n' + LISTENER_FIELD)):
-            status, out, _ = self.run_tool(MINIFIED, mapping(body=body))
-            self.assertEqual(status, 1, body)
-            self.assertIn('FAIL R8 removed net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
+    def test_passes_for_the_fixed_2_0_1_build(self):
+        # The class and its field kept under their own names: the mapping lists the class but not the field.
+        fixed = (b'net.wizardfactory.todayweather.HandBackWriter -> net.wizardfactory.todayweather.HandBackWriter:\n'
+                 b'    android.content.SharedPreferences suite -> a\n')
+        field = ('Lnet/wizardfactory/todayweather/HandBackWriter;', LISTENER_TYPE, 'consentListener')
+        status, out, _ = self.run_tool(self.app_dex(field), mapping(body=SHRUNK.replace(HAND_BACK, fixed)))
+        self.assertIn('ok   R8 kept net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
 
-    def test_a_method_of_the_fields_name_is_not_the_field(self):
-        for line in (b'    void consentListener() -> d\n', b'    5:6:void consentListener():50:51 -> d\n'):
-            status, out, _ = self.run_tool(MINIFIED, mapping(body=SHRUNK.replace(LISTENER_FIELD, line)))
-            self.assertEqual(status, 1, line)
-            self.assertIn('FAIL R8 removed net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
+    def test_a_renamed_field_is_found_under_its_new_name(self):
+        renamed = HAND_BACK + (b'    android.content.SharedPreferences$OnSharedPreferenceChangeListener'
+                               b' consentListener -> d\n')
+        status, out, _ = self.run_tool(self.app_dex(('Le/f;', LISTENER_TYPE, 'd')),
+                                       mapping(body=SHRUNK.replace(HAND_BACK, renamed)))
+        self.assertEqual(status, 0, out)
+        self.assertIn('ok   R8 kept net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
+        self.assert_removed(self.app_dex(KEPT), SHRUNK.replace(HAND_BACK, renamed))
+
+    def test_the_field_must_be_in_its_class_under_its_mapped_name(self):
+        self.assert_removed(self.app_dex(('Lg/h;', LISTENER_TYPE, 'consentListener')))
+        self.assert_removed(self.app_dex(('Lnet/wizardfactory/todayweather/HandBackWriter;', LISTENER_TYPE,
+                                          'consentListener')))
+        self.assert_removed(MINIFIED, SHRUNK.replace(b'HandBackWriter -> e.f:', b'HandBackWriter -> R8$$REMOVED$$CLASS$$1:'))
+
+    def test_a_string_of_the_fields_name_is_not_the_field(self):
+        self.assert_removed(self.app_dex(strings=('Le/f;', 'consentListener')))
+
+    def test_the_field_may_be_in_another_dex_file(self):
+        entries = {**self.app_dex(), 'classes3.dex': dex(fields=[KEPT])}
+        status, out, _ = self.run_tool(entries)
+        self.assertEqual(status, 0, out)
 
     def test_fails_for_an_unminified_apk(self):
         d8 = marker('D8', **{'desugared-library-identifiers': ['com.tools.android:desugar_jdk_libs_configuration:2.1.5']})
