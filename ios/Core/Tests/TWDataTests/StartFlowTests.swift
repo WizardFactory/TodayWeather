@@ -50,6 +50,24 @@ struct StartFlowTests {
 
     static let cityHall = Location(lat: 37.5662952, long: 126.9779451)
 
+    /// CODEX-3195-13 (#3097): an S01 add abandoned by the star of a linked place requests nothing more: no weather, no
+    /// position, no geocode, and the page's loading callback is not turned on again.
+    @Test func anAbandonedAddRequestsNothing() async throws {
+        let f = try Fixture(LocationDouble(system: .authorizedWhenInUse, fixes: [Self.cityHall]))
+        let shortcut = CityShortcuts.forScreenHeight(800)[0]
+        let add = Task { await f.flow.addShortcut(shortcut) }
+        add.cancel()
+        #expect(await add.value == .none)
+        var loading: [Bool] = []
+        let current = Task { await f.flow.useCurrentLocation { loading.append($0) } }
+        current.cancel()
+        #expect(await current.value == .none)
+        #expect(f.paths.isEmpty, "\(f.paths)")
+        #expect(f.location.positions == 0)
+        #expect(loading.allSatisfy { !$0 }, "\(loading)")
+        #expect(f.state.places.count == 1)
+    }
+
     /// The current position saved in slot 0, named from the geocode response, and S01 closed onto it.
     func expectCurrentPositionAdded(_ f: Fixture) {
         let s = f.state

@@ -277,8 +277,9 @@ final class WeatherScreens {
     /// The header's texts that the Cordova catalogs lack (#3180).
     @ObservationIgnored lazy var linkTexts = LinkTexts.of(shell.locale.catalog)
 
-    /// The room the weather pages' title leaves on each side: the bell or star and share at the right (#3180).
-    static let titleClearance: CGFloat = 86
+    /// The room the weather pages' title leaves on each side: the widest right side, the star's 44 pt area, share (34 pt)
+    /// with its 4 pt margin and the bar's 5 pt padding, plus 1 pt (#3180, CODEX-3195-6).
+    static let titleClearance: CGFloat = 88
 
     /// The units the pages show (`Units.getUnit`).
     static func units(_ u: UnitSettings) -> PageUnits {

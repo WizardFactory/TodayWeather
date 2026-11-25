@@ -252,10 +252,12 @@ extension HostedShellTests {
     struct HeaderFitTests {
         /// CODEX-3195-6: in a 320 pt window with larger text and a long name, the header keeps every control whole, inside the
         /// window and apart: menu, the name, the search button (44 × 44 pt), the star and share.
-        @Test func theHeaderFitsANarrowWindowWithALongName() async throws {
+        @Test(arguments: Theme.allCases)
+        func theHeaderFitsANarrowWindowWithALongName(theme: Theme) async throws {
             let long = Place(currentPosition: false, disable: false, name: "경기도 성남시 분당구 정자일로 분당내곡로 아주 긴 이름",
                              address: "대한민국 경기도 성남시 분당구", country: "KR", location: Location(lat: 37.383, long: 127.119))
             let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul])
+            f.holder.change { $0.settings.theme = theme.key }
             f.unsaved.show(long)
             f.shell.select(.forecast)
             let size = CGSize(width: 320, height: 568)
@@ -270,12 +272,14 @@ extension HostedShellTests {
             let star = try frame("forecast-star"), share = try frame("forecast-share")
             let window = hosted.window.frame
             for (name, rect) in [("menu", menu), ("search", search), ("star", star), ("share", share)] {
-                #expect(window.contains(rect), "\(name) inside the window: \(rect)")
+                #expect(window.contains(rect), "\(theme) \(name) inside the window: \(rect)")
             }
-            #expect(menu.maxX <= title.minX && title.maxX <= search.minX + 1, "menu, the name, then search: \(menu) \(title) \(search)")
-            #expect(search.maxX <= star.minX + 1 && star.maxX <= share.minX + 1, "search, star, share: \(search) \(star) \(share)")
-            #expect(search.width >= 44 && search.height >= 44, "touch size: \(search)")
-        #expect(star.width >= 44 && star.height >= 44, "the star's touch size (CODEX-3195-6): \(star)")
+            // No overlap, no tolerance: the name gives way before its search button, and the button before the star.
+            #expect(menu.maxX <= title.minX && title.maxX <= search.minX, "\(theme) menu, the name, then search: \(menu) \(title) \(search)")
+            #expect(search.maxX <= star.minX && star.maxX <= share.minX, "\(theme) search, star, share: \(search) \(star) \(share)")
+            #expect(title.width < 150, "\(theme) the long name is cut: \(title)")
+            #expect(search.width >= 44 && search.height >= 44, "\(theme) touch size: \(search)")
+            #expect(star.width >= 44 && star.height >= 44, "\(theme) the star's touch size (CODEX-3195-6): \(star)")
         }
     }
 }

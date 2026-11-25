@@ -102,7 +102,8 @@ final class StartPage {
         guard addTask == nil else { return }
         let flow = self.flow
         addTask = Task { [weak self] in
-            let outcome = await flow.useCurrentLocation { self?.loading = $0 }
+            // An abandoned page's overlay stays off (CODEX-3195-13).
+            let outcome = await flow.useCurrentLocation { value in if !Task.isCancelled { self?.loading = value } }
             guard !Task.isCancelled else { return }
             self?.addTask = nil
             self?.show(outcome)

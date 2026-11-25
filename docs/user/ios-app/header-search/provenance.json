@@ -5,7 +5,7 @@
     "window": "402x874 pt rendered at 3x, resized to 720 px wide",
     "language": "ko-KR",
     "theme": "light",
-    "date": "2026-11-24",
+    "date": "2026-11-25",
     "font_for_pdf": "NanumGothic (macOS system font asset NanumGothic.ttc), not distributed"
   },
   "screenshots": {
@@ -24,7 +24,7 @@
       ]
     },
     "unsaved-place.png": {
-      "sha256": "4a05c67a941f7dfccaec3b6c8278eb4d82df96b8df3ee59882ee9cc64dce770e",
+      "sha256": "a157a2249e7e520883d42a2be739889fa2fb3ad01d51c73fbc827eec415b4243",
       "size": [
         720,
         1565
@@ -39,13 +39,13 @@
     }
   },
   "manual_sha256": "f29755facb323e0a79d8368818db84c1e91130793d713eb9bb0e16f81418106a",
-  "pdf_sha256": "223203a06a9f80339df8ea9972c41c673018a3b7877d7d0cb60eba7269f211d2",
+  "pdf_sha256": "f95fa10420f0eeced5fd2312908f28a2af7737781d510c428d46f3de204adbb8",
   "sources": {
     "ios/TodayWeatherTests/HeaderSearchManualCaptureTests.swift": "d8a1ff6e046f058a09f084aa24bd5add8c7a9439a67b3358a15d594bf752792b",
-    "ios/TodayWeather/Weather/WeatherScreens.swift": "0974f25c05db7f96b6b573f2dfaa13d1966cf7ca234b482e78743281bea99092",
+    "ios/TodayWeather/Weather/WeatherScreens.swift": "d6c4058864c82ba63d7334c37c3b187d2ae630f0bcaad13ffe3324a42160aa78",
     "ios/TodayWeather/Shell/ShellView.swift": "5e1a35399969eb119ca3715d1d732373ad0153a3852999350bbbbea0a57796d7",
-    "ios/TodayWeather/Weather/BubblesSpinner.swift": "5271a7f07acbc689407e25ef464226d2feef1bbdde6faf8dbe6ff21a9907bc09",
-    "ios/TodayWeather/Places/PlacesScreens.swift": "a79f51893c854f1d5bba7c6379c2b1c908ebc0851a90df3dd6ea04cb340b8d31",
+    "ios/TodayWeather/Weather/BubblesSpinner.swift": "a9f57d1a849beb8c505adf7195c6c293b0e8ac53e6648b4392c295a8e621c5ec",
+    "ios/TodayWeather/Places/PlacesScreens.swift": "9d8b1003294ce7d7c02dd8ab1064cae82c51ea2e17016fd353a1e801e28e1720",
     "ios/TodayWeather/Weather/LinkTexts.swift": "93e51cb9f847cc14d4790e0aef40adeb77714ae3508d251c784897eba2be2197",
     "ios/TodayWeatherTests/PlacesReference/places-kma-seoul.input.json": "ec2a645f69200df2609792d64d9c9ea90dafaa2d1daadbf2566df1d75a7b6b31"
   }

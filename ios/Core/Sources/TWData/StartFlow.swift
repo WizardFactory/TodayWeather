@@ -95,7 +95,8 @@ public final class StartFlow {
     /// The place of a chosen Places prediction, named and geocoded as `addPrediction` does; nil when the geocode failed.
     public func predictionPlace(fullText: String, firstMatch: Int?, word: String, query: String? = nil) async -> Place? {
         let name = PredictionName.of(fullText: fullText, firstMatch: firstMatch, word: word)
-        guard let geoInfo = await geocode.byAddress(query ?? fullText, acceptLanguage: acceptLanguage()) else { return nil }
+        guard !Task.isCancelled,
+              let geoInfo = await geocode.byAddress(query ?? fullText, acceptLanguage: acceptLanguage()) else { return nil }
         var place = GeocodeClient.place(geoInfo, currentPosition: false)
         place.name = name
         return place
@@ -120,7 +121,7 @@ public final class StartFlow {
 
     /// `saveCity` then `addCity`: an existing place, or a body that does not convert, is "already added".
     private func add(_ city: Place) async -> Outcome {
-        guard let s = holder.state else { return .none }
+        guard !Task.isCancelled, let s = holder.state else { return .none }
         let loaded = await repository.load(city, units: s.units, acceptLanguage: acceptLanguage(), force: true)
         // Cancelled while it loaded (the star of a linked place closed S01, #3097): nothing is saved.
         if Task.isCancelled { return .none }
@@ -145,7 +146,11 @@ public final class StartFlow {
     /// grant from the prompt runs it again at once; every failure ends in O04 (#2871). `loading` shows and hides the
     /// loading overlay as StartCtrl did.
     public func useCurrentLocation(loading: (Bool) -> Void = { _ in }) async -> Outcome {
-        switch await locate(loading: loading) {
+        // Abandoned (the star of a linked place closed S01, #3097): nothing more is asked or requested (CODEX-3195-13).
+        if Task.isCancelled { return .none }
+        let located = await locate(loading: loading)
+        if Task.isCancelled { return .none }
+        switch located {
         case .found(let geoInfo): return await saveCurrent(geoInfo, loading: loading)
         case .failed(let message):
             loading(false)
@@ -166,6 +171,8 @@ public final class StartFlow {
                        decide: (LocationPermission?, LocationPermission) -> (step: StartLocation.Step, records: LocationPermission?),
                        record: (LocationPermission) -> Void) async -> Located {
         while true {
+            // A cancelled attempt (an abandoned S01) asks for no position, prompt or geocode (CODEX-3195-13).
+            if Task.isCancelled { return .failed(.notFound) }
             loading(true)
             let decision = decide(location.recorded, location.status())
             if let records = decision.records { record(records) }
@@ -173,7 +180,7 @@ public final class StartFlow {
             telemetry?("location_permission", ["outcome": .text(decision.step == .locate ? "granted" : "denied")])
             switch decision.step {
             case .locate:
-                guard let fix = await location.position() else { return .failed(.notFound) }
+                guard let fix = await location.position(), !Task.isCancelled else { return .failed(.notFound) }
                 let normalized = GeoLocation.normalize(lat: fix.lat, long: fix.long)
                 let at = Location(lat: normalized.lat, long: normalized.long)
                 guard let geoInfo = await geocode.byLocation(at, acceptLanguage: acceptLanguage()) else {
