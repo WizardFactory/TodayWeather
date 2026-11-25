@@ -15,9 +15,10 @@ The check passes when
 - R8 obfuscated and shrank the app's own classes (APP_PACKAGE): of the classes it kept, the mapping gives more a
   new name than their own (R8 run with -dontobfuscate renames none), and it maps some to `R8$$REMOVED$$CLASS$$<n>`,
   the name R8 9.x gives a class it removed (with -dontshrink it removes none);
-- every field of KEPT_FIELDS is in a dex file's field table, under the names the mapping gives its class and the field
-  (R8 writes no mapping line for a member it keeps under its own name): the field holds a listener that a registry
-  keeps only weakly, and nothing reads it, so without its keep rule R8 removes it and the listener is collected.
+- every field of KEPT_FIELDS is declared in a dex file's class definitions (`class_defs` / `class_data_item`), under the
+  names the mapping gives its class and the field (R8 writes no mapping line for a member it keeps under its own name):
+  the field holds a listener that a registry keeps only weakly, and nothing reads it, so without its keep rule R8 removes
+  it and the listener is collected.
 Prints one ok or FAIL line per check, and the mapping file's SHA-256 for the release notes. Status 1: a check
 failed; 2: usage or an unreadable file.
 """
@@ -107,24 +108,40 @@ def mapped_names(data):
     return {pair: (mapped[0], mapped[1]) for pair, mapped in names.items()}
 
 
+def read_uleb128(data, offset):
+    """Read an unsigned LEB128 (at most 5 bytes, 32-bit value) from data at offset; return (value, next_offset)."""
+    value = 0
+    for shift in (0, 7, 14, 21, 28):
+        byte = data[offset]
+        offset += 1
+        if shift == 28 and byte > 0x0f:
+            raise ValueError("uleb128 overflow")
+        value |= (byte & 0x7f) << shift
+        if not byte & 0x80:
+            return value, offset
+    raise ValueError("unterminated uleb128")
+
+
 def dex_fields(data):
-    """The (class descriptor, field name) pairs of a dex file's field_ids table; empty when the tables do not parse."""
+    """The (class descriptor, field name) pairs declared by a dex file's class_defs / class_data_item; empty on error."""
     try:
+        if len(data) < 0x70 or data[:4] != b"dex\n":
+            return set()
+        endian_tag = struct.unpack_from("<I", data, 0x28)[0]
+        if endian_tag != 0x12345678:
+            return set()
         string_count, string_off, type_count, type_off = struct.unpack_from("<IIII", data, 0x38)
         field_count, field_off = struct.unpack_from("<II", data, 0x50)
+        class_def_count, class_def_off = struct.unpack_from("<II", data, 0x60)
+        if (string_off + 4 * string_count > len(data) or type_off + 4 * type_count > len(data) or
+                field_off + 8 * field_count > len(data) or class_def_off + 32 * class_def_count > len(data)):
+            return set()
 
         def string(index):
             if index >= string_count:
                 raise IndexError(index)
             offset = struct.unpack_from("<I", data, string_off + 4 * index)[0]
-            size = shift = 0
-            while True:  # uleb128 length in UTF-16 units, then MUTF-8 bytes ending in 0
-                byte = data[offset]
-                offset += 1
-                size |= (byte & 0x7f) << shift
-                shift += 7
-                if not byte & 0x80:
-                    break
+            _, offset = read_uleb128(data, offset)  # UTF-16 unit length, followed by MUTF-8 bytes ending in 0
             return data[offset:data.index(b"\x00", offset)].decode("utf-8", "replace")
 
         def type_name(index):
@@ -133,11 +150,30 @@ def dex_fields(data):
             return string(struct.unpack_from("<I", data, type_off + 4 * index)[0])
 
         found = set()
-        for i in range(field_count):
-            class_index, _, name_index = struct.unpack_from("<HHI", data, field_off + 8 * i)
-            if name_index >= string_count:
-                raise IndexError(name_index)
-            found.add((type_name(class_index), string(name_index)))
+        for i in range(class_def_count):
+            class_idx, _, _, _, _, _, class_data_off, _ = struct.unpack_from("<IIIIIIII", data, class_def_off + 32 * i)
+            if class_idx >= type_count:
+                raise IndexError(class_idx)
+            if class_data_off == 0:
+                continue
+            off = class_data_off
+            static_count, off = read_uleb128(data, off)
+            instance_count, off = read_uleb128(data, off)
+            _, off = read_uleb128(data, off)  # direct_methods_size
+            _, off = read_uleb128(data, off)  # virtual_methods_size
+            owner = type_name(class_idx)
+            for count in (static_count, instance_count):
+                field_idx = 0
+                for _ in range(count):
+                    diff, off = read_uleb128(data, off)
+                    _, off = read_uleb128(data, off)  # access_flags
+                    field_idx += diff
+                    if field_idx >= field_count:
+                        raise IndexError(field_idx)
+                    f_class_idx, f_type_idx, f_name_idx = struct.unpack_from("<HHI", data, field_off + 8 * field_idx)
+                    if f_class_idx != class_idx or f_type_idx >= type_count or f_name_idx >= string_count:
+                        raise ValueError("invalid field_id")
+                    found.add((owner, string(f_name_idx)))
         return found
     except (struct.error, IndexError, ValueError):
         return set()

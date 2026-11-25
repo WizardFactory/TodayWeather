@@ -3,9 +3,10 @@
 The dex files hold the marker strings D8, R8 and L8 write, in the form of the 2.0.x builds (AGP 9.5, R8 9.5.29): the
 unminified release had `~~D8` markers, the minified one an `~~R8` marker with `pg-map-id` in the app's dex and
 `~~L8` with `~~R8` in the desugared library's dex. The mapping header is R8's, whose `pg_map_hash` is the SHA-256 of
-the lines after the header. A field of check_r8.KEPT_FIELDS is looked up in the dex files' field table under the names
-the mapping gives its class and field; R8 9.5.29 writes no mapping line for a field it keeps under its own name (the
-fixed 2.0.1 build kept HandBackWriter and consentListener unrenamed, and the mapping lists neither member).
+the lines after the header. A field of check_r8.KEPT_FIELDS is looked up in the dex files' class definitions
+(`class_defs` / `class_data_item`) under the names the mapping gives its class and field; R8 9.5.29 writes no mapping line
+for a field it keeps under its own name (the fixed 2.0.1 build kept HandBackWriter and consentListener unrenamed, and the
+mapping lists neither member).
 """
 import hashlib
 import json
@@ -39,30 +40,49 @@ def uleb128(value):
             return bytes(out)
 
 
-def dex(*markers, fields=(), strings=()):
-    """A dex file with a header, the string, type and field ID tables of `fields` ((class, type, name) descriptors)
-    and extra `strings`, then the markers."""
+def dex(*markers, fields=(), strings=(), declared=True):
+    """A dex file with a header, string/type/field tables, optional class_defs + class_data_item declarations for
+    `fields` ((class, type, name) descriptors), extra `strings`, and the markers."""
     names = sorted({s for field in fields for s in field} | set(strings))
     index = {s: i for i, s in enumerate(names)}
     types = sorted({d for c, ty, _ in fields for d in (c, ty)})
     type_index = {d: i for i, d in enumerate(types)}
+    by_class = {}
+    if declared:
+        for fid, (c, _, _) in enumerate(fields):
+            by_class.setdefault(c, []).append(fid)
+    class_defs_list = sorted(by_class.items(), key=lambda item: type_index[item[0]])
     string_ids_off = 0x70
     type_ids_off = string_ids_off + 4 * len(names)
     field_ids_off = type_ids_off + 4 * len(types)
-    data_off = field_ids_off + 8 * len(fields)
+    class_defs_off = field_ids_off + 8 * len(fields)
+    data_off = class_defs_off + 32 * len(class_defs_list)
     data, offsets = b'', []
     for s in names:
         offsets.append(data_off + len(data))
         data += uleb128(len(s)) + s.encode() + b'\x00'
+    class_defs_bytes = b''
+    for cls_desc, fids in class_defs_list:
+        class_data_off = data_off + len(data)
+        encoded = uleb128(0) + uleb128(len(fids)) + uleb128(0) + uleb128(0)
+        prev = 0
+        for fid in fids:
+            encoded += uleb128(fid - prev) + uleb128(0x0002)  # private
+            prev = fid
+        data += encoded
+        class_defs_bytes += struct.pack('<IIIIIIII', type_index[cls_desc], 0x0001, 0xffffffff, 0, 0xffffffff, 0,
+                                        class_data_off, 0)
     tables = (b''.join(struct.pack('<I', o) for o in offsets)
               + b''.join(struct.pack('<I', index[d]) for d in types)
-              + b''.join(struct.pack('<HHI', type_index[c], type_index[ty], index[n]) for c, ty, n in fields))
+              + b''.join(struct.pack('<HHI', type_index[c], type_index[ty], index[n]) for c, ty, n in fields)
+              + class_defs_bytes)
     body = tables + data + b''.join(b'\x00' + m for m in markers)
     header = bytearray(b'dex\n039\x00' + b'\x00' * (0x70 - 8))
     struct.pack_into('<II', header, 0x20, 0x70 + len(body), 0x70)
     struct.pack_into('<I', header, 0x28, 0x12345678)
     struct.pack_into('<IIII', header, 0x38, len(names), string_ids_off, len(types), type_ids_off)
     struct.pack_into('<II', header, 0x50, len(fields), field_ids_off)
+    struct.pack_into('<II', header, 0x60, len(class_defs_list), class_defs_off)
     return bytes(header) + body
 
 
@@ -173,6 +193,48 @@ class CheckR8Test(unittest.TestCase):
 
     def test_a_string_of_the_fields_name_is_not_the_field(self):
         self.assert_removed(self.app_dex(strings=('Le/f;', 'consentListener')))
+
+    def test_a_field_reference_without_a_class_declaration_fails(self):
+        ref_only = {**MINIFIED, 'classes.dex': dex(marker('R8', **{'pg-map-id': APP_ID}), fields=[KEPT], declared=False)}
+        self.assert_removed(ref_only)
+
+    def test_malformed_dex_tables_and_uleb128_fail(self):
+        valid = bytearray(MINIFIED['classes.dex'])
+        # 1. Invalid field type_idx (65535) in field_ids.
+        bad_type = bytearray(valid)
+        _, field_off = struct.unpack_from('<II', bad_type, 0x50)
+        struct.pack_into('<H', bad_type, field_off + 2, 0xffff)
+        self.assert_removed({**MINIFIED, 'classes.dex': bytes(bad_type)})
+
+        # 2. Truncated class_defs table.
+        bad_trunc = bytearray(valid)
+        struct.pack_into('<II', bad_trunc, 0x60, 100, len(bad_trunc) - 8)
+        self.assert_removed({**MINIFIED, 'classes.dex': bytes(bad_trunc)})
+
+        # 3. Unterminated ULEB128 (>5 bytes with continuation bit set) in class_data_item.
+        bad_uleb = bytearray(valid)
+        _, class_def_off = struct.unpack_from('<II', bad_uleb, 0x60)
+        class_data_off = struct.unpack_from('<I', bad_uleb, class_def_off + 24)[0]
+        bad_uleb[class_data_off:class_data_off + 6] = b'\x80\x80\x80\x80\x80\x00'
+        self.assert_removed({**MINIFIED, 'classes.dex': bytes(bad_uleb)})
+
+        # 4. Out-of-range string_idx and unterminated string without NUL byte.
+        bad_str = bytearray(valid)
+        string_count, string_off = struct.unpack_from('<II', bad_str, 0x38)
+        struct.pack_into('<I', bad_str, field_off + 4, string_count + 5)
+        self.assert_removed({**MINIFIED, 'classes.dex': bytes(bad_str)})
+
+        no_nul = bytearray(valid)
+        s0_off = struct.unpack_from('<I', no_nul, string_off)[0]
+        nul_pos = no_nul.index(b'\x00', s0_off + 1)
+        # Point string 0 past the last NUL byte by replacing all trailing NULs with 'x' in a copy that keeps markers.
+        marker_pos = no_nul.index(b'~~R8')
+        tail = no_nul[marker_pos:]
+        no_nul_body = bytearray(no_nul[:marker_pos])
+        for pos in range(s0_off + 1, len(no_nul_body)):
+            if no_nul_body[pos] == 0:
+                no_nul_body[pos] = ord('x')
+        self.assert_removed({**MINIFIED, 'classes.dex': bytes(no_nul_body) + bytes(tail)})
 
     def test_the_field_may_be_in_another_dex_file(self):
         entries = {**self.app_dex(), 'classes3.dex': dex(fields=[KEPT])}
