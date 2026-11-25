@@ -46,6 +46,8 @@ struct PlacesFixture {
     let session: WeatherSession
     let weather: WeatherScreens
     let places: PlacesScreens
+    /// The unsaved place over the holder, as `AppLaunch` wires it (#3097): S02's results open there.
+    let unsaved: UnsavedPlaces
     let removed = Removed()
 
     init(places list: [Place], selected: Int = 1, records: [JSONObject] = [], startupPage: String = "0",
@@ -60,15 +62,20 @@ struct PlacesFixture {
         server = try Self.server()
         self.location = location
         let repository = WeatherRepository(baseURL: "https://server.test.invalid", cacheDirectory: nil, http: server)
-        let session = WeatherSession(repository: repository, holder: holder, acceptLanguage: { "ko-KR,ko;q=0.9" }, location: location)
+        let unsaved = UnsavedPlaces(holder: holder)
+        self.unsaved = unsaved
+        let session = WeatherSession(repository: repository, holder: unsaved, acceptLanguage: { "ko-KR,ko;q=0.9" }, location: location)
         self.session = session
         weather = WeatherScreens(session: session, shell: shell, screenSize: CGSize(width: 393, height: 852))
-        let holder = self.holder, removed = self.removed
+        weather.isUnsaved = { [unsaved] in unsaved.isSelected($0) }
+        let removed = self.removed, saved = unsaved.savedAccess
         let geocode = GeocodeClient(baseURL: "https://server.test.invalid", http: server)
         places = PlacesScreens(shell: shell, session: session, makePage: {
-            PlacesPage(holder: holder, repository: repository, session: session, geocode: geocode, location: location,
+            PlacesPage(holder: saved, repository: repository, session: session, geocode: geocode, location: location,
                        acceptLanguage: { "ko-KR,ko;q=0.9" }, removeAlarms: { removed.indices.append($0) })
         }, search: search, towns: BundledTownLoader(), openURL: { _ in })
+        let opener = LinkOpener(unsaved: unsaved, openPlace: { _ in }, reload: {})
+        places.onOpenPlace = { opener.show($0) }
         places.query.predictionDelay = .milliseconds(10)
     }
 
@@ -256,8 +263,8 @@ struct PlacesScreenTests {
         #expect(!f.places.editing)
     }
 
-    /// Search mode: the bundled towns for 부산; a town is added, selected and opened on the startup page.
-    @Test func aTownIsSearchedAndAdded() async throws {
+    /// Search mode: the bundled towns for 부산; a town opens unsaved on the startup page (#3180: not saved).
+    @Test func aTownIsSearchedAndOpenedUnsaved() async throws {
         let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul])
         let app = try await f.hosted()
         defer { app.close() }
@@ -271,7 +278,8 @@ struct PlacesScreenTests {
         try app.tap("places-town-0")
         await f.settle()
         try await app.settle()
-        #expect(f.state.places.last?.name == "부산광역시" && f.state.placeIndex == 2)
+        #expect(f.unsaved.unsaved?.place.name == "부산광역시" && f.unsaved.unsaved?.selected == true)
+        #expect(f.state.places.count == 2 && f.state.placeIndex == 1, "nothing saved")
         #expect(f.shell.selected == .forecast)
         #expect(!f.places.searching && f.places.query.word.isEmpty)
         // The mode button: 취소 leaves search mode and clears the word.
@@ -298,7 +306,7 @@ struct PlacesScreenTests {
     }
 
     /// With the Places key the predictions follow the towns under Google's logo; one is geocoded by its terms.
-    @Test func aPredictionIsAdded() async throws {
+    @Test func aPredictionOpensUnsaved() async throws {
         let search = TestPlaceSearch(["London": [Prediction(fullText: "London, UK", firstMatch: 0)]])
         let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul], search: search)
         let app = try await f.hosted()
@@ -312,11 +320,13 @@ struct PlacesScreenTests {
         try app.tap("places-prediction-0")
         await f.settle()
         #expect(f.paths.contains("/geocode/v000903/addr/London,UK"))
-        #expect(f.state.places.last?.name == "London")
+        #expect(f.unsaved.unsaved?.place.name == "London")
+        #expect(f.state.places.count == 2, "nothing saved")
     }
 
-    /// 현재위치로 지역찾기: the found position replaces the results and is added as a place.
-    @Test func findByLocationAddsTheFoundPlace() async throws {
+    /// 현재위치로 지역찾기: the found position replaces the results; chosen, it opens the saved place within 0.01° (서울
+    /// here, #3180), else it would open unsaved.
+    @Test func findByLocationOpensTheFoundPlace() async throws {
         let location = TestLocation(system: .authorizedWhenInUse, fixes: [Location(lat: 37.5604, long: 126.9801)])
         let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul], location: location)
         let app = try await f.hosted()
@@ -332,7 +342,8 @@ struct PlacesScreenTests {
         #expect(f.places.query.word == "회현동")
         try app.tap("places-found")
         await f.settle()
-        #expect(f.state.places.last?.address == "서울특별시 중구 회현동")
+        #expect(f.unsaved.unsaved == nil && f.state.placeIndex == 1, "서울, 0.0066° away, opens")
+        #expect(f.state.places.count == 2, "nothing saved")
         #expect(f.shell.selected == .forecast)
     }
 

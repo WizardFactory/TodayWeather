@@ -7,8 +7,13 @@ import UIKit
 /// shell's own default shows the selected place's name over an empty page.
 struct TabContent {
     var title: String = ""
-    /// What follows the title inside it (IN-08: the current position's location glyph or the loading spinner).
+    /// What precedes the title inside it (#3180: the current position's location glyph).
+    var titleLeading: AnyView? = nil
+    /// What follows the title inside it (IN-08: the loading spinner; #3180: the search button).
     var titleAccessory: AnyView? = nil
+    /// The room the centered title leaves on each side for the bar's buttons (#3180: the weather pages' title with its
+    /// search button gives way before the bell and share); 0 keeps the Cordova margins.
+    var titleClearance: CGFloat = 0
     var actions: AnyView = AnyView(EmptyView())
     var page: AnyView = AnyView(Color.clear)
     /// What fills the header bar after the menu button instead of the title (IN-11: S02's search field and mode button,
@@ -162,7 +167,8 @@ struct ShellFrame: View {
                     tab.page.modifier(ForecastNativeVisitHost()).id(model.adVisit).frame(maxWidth: .infinity, maxHeight: .infinity)
                         .environment(\.shellInsets, insets)
                         .accessibilityIdentifier("shell-page-\(model.selected.rawValue)")
-                    HeaderBar(colors: colors, title: tab.title, titleAccessory: tab.titleAccessory, titleView: tab.titleView,
+                    HeaderBar(colors: colors, title: tab.title, titleLeading: tab.titleLeading, titleAccessory: tab.titleAccessory,
+                              titleClearance: tab.titleClearance, titleView: tab.titleView,
                               insets: insets, onMenu: model.openMenu) { tab.actions }
                 }
                 .frame(maxHeight: .infinity)
@@ -186,6 +192,24 @@ struct ShellFrame: View {
             if let overlay = tab.overlay {
                 overlay.padding(.top, insets.statusBar)
             }
+            if let notice = model.notice {
+                // The star's short notice (#3180), above the tab bar.
+                VStack {
+                    Spacer()
+                    Text(notice)
+                        .font(.system(size: 15))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16).padding(.vertical, 10)
+                        .background(Capsule().fill(Color.black.opacity(0.8)))
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, ShellMetrics.tabBarHeight + insets.bottom + 16)
+                }
+                .frame(maxWidth: .infinity)
+                .allowsHitTesting(false)
+                .accessibilityIdentifier("shell-notice")
+                .transition(.opacity)
+            }
             if let popup = model.popups.first {
                 IonicPopupView(popup: popup, onTap: model.tapPopupButton).padding(.top, insets.statusBar)
             }
@@ -195,7 +219,7 @@ struct ShellFrame: View {
 
     /// The shell's own content: the selected place's name in the header bar of the weather and air tabs.
     private func defaultContent(_ tab: ShellTab) -> TabContent {
-        guard tab != .search, let state = model.holder.state, state.places.indices.contains(state.placeIndex) else {
+        guard tab != .search, let state = model.shownState() ?? model.holder.state, state.places.indices.contains(state.placeIndex) else {
             return TabContent()
         }
         let place = state.places[state.placeIndex]
@@ -209,7 +233,10 @@ struct ShellFrame: View {
 struct BarFrame<Leading: View, Trailing: View>: View {
     let colors: ShellColors
     let title: String
+    var titleLeading: AnyView? = nil
     var titleAccessory: AnyView? = nil
+    /// The room the title leaves on each side (`TabContent.titleClearance`); the Cordova margins when smaller.
+    var titleClearance: CGFloat = 0
     /// Instead of the title: a view from 50 pt to 10 pt before the bar's end (S02's search header, IN-11).
     var titleView: AnyView? = nil
     let insets: ShellInsets
@@ -235,18 +262,23 @@ struct BarFrame<Leading: View, Trailing: View>: View {
                     .padding(.leading, 50).padding(.trailing, 10)
             } else {
                 HStack(spacing: 0) {
+                    if let titleLeading { titleLeading }
+                    // The name gives way with an ellipsis; the glyph and the buttons beside it keep their size (#3180).
                     Text(title)
                         .font(.system(size: displayedTitleSize, weight: .medium))
                         .foregroundStyle(colors.headerText.color)
                         .outlined(colors.headerOutline)
                         .lineLimit(1)
+                        .truncationMode(.tail)
+                        .layoutPriority(-1)
+                        // On the name only: the glyph and buttons beside it keep their own identifiers (#3180).
+                        .accessibilityIdentifier(titleIdentifier)
                     if let titleAccessory { titleAccessory }
                 }
                     // WebKit puts the baseline of a 44 pt line 1 pt lower than SwiftUI centers the text (measured).
                     .offset(y: titleOffset)
                     .frame(maxWidth: .infinity, minHeight: ShellMetrics.headerHeight)
-                    .padding(.horizontal, ShellMetrics.titleMargin)
-                    .accessibilityIdentifier(titleIdentifier)
+                    .padding(.horizontal, max(ShellMetrics.titleMargin, titleClearance))
             }
             HStack(alignment: .top, spacing: 0) {
                 leading()
@@ -272,14 +304,17 @@ struct BarFrame<Leading: View, Trailing: View>: View {
 struct HeaderBar<Actions: View>: View {
     let colors: ShellColors
     let title: String
+    var titleLeading: AnyView? = nil
     var titleAccessory: AnyView? = nil
+    var titleClearance: CGFloat = 0
     var titleView: AnyView? = nil
     let insets: ShellInsets
     let onMenu: () -> Void
     @ViewBuilder let actions: () -> Actions
 
     var body: some View {
-        BarFrame(colors: colors, title: title, titleAccessory: titleAccessory, titleView: titleView, insets: insets,
+        BarFrame(colors: colors, title: title, titleLeading: titleLeading, titleAccessory: titleAccessory,
+                 titleClearance: titleClearance, titleView: titleView, insets: insets,
                  titleIdentifier: "shell-title", usesCordovaTitleSize: true) {
             BarButton(glyph: Glyphs.navicon, colors: colors, width: 40, action: onMenu)
                 .accessibilityLabel("menu")

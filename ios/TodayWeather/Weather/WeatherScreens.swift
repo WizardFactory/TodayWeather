@@ -143,7 +143,7 @@ final class WeatherScreens {
     /// AirCtrl's `init`: the sizes, the pollutant of the link (`?code=`, else the overall index), the enabled places, then
     /// `_applyWeatherData`.
     private func openAirVisit() {
-        guard let state = shell.holder.state else { return }
+        guard let state = session.state else { return }
         visitTab = .air
         var visit = AirScope(metrics: ChartMetrics(bodyWidth: screenSize.width, bodyHeight: screenSize.height),
                              airUnit: state.units.airUnit)
@@ -157,7 +157,7 @@ final class WeatherScreens {
     /// The air visit follows the session: each `applyEvent` returns to the first station and applies the selected place;
     /// a new standard from the units page goes to the visit as it is (`changeAirUnitEvent`).
     private func applyAir() {
-        guard var visit = airScope, let state = shell.holder.state else { return }
+        guard var visit = airScope, let state = session.state else { return }
         if visit.airUnit != state.units.airUnit { visit.airUnit = state.units.airUnit }
         if airApplies != session.applies {
             airApplies = session.applies
@@ -172,6 +172,16 @@ final class WeatherScreens {
         guard var visit = airScope else { return }
         visit.setCode(code)
         airScope = visit
+    }
+
+    /// A link's tab (#3097): Hourly, Daily, or Air on its pollutant as a new visit (`goAirInfoPage(code)`).
+    func openLinkTab(_ tab: ShellTab, pollutant: String?) {
+        if tab == .air {
+            airLink = pollutant
+            if shell.selected == .air { visitTab = nil }
+        }
+        shell.select(tab)
+        update()
     }
 
     /// The main box's current weather (`goWeather()`): S03 (`$location.path('/tab/forecast')`; the link's pollutant stays
@@ -189,7 +199,7 @@ final class WeatherScreens {
 
     /// ForecastCtrl's `init`: the sizes, `expandShortChart`, the enabled places, then `applyWeatherData`.
     private func openVisit(_ tab: ShellTab) {
-        guard let state = shell.holder.state else { return }
+        guard let state = session.state else { return }
         visitTab = tab
         var visit = ForecastScope(
             type: tab == .forecast ? .short : .mid,
@@ -207,7 +217,7 @@ final class WeatherScreens {
 
     /// `applyEvent`: the selected place again, with the units and theme as they are now.
     private func applySelected() {
-        guard var visit = scope, let state = shell.holder.state else { return }
+        guard var visit = scope, let state = session.state else { return }
         visit.fahrenheit = state.units.temperatureUnit == "F"
         visit.photoTheme = state.settings.theme == "photo"
         visit.apply(selectedRecord(), hasPush: hasPush(state))
@@ -234,7 +244,7 @@ final class WeatherScreens {
     /// `loadWeatherPhotosEvent`: in the photo theme the page takes the selected place's new photo, without an apply (the
     /// charts stay where they are).
     private func photoLoaded() {
-        guard var visit = scope, let state = shell.holder.state else { return }
+        guard var visit = scope, let state = session.state else { return }
         visit.photoTheme = state.settings.theme == "photo"
         let before = visit.photo
         visit.photoLoaded(selectedRecord())
@@ -258,6 +268,18 @@ final class WeatherScreens {
     /// The bell (`goPushPage`, IN-14) and share (`doTabShare`, IN-16) buttons.
     @ObservationIgnored var onBell: () -> Void = {}
     @ObservationIgnored var onShare: () -> Void = {}
+    /// The search button beside the place name (#3180): S02's search from this tab.
+    @ObservationIgnored var onSearch: (ShellTab) -> Void = { _ in }
+    /// The star of an unsaved place (#3180): saves it.
+    @ObservationIgnored var onStar: () -> Void = {}
+    /// Whether the selected place of the shown state is the unsaved one (`UnsavedPlaces.isSelected`).
+    @ObservationIgnored var isUnsaved: (AppState) -> Bool = { _ in false }
+    /// The header's texts that the Cordova catalogs lack (#3180).
+    @ObservationIgnored lazy var linkTexts = LinkTexts.of(shell.locale.catalog)
+
+    /// The room the weather pages' title leaves on each side: the widest right side, the star's 44 pt area, share (34 pt)
+    /// with its 4 pt margin and the bar's 5 pt padding, plus 1 pt (#3180, CODEX-3195-6).
+    static let titleClearance: CGFloat = 88
 
     /// The units the pages show (`Units.getUnit`).
     static func units(_ u: UnitSettings) -> PageUnits {
@@ -267,7 +289,7 @@ final class WeatherScreens {
 
     /// The page model of the shown visit.
     var pageContent: WeatherPageContent? {
-        guard let scope, let state = shell.holder.state else { return nil }
+        guard let scope, let state = session.state else { return nil }
         let photo = scope.photo?.stringValue.flatMap { URL(string: $0) }
         var content = WeatherPageContent(scope: scope, units: Self.units(state.units), texts: texts, photo: photo)
         content.visit = visits
@@ -285,7 +307,7 @@ final class WeatherScreens {
         if tab == .air { return airTabContent() }
         // The scope is read first, so a shell drawn before the visit opened (S01 just closed, IN-10) is drawn again
         // when it does.
-        guard let content = pageContent, tab == visitTab, let state = shell.holder.state else { return nil }
+        guard let content = pageContent, tab == visitTab, let state = session.state else { return nil }
         let theme = Theme.of(state.settings.theme)
         let colors = ShellColors.of(theme, tab: tab)
         let actions = WeatherPageActions(
@@ -296,9 +318,10 @@ final class WeatherScreens {
             perform: { [weak self] in self?.perform($0) })
         return TabContent(
             title: content.page.title,
-            titleAccessory: titleAccessory(content.page, colors: colors),
-            actions: AnyView(WeatherBarActions(hasPush: content.page.hasPush, colors: colors,
-                                               onBell: { [weak self] in self?.onBell() }, onShare: { [weak self] in self?.onShare() })),
+            titleLeading: titleLeading(content.page.currentPosition, colors: colors, tappable: true),
+            titleAccessory: titleAccessory(tab, colors: colors),
+            titleClearance: Self.titleClearance,
+            actions: barActions(content.page.hasPush, state: state, colors: colors),
             page: AnyView(WeatherPageView(content: content, theme: theme, actions: actions,
                                           trackingNotice: trackingNotice(colors: WeatherColors.of(theme, daily: tab == .dailyforecast)))
                 .task(id: scope?.summaryExpiresAt) { [weak self] in
@@ -315,7 +338,7 @@ final class WeatherScreens {
     /// S05 in the shell: the title, the location glyph (inert on S05: `switchToLocationSettings` is ForecastCtrl's, A10)
     /// or the spinner, the bell and share buttons, and the page with its taps.
     private func airTabContent() -> TabContent? {
-        guard let content = airContent, visitTab == .air, let state = shell.holder.state else { return nil }
+        guard let content = airContent, visitTab == .air, let state = session.state else { return nil }
         let theme = Theme.of(state.settings.theme)
         let colors = ShellColors.of(theme, tab: .air)
         let actions = AirPageActions(
@@ -326,21 +349,12 @@ final class WeatherScreens {
             station: { [weak self] in self?.selectAirStation($0) },
             weather: { [weak self] in self?.airWeatherTapped() },
             perform: { [weak self] in self?.perform($0) })
-        let accessory: AnyView?
-        if session.loadingSelected {
-            accessory = AnyView(BubblesSpinner().padding(.leading, 4).accessibilityIdentifier("air-spinner"))
-        } else if content.page.currentPosition {
-            accessory = AnyView(Text(Self.locationEnabled ? Glyphs.locationOn : Glyphs.locationOff)
-                .font(Glyphs.material(24)).foregroundStyle(colors.headerText.color)
-                .accessibilityIdentifier("air-location"))
-        } else {
-            accessory = nil
-        }
         return TabContent(
             title: content.page.title,
-            titleAccessory: accessory,
-            actions: AnyView(WeatherBarActions(hasPush: content.page.hasPush, colors: colors,
-                                               onBell: { [weak self] in self?.onBell() }, onShare: { [weak self] in self?.onShare() })),
+            titleLeading: titleLeading(content.page.currentPosition, colors: colors, tappable: false),
+            titleAccessory: titleAccessory(.air, colors: colors),
+            titleClearance: Self.titleClearance,
+            actions: barActions(content.page.hasPush, state: state, colors: colors),
             page: AnyView(AirPageView(content: content, theme: theme, actions: actions,
                                       trackingNotice: trackingNotice(colors: AirColors.of(theme).page))
                 .background(WindowSizeReader { [weak self] size in self?.windowChanged(size) })
@@ -352,20 +366,49 @@ final class WeatherScreens {
         return TrackingNotice(catalog: catalog, colors: colors) { [weak shell] in shell?.chooseMenuRow(.trackingPermission) }
     }
 
-    /// Inside the title: the current position's location glyph (`location_on` while location is allowed, else
-    /// `location_off`; a tap opens the settings) unless the place loads; the spinner (O17) while it loads.
-    private func titleAccessory(_ page: ForecastPage, colors: ShellColors) -> AnyView? {
-        if session.loadingSelected {
-            return AnyView(BubblesSpinner().padding(.leading, 4).accessibilityIdentifier("forecast-spinner"))
-        }
-        guard page.currentPosition else { return nil }
-        return AnyView(Button { [weak self] in self?.locationGlyphTapped() } label: {
-            Text(Self.locationEnabled ? Glyphs.locationOn : Glyphs.locationOff)
-                .font(Glyphs.material(24)).foregroundStyle(colors.headerText.color)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("location")
-        .accessibilityIdentifier("forecast-location"))
+    /// Before the title (#3180: moved from after it): the current position's location glyph (`location_on` while location
+    /// is allowed, else `location_off`) unless the place loads. On S03 and S04 a tap opens the settings; on S05 it is inert
+    /// (`switchToLocationSettings` is ForecastCtrl's, A10).
+    private func titleLeading(_ currentPosition: Bool, colors: ShellColors, tappable: Bool) -> AnyView? {
+        guard currentPosition, !session.loadingSelected else { return nil }
+        let glyph = Text(Self.locationEnabled ? Glyphs.locationOn : Glyphs.locationOff)
+            .font(Glyphs.material(24)).foregroundStyle(colors.headerText.color)
+            .padding(.trailing, 2)
+        guard tappable else { return AnyView(glyph.accessibilityIdentifier("air-location")) }
+        return AnyView(Button { [weak self] in self?.locationGlyphTapped() } label: { glyph }
+            .buttonStyle(.plain)
+            .accessibilityLabel("location")
+            .accessibilityIdentifier("forecast-location"))
+    }
+
+    /// After the title: the spinner (O17) while the place loads, then the search button (#3180), which opens S02's
+    /// search from `tab`. The button keeps a 44 × 44 pt touch area (CODEX-3195-6).
+    private func titleAccessory(_ tab: ShellTab, colors: ShellColors) -> AnyView {
+        let spinner = session.loadingSelected
+        let search = linkTexts.search
+        return AnyView(HStack(spacing: 0) {
+            if spinner {
+                BubblesSpinner().padding(.leading, 4)
+                    .accessibilityIdentifier(tab == .air ? "air-spinner" : "forecast-spinner")
+            }
+            Button { [weak self] in self?.onSearch(tab) } label: {
+                Text(Glyphs.iosSearch)
+                    .font(Glyphs.ionicons(22)).foregroundStyle(colors.headerText.color)
+                    .outlined(colors.headerOutline)
+                    .frame(width: 44, height: ShellMetrics.headerHeight)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(search)
+            .accessibilityIdentifier("forecast-search")
+        })
+    }
+
+    /// The bell, or the star of an unsaved place (#3180), and share.
+    private func barActions(_ hasPush: Bool, state: AppState, colors: ShellColors) -> AnyView {
+        AnyView(WeatherBarActions(hasPush: hasPush, colors: colors, unsaved: isUnsaved(state), starLabel: linkTexts.addFavorite,
+                                  onBell: { [weak self] in self?.onBell() }, onShare: { [weak self] in self?.onShare() },
+                                  onStar: { [weak self] in self?.onStar() }))
     }
 
     // MARK: - Actions

@@ -35,6 +35,10 @@ Each weather tab shows its forecast or air information first. An available nativ
 
 The first Hourly and first Daily visit each day open immediately. After reading beyond a chart, tapping the other forecast tab on a repeat visit has a 10% chance of showing a ready full-screen ad. The two tabs share a limit of one display per local day across saved places. Dismissing the ad opens the tab you selected.
 
+## Search from the header and unsaved places
+
+A magnifier after the place name on 시간별날씨, 일별날씨 and 대기정보 opens the 즐겨찾기 search. A result, or a shared `link.todayweather.ai` link, opens the place without saving it: an outline star stands in the bell's position, and tapping it saves the place with the short message 즐겨찾기에 추가했습니다. One unsaved place is kept while you move between places, until the app starts again. For the current position, the location icon now stands before the name. The main manual's screenshots predate this header. [Read the guide](header-search/manual.pdf) · [Editable source](header-search/manual.json)
+
 ## Read the current temperature
 
 On the Hourly and Daily tabs, the decimal point and the digits after it appear at 70% of the whole-number size.

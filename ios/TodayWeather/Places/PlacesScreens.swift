@@ -11,9 +11,11 @@ import UIKit
 /// tab opens (`cache: false`), the search with IN-10's component (`PlaceQuery`: Google's predictions with the Places key
 /// and the bundled towns), the modes of the header's button, and the hand-offs: a row tap or an add selects the place
 /// and opens the startup page (`goPage()`: `reloadEvent 'search'`), the bell opens the place's alarms (IN-14 connects
-/// `onBell`), O09 and O03 `search` show through the shell's popups, and `$ionicLoading` covers the shell. Port of the
-/// Android `PlacesTab` (AN-11) with the Cordova iOS branches (no input focus on an empty list: `setInputFocus` does not
-/// work on iOS).
+/// `onBell`), O03 `search` shows through the shell's popups, and `$ionicLoading` covers the shell. Port of the Android
+/// `PlacesTab` (AN-11) with the Cordova iOS branches (no input focus on an empty list: `setInputFocus` does not work on
+/// iOS). #3180, #3097: a chosen result is not saved; it opens as the unsaved place (`onOpenPlace`) on the tab the search
+/// came from. The weather header's search button opens the visit in search mode with the input focused
+/// (`openSearch(from:)`), and 취소 returns to that tab.
 @MainActor
 @Observable
 final class PlacesScreens {
@@ -26,6 +28,15 @@ final class PlacesScreens {
     @ObservationIgnored private let openURL: (URL) -> Void
     /// The bell of a row (`OnOpenSettingPush(index)`, the alarms page S09, IN-14).
     @ObservationIgnored var onBell: (Int) -> Void = { _ in }
+    /// A chosen search result, shown without saving it (#3180: `LinkOpener.show`).
+    @ObservationIgnored var onOpenPlace: (Place) -> Void = { _ in }
+    /// The tab the header's search button opened the search from; 취소 and a chosen result return there (#3180).
+    private(set) var searchFrom: ShellTab?
+    /// The header's search button asked for the next visit to start searching from this tab.
+    @ObservationIgnored private var pendingSearch: ShellTab?
+    /// Incremented to give the input the focus (the header's search button, #3180).
+    private(set) var focusIn = 0
+    @ObservationIgnored private var focusPending = false
 
     /// The visit shown now; a new one each time the tab opens.
     private(set) var page: PlacesPage
@@ -81,7 +92,12 @@ final class PlacesScreens {
         let shown: Bool
         if case .tab = shell.screen { shown = shell.selected == .search } else { shown = false }
         if shown && !visitOpen { openVisit() }
-        if !shown && visitOpen { query.clear() }
+        if !shown && visitOpen {
+            query.clear()
+            searchFrom = nil
+            // A result still loading opens nothing once the tab is left (another tab, a link; CODEX-3195-2).
+            page.close()
+        }
         visitOpen = shown
         // `OnSearchCurrentPosition`: each found position replaces the results with the found row, named in the input
         // (`search.word`), also when the word already is its name.
@@ -100,15 +116,48 @@ final class PlacesScreens {
     /// SearchCtrl's `init` for a new visit.
     private func openVisit() {
         query.clear()
-        page = makePage()
-        page.onPopup = { [weak self] in self?.show($0) }
-        page.onAdded = { [weak self] in self?.added() }
+        // The visit replaced and its answers still on their way act no more (CODEX-3195-2).
+        page.close()
+        let visit = makePage()
+        page = visit
+        // An answer acts only for this visit while the Locations tab shows: another tab or a link may have taken over
+        // before the tab's close was observed (CODEX-3195-2).
+        let current: () -> Bool = { [weak self, weak visit] in
+            guard let self, let visit, self.page === visit, case .tab = self.shell.screen else { return false }
+            return self.shell.selected == .search
+        }
+        page.onPopup = { [weak self] in if current() { self?.show($0) } }
+        page.onOpen = { [weak self] in if current() { self?.onOpenPlace($0) } }
+        page.onOpened = { [weak self] in if current() { self?.opened() } }
         query = PlaceQuery(search: search, towns: towns, scansTowns: true, keepsLastTowns: false)
         shownFinds = page.finds
         editing = false
         searching = false
+        searchFrom = nil
+        if let from = pendingSearch {
+            pendingSearch = nil
+            searchFrom = from
+            searching = true
+            focusPending = true
+            focusIn += 1
+        }
         visits += 1
         page.open()
+    }
+
+    /// The weather header's search button (#3180): S02 opens in search mode with the input focused; 취소 returns to `tab`.
+    func openSearch(from tab: ShellTab) {
+        pendingSearch = tab
+        // Always a new visit, also when the tab's close has not been observed yet (a search right after 취소).
+        visitOpen = false
+        shell.select(.search)
+        update()
+    }
+
+    /// True once after `openSearch`: the header gives the input the focus.
+    func takeFocusRequest() -> Bool {
+        defer { focusPending = false }
+        return focusPending
     }
 
     /// The rows of the list: each place with its stored weather and the visit's bell.
@@ -151,6 +200,14 @@ final class PlacesScreens {
         if searching {
             searching = false
             focusRequest += 1
+            // A search from the weather header returns to its tab (#3180).
+            if let from = searchFrom {
+                searchFrom = nil
+                query.clear()
+                page.clearFound()
+                shell.select(from)
+                return
+            }
         } else {
             editing = true
         }
@@ -177,20 +234,21 @@ final class PlacesScreens {
         page.findByLocation()
     }
 
-    /// `OnSelectResult` of a town.
+    /// `OnSelectResult` of a town: opened unsaved (#3180).
     func addTown(_ town: BundledTown) {
         if keyboardOnly() { return }
-        page.addTown(town)
+        page.openTown(town)
     }
 
-    /// `OnSelectResult` of the n-th Google row: the found position, or a prediction named from the word typed for it.
+    /// `OnSelectResult` of the n-th Google row: the found position, or a prediction named from the word typed for it;
+    /// opened unsaved (#3180).
     func addPlace(_ n: Int) {
         if keyboardOnly() { return }
         if page.found != nil {
-            page.addFound()
+            page.openFound()
         } else if let predictions = query.predictions, predictions.list.indices.contains(n) {
             let p = predictions.list[n]
-            page.addPrediction(fullText: p.fullText, firstMatch: p.firstMatch, word: predictions.word)
+            page.openPrediction(fullText: p.fullText, firstMatch: p.firstMatch, word: predictions.word)
         }
     }
 
@@ -200,8 +258,9 @@ final class PlacesScreens {
         return true
     }
 
-    /// An add selected the new place: the search closes and the startup page opens.
-    private func added() {
+    /// A result was opened (selected, unsaved or the saved place near it): the search closes and the tab it came from, or
+    /// else the startup page's tab, opens.
+    private func opened() {
         query.clear()
         page.clearFound()
         searching = false
@@ -209,9 +268,11 @@ final class PlacesScreens {
         goPage(nil)
     }
 
-    /// `goPage()`: the startup page's tab, then `reloadEvent 'search'`.
+    /// `goPage()`: the tab the header's search came from, else the startup page's tab, then `reloadEvent 'search'`.
     private func goPage(_ index: Int?) {
-        shell.select(PlaceRows.startTab(shell.holder.state?.settings.startupPage))
+        let tab = searchFrom ?? PlaceRows.startTab(shell.holder.state?.settings.startupPage)
+        searchFrom = nil
+        shell.select(tab)
         session.openFromSearch(index)
     }
 

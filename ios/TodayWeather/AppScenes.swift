@@ -94,7 +94,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options: UIScene.ConnectionOptions) {
         guard let scene = scene as? UIWindowScene else { return }
         show(in: scene)
-        submit(options.urlContexts.map(\.url) + options.userActivities.compactMap(\.webpageURL))
+        submit(options.urlContexts.map(\.url) + Self.webLinks(options.userActivities))
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {
@@ -108,7 +108,13 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
-        submit([userActivity.webpageURL].compactMap { $0 })
+        submit(Self.webLinks([userActivity]))
+    }
+
+    /// The Universal Links of `activities` (`link.todayweather.ai`, #3097): only a web-browsing activity's page URL;
+    /// Handoff and other activities with a page URL open nothing (specs/deeplink.md §6.2.4).
+    static func webLinks(_ activities: some Sequence<NSUserActivity>) -> [URL] {
+        activities.compactMap { $0.activityType == NSUserActivityTypeBrowsingWeb ? $0.webpageURL : nil }
     }
 
     /// A connecting application scene whose delegate is not this build's (a session restored with an earlier build's

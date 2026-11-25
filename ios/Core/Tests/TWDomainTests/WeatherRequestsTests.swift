@@ -32,7 +32,10 @@ struct WeatherRequestsTests {
         #expect(WeatherRequests.url(base: "b", lat: 1e-7, long: 127, address: nil, units: units)
                 == "b/weather/v000903/coord/1e-7,127?temperatureUnit=C&airForecastSource=kaq")
         #expect(WeatherRequests.url(base: "b", lat: .nan, long: 127, address: nil, units: units) == nil, "NaN is falsy")
-        #expect(WeatherRequests.url(base: "b", lat: 0, long: 127, address: "", units: units) == nil)
+        // Latitude 0 without an address is a place on the equator (#3097): its coordinates are its location.
+        #expect(WeatherRequests.url(base: "b", lat: 0, long: 127, address: "", units: units)
+                == "b/weather/v000903/coord/0,127?temperatureUnit=C&airForecastSource=kaq")
+        #expect(WeatherRequests.url(base: "b", lat: nil, long: nil, address: "", units: units) == nil)
     }
 
     @Test func webKitEncodesTheURLItSends() throws {

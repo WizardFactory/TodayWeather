@@ -13,10 +13,19 @@ public enum WeatherRequests {
     public static let attempts = 3
     public static let attemptGap = Duration.seconds(2)
 
+    /// Whether a place's coordinates are its location: Cordova's `if (location.lat)` prefers the address at latitude 0 (A05);
+    /// without an address the coordinates stand (a linked place on the equator, #3097). The request, the weather key and
+    /// `updateCity`'s location all follow this one rule (Android CODEX-3164-5, -11, -13).
+    public static func usesCoordinates(lat: Double?, address: String?) -> Bool {
+        guard let lat, !lat.isNaN else { return false }
+        return lat != 0 || (address ?? "").isEmpty
+    }
+
     /// The URL for a place, or nil when it has neither a usable location nor an address (Cordova rejects with "Need
     /// location or address", `invalid_input`).
     ///
-    /// - Coordinates win when the latitude is truthy (A05: latitude 0 falls back to the address):
+    /// - Coordinates win when they are the place's location (`usesCoordinates`; A05: latitude 0 falls back to the address
+    ///   when there is one):
     ///   `/weather/v000903/coord/{lat},{long}` and the units.
     /// - An address gets `대한민국 ` when it lacks it and is split into a KMA town: `/v000903/kma/addr/{first}/{second}/
     ///   {third}` (empty parts left out) and the units.
@@ -28,7 +37,7 @@ public enum WeatherRequests {
     /// `units` are the `Units.getAllUnits()` pairs in order.
     public static func url(base: String, lat: Double?, long: Double?, address: String?,
                            units: [(String, String)]) -> String? {
-        if let lat, let long, lat != 0, !lat.isNaN {
+        if let lat, let long, usesCoordinates(lat: lat, address: address) {
             return "\(base)/weather/\(version)/coord/\(Js.numberToString(lat)),\(Js.numberToString(long))\(unitsQuery(units))"
         }
         guard let address, !address.isEmpty else { return nil }

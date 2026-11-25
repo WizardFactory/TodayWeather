@@ -70,7 +70,8 @@ public enum AlarmPopup: Equatable, Sendable {
 @MainActor
 @Observable
 public final class AlarmPage {
-    @ObservationIgnored private let holder: AppStateHolder
+    /// The saved state (the app passes `UnsavedPlaces.alarmAccess`: opening for a saved place selects it, #3097).
+    @ObservationIgnored private let holder: any PlaceState
     @ObservationIgnored private let notifications: any NotificationAccess
     /// Posts the saved list of the place at an index, after the registrations before it (`PushSync.postPlace`).
     @ObservationIgnored private let post: (Int) -> Void
@@ -88,10 +89,14 @@ public final class AlarmPage {
     @ObservationIgnored public private(set) var permissionCheck: Task<Void, Never>?
     @ObservationIgnored public private(set) var saving: Task<Void, Never>?
 
-    public init(holder: AppStateHolder, notifications: any NotificationAccess, post: @escaping (Int) -> Void,
+    /// `open` selected a saved place (`setCityIndex(fav)`, also when already selected): the user's choice of it (#3097).
+    @ObservationIgnored private let chosen: () -> Void
+
+    public init(holder: any PlaceState, notifications: any NotificationAccess, post: @escaping (Int) -> Void,
                 openSettings: @escaping () -> Void, now: @escaping () -> Date = Date.init,
-                zone: @escaping () -> TimeZone = { TimeZone.current }) {
+                zone: @escaping () -> TimeZone = { TimeZone.current }, chosen: @escaping () -> Void = {}) {
         self.holder = holder
+        self.chosen = chosen
         self.notifications = notifications
         self.post = post
         self.openSettings = openSettings
@@ -103,8 +108,9 @@ public final class AlarmPage {
     public func open(fav: Int?) {
         guard !opened, let s = holder.state else { return }
         opened = true
-        if let fav, fav != 0 || s.places.first?.disable == false, s.places.indices.contains(fav), fav != s.placeIndex {
-            holder.change { $0.placeIndex = fav }
+        if let fav, fav != 0 || s.places.first?.disable == false, s.places.indices.contains(fav) {
+            if fav != s.placeIndex { holder.change { $0.placeIndex = fav } }
+            chosen()
         }
         guard let current = holder.state, current.places.indices.contains(current.placeIndex) else { return }
         let index = current.placeIndex

@@ -1,20 +1,42 @@
 import SwiftUI
 
 /// The weather pages' header buttons (the iOS template): the bell (`ion-ios-bell` with alarms, else `-outline`) and share
-/// (`ion-ios-upload-outline`), each with `padding: 0 4px`, share with `margin-right: 4px`.
+/// (`ion-ios-upload-outline`), each with `padding: 0 4px`, share with `margin-right: 4px`. An unsaved place (#3180, #3097)
+/// has the outline star (`ion-ios-star-outline`) in the bell's position, which saves it.
 struct WeatherBarActions: View {
     let hasPush: Bool
     let colors: ShellColors
+    var unsaved = false
+    var starLabel = "Add to favorites"
     var onBell: () -> Void = {}
     var onShare: () -> Void = {}
+    var onStar: () -> Void = {}
     /// This header's share anchor: the tap names it, so the sheet opens in this button's window (IN-16).
     @State private var shareAnchor = ShareAnchorBox()
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            BarButton(glyph: hasPush ? Glyphs.bell : Glyphs.bellOutline, colors: colors, width: 36, action: onBell)
-                .accessibilityLabel("notifications")
-                .accessibilityIdentifier("forecast-bell")
+            if unsaved {
+                // The bell's glyph position, in a 44 × 44 pt touch area (CODEX-3195-6).
+                Button(action: onStar) {
+                    Text(Glyphs.starOutline)
+                        .font(Glyphs.ionicons(ShellMetrics.barGlyph))
+                        .foregroundStyle(colors.headerText.color)
+                        .outlined(colors.headerOutline)
+                        .frame(width: 36, height: ShellMetrics.barGlyph)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .opacity(0.87)
+                .accessibilityLabel(starLabel)
+                .accessibilityIdentifier("forecast-star")
+            } else {
+                BarButton(glyph: hasPush ? Glyphs.bell : Glyphs.bellOutline, colors: colors, width: 36, action: onBell)
+                    .accessibilityLabel("notifications")
+                    .accessibilityIdentifier("forecast-bell")
+            }
             BarButton(glyph: Glyphs.upload, colors: colors, width: 32) {
                 ShareAnchor.tapped = shareAnchor.view
                 onShare()

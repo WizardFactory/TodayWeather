@@ -45,13 +45,18 @@ final class WeatherShare {
         }
     }
 
-    /// `doTabShare`: the selected place's record (`WeatherInfo.getCityOfIndex(getCityIndex())`) with the shell's catalog
-    /// and the WebView's `navigator.language` (`Util.language`).
+    /// `doTabShare`: the selected place's record (`WeatherInfo.getCityOfIndex(getCityIndex())`) with the shell's catalog,
+    /// ending with the `link.todayweather.ai` link of the tab shared from (the Air tab with its pollutant; #3097).
     func share(from screens: WeatherScreens) {
-        let locale = screens.shell.locale
-        let catalog = Catalog(code: locale.catalog)
+        let catalog = Catalog(code: screens.shell.locale.catalog)
         let record = screens.session.selected.map { screens.session.record($0) }
-        guard let message = ShareMessage.build(record, texts: ShareMessage.Texts { catalog($0) }, language: locale.webLanguage)
+        let view: WeatherView = switch screens.shell.selected {
+        case .dailyforecast: .daily
+        case .air: .air
+        default: .hourly
+        }
+        guard let message = ShareMessage.build(record, texts: ShareMessage.Texts { catalog($0) }, view: view,
+                                               pollutant: view == .air ? screens.airScope?.aqiCode : nil)
         else {
             onNoLocation()
             return

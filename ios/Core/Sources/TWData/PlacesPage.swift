@@ -12,14 +12,16 @@ import TWStorage
 /// - `delete` and `setCurrentPosition`: with the row's bell on, the place's alarms go first (`removeAlarms`, which is
 ///   `Push.removePushListByCityIndex`: `DELETE /push`, no other record renumbered, A24); turning the current position
 ///   on while it has no temperature finds it, names it from the geocode and loads it (`updateCurrentPositionWeather`);
-/// - `findByLocation` and the adds of a search result, one at a time behind the loading overlay; an add selects the
-///   new place (`onAdded`, then the app's `goPage`); failures end in O09 or O03 of type `search` (`onPopup`), whose OK
-///   finds by location again (A26).
+/// - `findByLocation` and a chosen search result, one at a time behind the loading overlay. A result is not saved
+///   (#3180, #3097): it goes to `onOpen`, which shows it as the selected place without saving it, and `onOpened` (the
+///   app's `goPage`) follows; the star of the weather header saves it. A failed lookup ends in O03 of type `search`
+///   (`onPopup`), whose OK finds by location again (A26); a prediction whose geocode failed opens nothing.
 /// SearchCtrl records the location status into TabCtrl's `gLocationAuthorizationStatus` (`WeatherSession.recorded`).
 @MainActor
 @Observable
 public final class PlacesPage {
-    @ObservationIgnored private let holder: AppStateHolder
+    /// The saved state (S02 lists and changes the saved places only: `UnsavedPlaces.savedAccess` in the app).
+    @ObservationIgnored private let holder: any PlaceState
     @ObservationIgnored private let repository: WeatherRepository
     @ObservationIgnored private let session: WeatherSession
     @ObservationIgnored private let flow: StartFlow
@@ -28,11 +30,15 @@ public final class PlacesPage {
     @ObservationIgnored private let telemetry: WeatherTelemetry?
     /// The action behind the overlay (find-by-location, an add, the first enable), while it runs.
     @ObservationIgnored public private(set) var action: Task<Void, Never>?
+    /// The visit closed: a late answer opens nothing.
+    @ObservationIgnored private var closed = false
 
-    /// O09 (`.alert`) or O03 `search` (`.confirm`) to show.
+    /// O03 `search` (`.confirm`) to show.
     @ObservationIgnored public var onPopup: (StartFlow.Outcome) -> Void = { _ in }
-    /// A search result was added and selected; `goPage()` follows.
-    @ObservationIgnored public var onAdded: () -> Void = {}
+    /// A chosen search result, to show without saving it (#3180).
+    @ObservationIgnored public var onOpen: (Place) -> Void = { _ in }
+    /// A search result was opened; `goPage()` follows.
+    @ObservationIgnored public var onOpened: () -> Void = {}
 
     /// Each row's bell as the visit opened (`Push.hasPushInfo`, not read again; a deleted row's goes with it).
     public private(set) var hasPush: [Bool] = []
@@ -47,7 +53,7 @@ public final class PlacesPage {
     @ObservationIgnored public private(set) var visit: Task<Void, Never>?
     @ObservationIgnored public private(set) var lookup: Task<Void, Never>?
 
-    public init(holder: AppStateHolder, repository: WeatherRepository, session: WeatherSession, geocode: GeocodeClient,
+    public init(holder: any PlaceState, repository: WeatherRepository, session: WeatherSession, geocode: GeocodeClient,
                 location: any LocationAccess, acceptLanguage: @escaping () -> String, telemetry: WeatherTelemetry? = nil,
                 removeAlarms: @escaping (Int) -> Void) {
         self.holder = holder
@@ -135,25 +141,35 @@ public final class PlacesPage {
         }
     }
 
-    /// A bundled town (`OnSelectResult`, town.js result).
-    public func addTown(_ town: BundledTown) {
-        perform { [weak self] in await self?.finish(self?.flow.addTown(town)) }
+    /// A bundled town (`OnSelectResult`, town.js result): opened without a request.
+    public func openTown(_ town: BundledTown) {
+        perform { [weak self] in self?.show(StartFlow.townPlace(town)) }
     }
 
     /// A Places prediction (`OnSelectResult`, Google's result): named by `PredictionName`, geocoded by its terms joined
-    /// with commas (`_makeQueryString`).
-    public func addPrediction(fullText: String, firstMatch: Int?, word: String) {
+    /// with commas (`_makeQueryString`); a failed geocode opens nothing.
+    public func openPrediction(fullText: String, firstMatch: Int?, word: String) {
         perform { [weak self] in
-            await self?.finish(self?.flow.addPrediction(fullText: fullText, firstMatch: firstMatch, word: word,
-                                                        query: SearchQuery.of(fullText)))
+            guard let place = await self?.flow.predictionPlace(fullText: fullText, firstMatch: firstMatch, word: word,
+                                                               query: SearchQuery.of(fullText)) else { return }
+            self?.show(place)
         }
     }
 
-    /// The find-by-location row (`OnSelectResult`, the geocode server's result): added as an ordinary place.
-    public func addFound() {
+    /// The find-by-location row (`OnSelectResult`, the geocode server's result): opened as an ordinary place.
+    public func openFound() {
         guard let geoInfo = found else { return }
         found = nil
-        perform { [weak self] in await self?.finish(self?.flow.addGeoInfo(geoInfo)) }
+        perform { [weak self] in self?.show(StartFlow.geoInfoPlace(geoInfo)) }
+    }
+
+    /// Opens `place` unless it has neither usable coordinates nor an address: such a place could never load, and its star
+    /// would save it (CODEX-3195-4).
+    private func show(_ place: Place) {
+        guard !closed, WeatherRequests.usesCoordinates(lat: place.location?.lat, address: place.address)
+                || !(place.address ?? "").isEmpty else { return }
+        onOpen(place)
+        onOpened()
     }
 
     /// The search was cleared (Cancel, Edit, a new word): the find-by-location row goes too (as AN-11).
@@ -185,15 +201,12 @@ public final class PlacesPage {
         onPopup(.confirm(SearchLocation.retry(message, recorded: session.recorded, enabled: location.recorded?.granted ?? false)))
     }
 
-    private func finish(_ outcome: StartFlow.Outcome?) {
-        switch outcome {
-        case .added?: onAdded()
-        case .alert?, .confirm?: onPopup(outcome!)
-        case .none?, nil: break
-        }
+    /// One action at a time, behind the overlay.
+    /// The visit closed (the tab or a link took over): an answer still on its way opens nothing (CODEX-3195-2).
+    public func close() {
+        closed = true
     }
 
-    /// One action at a time, behind the overlay.
     private func perform(_ body: @escaping @MainActor () async -> Void) {
         guard action == nil else { return }
         loading = true

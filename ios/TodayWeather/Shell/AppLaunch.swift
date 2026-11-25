@@ -64,6 +64,13 @@ final class AppLaunch {
     @ObservationIgnored private let makePlaceSearch: @MainActor () -> (any PlaceSearch)?
     /// The shell, created with the state; nil until the migration has finished.
     private(set) var shell: ShellModel?
+    /// The place shown without being saved (#3180, #3097): the weather pages read the state through it; S02, push, the
+    /// widgets and the store read the holder. Created with the shell.
+    private(set) var unsaved: UnsavedPlaces?
+    /// `link.todayweather.ai` links and S02's chosen results over `unsaved` (#3097), created with the shell.
+    @ObservationIgnored private(set) var linkOpener: LinkOpener?
+    /// A place link showed the tabs over S01 without closing it; the star closes it (specs/deeplink.md §6.2.3).
+    @ObservationIgnored private var startBypassed = false
     @ObservationIgnored private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "launch")
     @ObservationIgnored private var network: NWPathMonitor?
     @ObservationIgnored private var online = true
@@ -165,14 +172,29 @@ final class AppLaunch {
         // IN-10: the current position's lookup on the weather pages, `locationOn` reloading it.
         let location = makeLocation()
         self.location = location
-        let session = WeatherSession(repository: repository, holder: holder, acceptLanguage: { locale.acceptLanguage },
+        let unsaved = UnsavedPlaces(holder: holder)
+        self.unsaved = unsaved
+        shell.shownState = { [weak unsaved] in unsaved?.state }
+        let session = WeatherSession(repository: repository, holder: unsaved, acceptLanguage: { locale.acceptLanguage },
                                      photos: { [weak self] in self?.loadedPhotos }, loadPhotos: { [weak self] in self?.loadPhotos() },
                                      telemetry: AppLaunch.weatherTelemetry, location: location)
         location.onLocationOn = { [weak session] in session?.reload(.locationOn) }
         let weather = WeatherScreens(session: session, shell: shell, screenSize: Self.screenSize())
         self.weather = weather
+        let opener = LinkOpener(unsaved: unsaved, openPlace: { [weak session] in session?.openPlace($0, sender: .deeplink) },
+                                reload: { [weak session] in session?.reload(.deeplink) },
+                                unblock: { [weak session] in
+                                    // An open O03 (weather or position) stops every reload (CODEX-3195-3).
+                                    session?.closeRetry()
+                                    session?.closePositionRetry()
+                                })
+        linkOpener = opener
+        weather.isUnsaved = { [weak unsaved] in unsaved?.isSelected($0) ?? false }
+        weather.onStar = { [weak self] in self?.star() }
+        weather.onSearch = { [weak self] tab in self?.places?.openSearch(from: tab) }
         positionPopups = CurrentPositionPopups(session: session, shell: shell)
-        places = makePlaces(shell, session: session, location: location)
+        places = makePlaces(shell, session: session, location: location, unsaved: unsaved)
+        places?.onOpenPlace = { [weak opener] in opener?.show($0) }
         if case .start = shell.screen { startPage = makeStartPage(shell, location: location) }
         // A unit change posts the push list again through IN-04's registration (`AppPushUnits`).
         let mail = FeedbackMail(to: environment.mailTo, version: environment.version,
@@ -202,10 +224,13 @@ final class AppLaunch {
     /// visit; a save posts through IN-04's push service; the return starts the tabs' pages anew (`cache: false`).
     private func makeAlarms(_ shell: ShellModel, weather: WeatherScreens) -> AlarmsScreens {
         let holder = self.holder
+        // S09 opened for a saved place selects it, the user's choice: an unsaved place gives way (CODEX-3190-15).
+        let unsaved = self.unsaved
         let alarms = AlarmsScreens(shell: shell, makePage: {
             AlarmPage(holder: holder, notifications: UserNotificationAccess(available: FirebasePush.configured),
                       post: { index in AppStartup.shared.push?.postPlace(index) },
-                      openSettings: { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } })
+                      openSettings: { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } },
+                      chosen: { [weak unsaved] in unsaved?.savedChosen() })
         }, postList: { AppStartup.shared.push?.postList() })
         weather.onBell = { [weak alarms, weak holder] in alarms?.open(fav: holder?.state?.placeIndex) }
         places?.onBell = { [weak alarms] index in alarms?.open(fav: index) }
@@ -266,10 +291,7 @@ final class AppLaunch {
         log.info("entry event \(String(describing: event), privacy: .private)")
         if case .link(let url) = event, let link = WidgetSharing.Link(url),
            let shell, case .tab = shell.screen, let state = holder.state {
-            shell.closeMenu()
-            while settings?.top != nil { settings?.back() }
-            if nation?.page != nil { nation?.closePage() }
-            alarms?.page?.cancel() // An edited alarm keeps its normal save/discard confirmation.
+            closeForLink()
             shell.select(.forecast)
             if let id = link.placeID, let index = state.places.firstIndex(where: { !$0.disable && WidgetSharing.id($0) == id }) {
                 weather?.session.openPlace(index)
@@ -278,9 +300,61 @@ final class AppLaunch {
             }
             return
         }
+        // `link.todayweather.ai` (#3097): Universal Links that the scene accepted (web browsing activities only).
+        if case .link(let url) = event, url.scheme?.lowercased() == "https", let target = DeepLink.parse(url.absoluteString) {
+            openLink(target)
+            return
+        }
         // `checkLocationMode` on each return to the foreground (app.js `resume`), IN-10.
         if event == .resume { location?.check() }
         shell?.handle(event)
+    }
+
+    /// A link closes the menu, the settings stack, a nationwide or warning page and the alarm page (an edited alarm keeps
+    /// its normal save/discard confirmation), as the widget link does (specs/deeplink.md §6.2.1).
+    private func closeForLink() {
+        shell?.closeMenu()
+        while settings?.top != nil { settings?.back() }
+        if nation?.page != nil { nation?.closePage() }
+        alarms?.page?.cancel()
+    }
+
+    /// A `link.todayweather.ai` link (specs/deeplink.md §6.2): `LinkOpener` selects the saved place or shows the place
+    /// unsaved and loads it; then what covers the tabs closes and the route's tab (Air with its pollutant) or page opens.
+    /// A place link over S01 shows the tabs without closing S01 (no `startVersion`); the star closes it. Links that change
+    /// nothing (an unknown city, a page or `/open` over S01) leave the screens as they are.
+    private func openLink(_ target: DeepLinkTarget) {
+        guard let shell, let weather, let route = linkOpener?.open(target) else { return }
+        closeForLink()
+        switch route {
+        case .app:
+            break
+        case .page(let page):
+            nation?.open(page == .nationWeather ? .nation : page == .nationAir ? .nationAir : .warnings)
+        case .weather(let view, let pollutant, _, _):
+            let tab: ShellTab = view == .daily ? .dailyforecast : view == .air ? .air : .forecast
+            weather.openLinkTab(tab, pollutant: pollutant)
+            if case .start = shell.screen {
+                // S01 stays alive behind the tabs: an add it started still finishes and closes it (CODEX-3195-5).
+                startBypassed = true
+                shell.closeStart()
+            }
+        }
+    }
+
+    /// The star of the unsaved place (#3180): saved at once where it stands, with a short notice; over a bypassed S01 the
+    /// add closes it as a first place does (O06 and held taps follow, as after S01).
+    private func star() {
+        guard let shell, unsaved?.add() != nil else { return }
+        AppLaunch.weatherTelemetry("favorite_change", ["action": .text("add")])
+        shell.showNotice(LinkTexts.of(locale.catalog).addedFavorite)
+        if startBypassed {
+            // The star closed S01: an add it started saves nothing more and switches no tab (CODEX-3195-11).
+            startBypassed = false
+            startPage?.abandon()
+            startPage = nil
+            if let weather { alarms?.startClosed(session: weather.session) }
+        }
     }
 
     /// S01 for a new shell (IN-10): its adds through `StartFlow`, the Places search with the private key (else the
@@ -295,11 +369,15 @@ final class AppLaunch {
 
     /// The Locations tab S02 (IN-11): a visit's page over the session, with bundled towns, optional Places predictions
     /// and the alarms' removal through IN-04's push service.
-    private func makePlaces(_ shell: ShellModel, session: WeatherSession, location: any AppLocation) -> PlacesScreens {
-        let locale = self.locale, holder = self.holder, repository = self.repository
+    private func makePlaces(_ shell: ShellModel, session: WeatherSession, location: any AppLocation,
+                            unsaved: UnsavedPlaces) -> PlacesScreens {
+        let locale = self.locale, repository = self.repository
         let geocode = GeocodeClient(baseURL: environment.serverURL, http: weatherHTTP)
+        // S02 changes the saved places through the saved view, which keeps the place to return to while an unsaved place
+        // is selected (CODEX-3190-2).
+        let saved = unsaved.savedAccess
         return PlacesScreens(shell: shell, session: session, makePage: {
-            PlacesPage(holder: holder, repository: repository, session: session, geocode: geocode, location: location,
+            PlacesPage(holder: saved, repository: repository, session: session, geocode: geocode, location: location,
                        acceptLanguage: { locale.acceptLanguage }, telemetry: AppLaunch.weatherTelemetry,
                        removeAlarms: { AppPushRemoval().removeCity($0) })
         }, search: makePlaceSearch(), towns: towns)
@@ -314,6 +392,8 @@ final class AppLaunch {
     /// 'init'`).
     private func startClosed() {
         guard let shell else { return }
+        // S01 saved a place, the user's choice: an unsaved place a link showed over S01 gives way (CODEX-3190-19).
+        unsaved?.savedChosen()
         shell.select(.forecast)
         shell.closeStart()
         startPage = nil

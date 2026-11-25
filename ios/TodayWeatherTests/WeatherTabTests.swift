@@ -114,12 +114,15 @@ struct WeatherTabTests {
         #expect(url.absoluteString == "https://server.test.invalid/weather/v000903/coord/37.56,126.98?temperatureUnit=C"
                 + "&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq")
         #expect(headers["Accept-Language"] == "ko-KR,ko;q=0.9", "the WebView's header (ShellLocale.acceptLanguage)")
-        // O17: the spinner in the title while the place loads.
+        // O17: the spinner in the title while the place loads (with the search button after it, #3180).
+        #expect(f.screens.session.loadingSelected)
         #expect(f.screens.content(.forecast)?.titleAccessory != nil)
         #expect(await eventually { f.screens.scope?.currentWeather != nil })
         let content = try #require(f.screens.content(.forecast))
         #expect(content.title == "회현동")
-        #expect(content.titleAccessory == nil, "loaded: no spinner, and no location glyph for a saved place")
+        #expect(!f.screens.session.loadingSelected, "loaded: no spinner")
+        #expect(content.titleLeading == nil, "no location glyph for a saved place")
+        #expect(content.titleAccessory != nil, "the search button (#3180)")
         #expect(f.holder.state?.places[1].source == "KMA")
 
         await f.screens.session.refresh()

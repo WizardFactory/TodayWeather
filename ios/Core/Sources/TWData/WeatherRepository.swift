@@ -308,10 +308,11 @@ public final class WeatherRepository {
 
     private nonisolated static let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "weather")
 
-    /// Which place a request and its entry belong to: the current position, else its coordinates, else its address.
+    /// Which place a request and its entry belong to: the current position, else its coordinates when the request uses
+    /// them (`WeatherRequests.usesCoordinates`), else its address, so places with different requests never share a key.
     public nonisolated static func key(_ place: Place) -> String {
         if place.currentPosition { return "current" }
-        if let location = place.location, location.lat != 0, !location.lat.isNaN {
+        if let location = place.location, WeatherRequests.usesCoordinates(lat: location.lat, address: place.address) {
             return "coord:\(Js.numberToString(location.lat)),\(Js.numberToString(location.long))"
         }
         return "addr:\(place.address ?? "")"
@@ -345,8 +346,7 @@ public final class WeatherRepository {
             updated.location = location ?? place.location
             return updated
         }
-        let own = place.location
-        let hasLocation = own.map { $0.lat != 0 && !$0.lat.isNaN } ?? false
+        let hasLocation = WeatherRequests.usesCoordinates(lat: place.location?.lat, address: place.address)
         if !hasLocation, let location, location.lat != 0 { updated.location = location }
         return updated
     }

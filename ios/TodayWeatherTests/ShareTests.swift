@@ -10,7 +10,7 @@ import UIKit
 
 /// Sharing from the weather and air pages (IN-16, #2965 AC1; O16, V20), in the live shell in a window: the share button of
 /// S03, S04 and S05, tapped as VoiceOver's activation taps it, hands the selected place's Cordova message to the share
-/// sheet; Korean links for a Korean WebView language, English otherwise; nothing without a location; the system sheet is
+/// sheet, ending with the `link.todayweather.ai` link of the place and tab (#3097); nothing without a location; the system sheet is
 /// a `UIActivityViewController` whose popover points at the share button. The server is a double.
 extension HostedShellTests {
 @MainActor
@@ -38,17 +38,20 @@ struct ShareTests {
         return (shell, WeatherScreens(session: session, shell: shell, screenSize: CGSize(width: 393, height: 852)))
     }
 
-    /// The message the Cordova code builds for the selected place's record, in the shell's catalog and WebView language.
-    static func expected(_ screens: WeatherScreens) throws -> String {
+    /// The message the Cordova code builds for the selected place's record in the shell's catalog, ending with the link
+    /// of the tab shared from (#3097).
+    static func expected(_ screens: WeatherScreens, view: WeatherView = .hourly, pollutant: String? = nil) throws -> String {
         let place = try #require(screens.session.selected)
         let catalog = Catalog(code: screens.shell.locale.catalog)
         return try #require(ShareMessage.build(screens.session.record(place), texts: ShareMessage.Texts { catalog($0) },
-                                               language: screens.shell.locale.webLanguage))
+                                               view: view, pollutant: pollutant))
     }
 
     /// Each of S03, S04 and S05 in its own live shell (the startup page opens it, as `AirLiveTests` opens S05).
-    @Test(arguments: [("0", ShellTab.forecast), ("1", .dailyforecast), ("3", .air)])
-    func eachPageSharesTheSelectedPlacesMessage(startupPage: String, tab: ShellTab) async throws {
+    @Test(arguments: [("0", ShellTab.forecast, WeatherView.hourly, "https://link.todayweather.ai/place/seoul"),
+                      ("1", .dailyforecast, .daily, "https://link.todayweather.ai/place/seoul?view=daily"),
+                      ("3", .air, .air, "https://link.todayweather.ai/air/seoul")])
+    func eachPageSharesTheSelectedPlacesMessage(startupPage: String, tab: ShellTab, view: WeatherView, link: String) async throws {
         let (shell, screens) = Self.shell(startupPage: startupPage)
         #expect(shell.selected == tab)
         let recorder = Recorder()
@@ -59,14 +62,15 @@ struct ShareTests {
         #expect(await AirLiveTests.wait(30) { screens.session.selected.map { screens.session.repository.cached($0) != nil } == true })
         #expect(await AirLiveTests.wait(10) { screens.content(tab) != nil }, "\(tab)")
         for _ in 0..<100 where hosted.element("forecast-share") == nil { try await hosted.settle(100) }
-        let expected = try Self.expected(screens)
+        let expected = try Self.expected(screens, view: view, pollutant: view == .air ? "aqi" : nil)
         #expect(expected.hasPrefix("회현동\n현재 "), "\(expected)")
-        #expect(expected.hasSuffix("\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM"), "\(expected)")
+        #expect(expected.hasSuffix("\n\n오늘날씨 \(link)"), "\(expected)")
         try hosted.tap("forecast-share")
         #expect(recorder.messages == [expected], "\(tab)")
     }
 
-    @Test func otherLanguagesShareTheEnglishLink() async throws {
+    /// Every language shares the same link; only the texts follow the catalog (the Branch link per language is gone, D35).
+    @Test func otherLanguagesShareTheSameLink() async throws {
         let (shell, screens) = Self.shell(languages: ["en-US"])
         let recorder = Recorder()
         WeatherShare(presenter: recorder).attach(screens)
@@ -78,7 +82,7 @@ struct ShareTests {
         try hosted.tap("forecast-share")
         let message = try #require(recorder.messages.first)
         #expect(message.hasPrefix("회현동\nCurrent "), "\(message)")
-        #expect(message.hasSuffix("\n\nTodayWeather https://twa.app.link/II1JstpVoM"), "\(message)")
+        #expect(message.hasSuffix("\n\nTodayWeather https://link.todayweather.ai/place/seoul"), "\(message)")
         #expect(message == (try Self.expected(screens)))
     }
 

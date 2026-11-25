@@ -161,11 +161,14 @@ final class PlacesUITests: XCTestCase {
         let busan = title
         shot("busan-hourly")
 
-        // London from S02's search with the Places SDK.
+        // London from S02's search with the Places SDK: it opens unsaved, and its star saves it (#3180, #3097).
         search("London")
         tapResult("places-prediction-0")
         XCTAssertTrue(waitForTitle { $0 == "London" }, "Hourly for London: \(title)")
+        XCTAssertTrue(element("forecast-star").waitForExistence(timeout: 10), "an unsaved place has the star")
         shot("london-hourly")
+        tap("forecast-star")
+        XCTAssertTrue(element("forecast-bell").waitForExistence(timeout: 10), "the star saved London")
 
         // The header block swiped between them.
         element("forecast-header").swipeRight()

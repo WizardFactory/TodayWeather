@@ -1,0 +1,20 @@
+{
+ "tool": "ios/tools/import_deeplink_golden.py",
+ "license": "Same repository and license as specs/ and packages/ (TodayWeather, WizardFactory)",
+ "files": [
+  {
+   "source": "specs/deeplink.golden.json",
+   "commit": "3b38d0e494fe69cb0eb0df2fe0a821d06f7af65f",
+   "source_sha256": "c1ba3dbd4c546e9bf0dc12ccc8a3dcb81ea2ba8cecb8f85919d36c6405fa2a4b",
+   "output": "Core/Tests/TWDomainTests/DeepLink/deeplink.golden.json",
+   "output_sha256": "c1ba3dbd4c546e9bf0dc12ccc8a3dcb81ea2ba8cecb8f85919d36c6405fa2a4b"
+  },
+  {
+   "source": "packages/weather-core/src/index.ts",
+   "commit": "eb1c47d0f8cd23203c91fcceb058ce9c03377098",
+   "source_sha256": "145f03660ab17e54fdae13b875dcdb4bfaf08bc08a30e4a79d9cc3d1a4ba544a",
+   "output": "Core/Tests/TWDomainTests/DeepLink/places.json",
+   "output_sha256": "c923136f514b36b9ee2cbe29ebbd28eee82140ba455c4b8a8c79880bb9cc1706"
+  }
+ ]
+}

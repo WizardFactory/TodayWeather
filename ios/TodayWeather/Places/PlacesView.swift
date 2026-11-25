@@ -114,6 +114,8 @@ struct PlacesHeader: View {
         .padding(.top, PlacesMetrics.fieldTop)
         .onChange(of: focused) { _, now in screens.focusChanged(now) }
         .onChange(of: screens.focusRequest) { _, _ in focused = false }
+        // The weather header's search button (#3180): the input takes the focus once the field shows.
+        .task(id: screens.focusIn) { if screens.takeFocusRequest() { focused = true } }
     }
 
     private func field(_ catalog: Catalog) -> some View {
