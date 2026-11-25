@@ -44,8 +44,10 @@ jobs:
         env:
           REQUESTED: ${{ inputs.ref || github.sha }}
         run: |
-          [[ "$REQUESTED" =~ ^[0-9a-f]{40}$ && "$REQUESTED" == "$GITHUB_SHA" ]]
-          test "$(git rev-parse HEAD)" = "$REQUESTED"
+          if ! [[ "$REQUESTED" =~ ^[0-9a-f]{40}$ && "$REQUESTED" == "$GITHUB_SHA" && "$(git rev-parse HEAD)" == "$REQUESTED" ]]; then
+            echo "Expected the same full SHA for the request, workflow run and checkout." >&2
+            exit 1
+          fi
           echo "Source commit $REQUESTED" >> "$GITHUB_STEP_SUMMARY"
           xcodebuild -version >> "$GITHUB_STEP_SUMMARY"
           echo "$SIMULATOR" >> "$GITHUB_STEP_SUMMARY"
