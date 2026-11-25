@@ -181,7 +181,7 @@ class AlarmsScreenTest {
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
             val placesHost = PlacesHost(null, { TownSearch(BundledTowns.load(context)) }) { s ->
                 PlacesPage(memory, repository, session, StartFlow(memory, repository, GeocodeClient("https://server.test.invalid", http), Device,
-                    { listOf("ko-KR") }), Device, s, removeAlarms = {})
+                    { listOf("ko-KR") }), Device, s, removeAlarms = {}, openPlace = {})
             }
             AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, startTab = tab, places = placesHost, alarms = alarms,
                 messages = messages, alertIntro = alertIntro, openAppSettings = { settingsOpened += "app" })
@@ -282,7 +282,7 @@ class AlarmsScreenTest {
                 val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
                 val placesHost = PlacesHost(null, { TownSearch(BundledTowns.load(context)) }) { s ->
                     PlacesPage(holder, repository, session, StartFlow(holder, repository, GeocodeClient("https://server.test.invalid", http), Device,
-                        { listOf("ko-KR") }), Device, s, removeAlarms = { i -> io.launch { sync.removeCity(i) } })
+                        { listOf("ko-KR") }), Device, s, removeAlarms = { i -> io.launch { sync.removeCity(i) } }, openPlace = {})
                 }
                 state?.let {
                     AppContent(it, entries, loading, retry, session, host, "test", onExit = {}, startTab = Tab.LOCATIONS, places = placesHost,

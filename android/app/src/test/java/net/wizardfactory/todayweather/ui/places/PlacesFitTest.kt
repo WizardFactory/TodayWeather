@@ -121,7 +121,7 @@ abstract class PlacesFitTest {
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
             val places = PlacesHost(null, { TownSearch(BundledTowns.load(context)) }) { s ->
                 PlacesPage(memory, repository, session, StartFlow(memory, repository, GeocodeClient("https://server.test.invalid", http), Device,
-                    { listOf("ko-KR") }), Device, s, removeAlarms = {})
+                    { listOf("ko-KR") }), Device, s, removeAlarms = {}, openPlace = {})
             }
             Box(Modifier) {
                 AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, places = places)

@@ -1,5 +1,6 @@
 package net.wizardfactory.todayweather.ui.places
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -140,21 +141,26 @@ private class PlacesColors(val page: Color, val row: Color, val border: Color, v
  *   a focus on the input enters search mode;
  * - the list: each place in saved order with its label, the current position's glyph, the sky icon, the temperature
  *   and today's minimum and maximum, and the bell of the visit; a disabled current position shows only while editing;
- *   a row tap selects the place ([onSelect], `goPage`), a tap while the keyboard shows only closes it; an added result
- *   is selected already ([onAdded], `goPage`);
+ *   a row tap selects the place ([onSelect], `goPage`), a tap while the keyboard shows only closes it; a chosen search
+ *   result is shown without being saved (#3180) and [onOpened] follows (`goPage`);
  * - edit mode: the current position's switch, a ⊗ on every other row (no confirmation);
  * - search mode: 현재위치로 지역찾기 (at once, also with the keyboard up; its result replaces the others), the bundled towns (10 at a time, more on each scroll) under "powered by TodayWeather",
  *   then Google's predictions, 300 ms after the last change and the latest answer only, or the found position, under
  *   Google's logo; a word without predictions keeps the last ones. With no enabled place the input takes focus.
+ * - opened by the weather header's search button ([fromHeader], #3180): the visit starts in search mode with the input
+ *   focused, and 취소 or Android back returns to the tab it came from ([onBack]) instead of showing the list; while the
+ *   side menu is open over it ([menuOpen]), back closes the menu first (CODEX-3190-5).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme: Theme, page: PlacesPage, host: PlacesHost, onSelect: (Int) -> Unit,
-                      onAdded: () -> Unit, onAlarm: (Int) -> Unit = {}, nativeAd: (@Composable () -> Unit)? = null): TabContent {
+                      onOpened: () -> Unit, onAlarm: (Int) -> Unit = {}, nativeAd: (@Composable () -> Unit)? = null,
+                      fromHeader: Boolean = false, onBack: () -> Unit = {}, menuOpen: Boolean = false): TabContent {
     val colors = PlacesColors.of(theme)
     var headerHeight by remember { mutableStateOf(44.dp) }
     var editing by rememberSaveable { mutableStateOf(false) }
-    var searching by rememberSaveable { mutableStateOf(false) }
+    var searching by rememberSaveable { mutableStateOf(fromHeader) }
+    BackHandler(enabled = fromHeader && !menuOpen) { onBack() }
     var field by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
     val word = field.text.trim()
     var predictions by remember { mutableStateOf<List<Prediction>>(emptyList()) }
@@ -201,19 +207,19 @@ fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme
             if (towns === shown) towns = TownPage(shown.towns + more.towns, more.next)
         }
     }
-    // `setInputFocus`: with no enabled place the input takes focus after 100 ms.
+    // `setInputFocus`: with no enabled place, or opened by the header's search button, the input takes focus after 100 ms.
     LaunchedEffect(Unit) {
         page.open()
-        if (PlaceIndex.enabledCount(state.places.map { it.disable }) == 0) {
+        if (fromHeader || PlaceIndex.enabledCount(state.places.map { it.disable }) == 0) {
             delay(100)
             focus.requestFocus()
         }
     }
     LaunchedEffect(page) {
-        page.added.collect {
+        page.opened.collect {
             clearSearch()
             searching = false
-            onAdded()
+            onOpened()
         }
     }
     fun keyboardOnly(): Boolean {
@@ -248,6 +254,7 @@ fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme
                             keyboard?.hide()
                             focusManager.clearFocus()
                             clearSearch()
+                            if (fromHeader) onBack()
                         }
                         else -> {
                             editing = true
@@ -269,7 +276,7 @@ fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme
                             var first = true
                             shownTowns.forEachIndexed { i, town ->
                                 ResultRow(listOf(town.first, town.second, town.third).joinToString(" "), colors, first, Modifier.testTag(PlacesTags.town(i))) {
-                                    if (!keyboardOnly()) page.addTown(town)
+                                    if (!keyboardOnly()) page.openTown(town)
                                 }
                                 first = false
                             }
@@ -283,7 +290,7 @@ fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme
                                 val tag = if (found != null) PlacesTags.FOUND else PlacesTags.prediction(i)
                                 ResultRow(text, colors, first, Modifier.testTag(tag)) {
                                     if (keyboardOnly()) return@ResultRow
-                                    if (found != null) page.addFound() else predictions.getOrNull(i)?.let { page.addPrediction(it.fullText, it.firstMatch, word) }
+                                    if (found != null) page.openFound() else predictions.getOrNull(i)?.let { page.openPrediction(it.fullText, it.firstMatch, word) }
                                 }
                                 first = false
                             }

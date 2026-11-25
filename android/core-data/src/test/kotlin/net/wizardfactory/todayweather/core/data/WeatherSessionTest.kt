@@ -58,6 +58,33 @@ class WeatherSessionTest {
         return Setup(state, session, requests)
     }
 
+    /**
+     * CODEX-3164-11: places at latitude 0 without an address are told apart by their coordinates, as their requests
+     * are, so a response for one never changes the other.
+     */
+    @Test
+    fun equatorPlacesWithoutAnAddressKeepTheirOwnWeatherAndLocation() = runTest {
+        val east30 = Place(currentPosition = false, disable = false, name = "A", location = Location(0.0, 30.0))
+        val east60 = Place(currentPosition = false, disable = false, name = "B", location = Location(0.0, 60.0))
+        assertTrue(WeatherRepository.key(east30) != WeatherRepository.key(east60), "one key per place")
+        // With an address, latitude 0 keeps the address key, as its request keeps the address (Cordova).
+        assertEquals("addr:대한민국 서울특별시", WeatherRepository.key(east30.copy(address = "대한민국 서울특별시")))
+        val t = setup()
+        t.state.value = t.state.value.copy(places = listOf(east30, east60), placeIndex = 1)
+        t.session.reload(WeatherSession.Sender.INIT)
+        runCurrent()
+        assertTrue("/coord/0,60" in t.requests.last(), t.requests.last())
+        assertEquals(Location(0.0, 30.0), t.state.value.places[0].location, "the other place keeps its longitude")
+        // CODEX-3164-13: the place that asked keeps its own coordinates too, though the fixture answers with Seoul's.
+        assertEquals(Location(0.0, 60.0), t.state.value.places[1].location)
+        // A legacy place with an address and latitude 0 still takes the response's location (#1971).
+        val legacy = Place(currentPosition = false, disable = false, name = "C", address = "대한민국 서울특별시", location = Location(0.0, 0.0))
+        t.state.value = t.state.value.copy(places = listOf(legacy), placeIndex = 0)
+        t.session.reload(WeatherSession.Sender.INIT)
+        runCurrent()
+        assertTrue(t.state.value.places[0].location!!.lat != 0.0, "the address place got the response's location")
+    }
+
     /** `branchInit` (A20): `setCityIndex` within the list, then `reloadEvent 'deeplink'`, which loads at once. */
     @Test
     fun anEntryLinkSelectsItsPlaceAndLoadsIt() = runTest {

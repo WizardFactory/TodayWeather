@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A place shown without being saved (a search result or a link.todayweather.ai link) and the weather header's search button (#3180). Not generated from client/. -->
+<resources>
+    <string name="link_add_favorite">加入收藏</string>
+    <string name="link_added_favorite">已加入收藏</string>
+    <string name="header_search">搜尋地點</string>
+</resources>

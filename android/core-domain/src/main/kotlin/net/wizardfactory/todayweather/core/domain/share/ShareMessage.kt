@@ -8,28 +8,35 @@ import net.wizardfactory.todayweather.core.domain.AddressFormat
 import net.wizardfactory.todayweather.core.domain.ForecastText
 import net.wizardfactory.todayweather.core.domain.Js
 
-/** The share message of TabCtrl's `doTabShare` for TodayWeather (O16, V20). */
+/**
+ * The share message of TabCtrl's `doTabShare` for TodayWeather (O16, V20). It ends with the `link.todayweather.ai` link
+ * of the shared place and tab ([DeepLink.shareUrl]) where the Cordova app ended with a Branch link per language (D35).
+ */
 object ShareMessage {
-    /** The Branch links the message ends with: Korean when the device language has `ko`, otherwise English. */
-    const val KO_LINK = "https://twa.app.link/wgVmUTfVoM"
-    const val LINK = "https://twa.app.link/II1JstpVoM"
 
     /** The translations it uses: LOC_CURRENT, LOC_HIGHEST, LOC_LOWEST and the app name (`$rootScope.title`). */
     class Texts(val current: String, val highest: String, val lowest: String, val app: String)
 
     /**
      * The message for the selected [city] record (`WeatherInfo.getCityOfIndex`: the place with its weather), or null
-     * when there is none or it has no location (`startPopup` instead). [language] is the device's first language
-     * (`navigator.language`). Values are joined as JavaScript joins them; when building the weather lines throws (no
-     * `currentWeather`, a `skyIcon` without `indexOf`), the message is the city line alone, as `.finally` shares it.
+     * when there is none or it has no location (`startPopup` instead). [view] and [pollutant] are the tab shared from.
+     * Values are joined as JavaScript joins them; when building the weather lines throws (no `currentWeather`, a
+     * `skyIcon` without `indexOf`), the message is the city line alone, as `.finally` shares it.
      */
-    fun build(city: JsonObject?, texts: Texts, language: String): String? {
+    fun build(city: JsonObject?, texts: Texts, view: WeatherView = WeatherView.HOURLY, pollutant: String? = null): String? {
         if (city == null || !Js.present(city["location"])) return null
         val name = city["name"]
         val cityName = if (Js.truthy(name)) Js.string(name) else AddressFormat.shorten((city["address"] as? JsonPrimitive)?.takeIf { it.isString }?.content)
         val head = cityName + "\n"
         val weather = weatherLines(city["currentWeather"], texts) ?: return head
-        return head + weather + "\n" + texts.app + " " + (if ("ko" in language) KO_LINK else LINK)
+        return head + weather + "\n" + texts.app + " " + link(city, cityName, view, pollutant)
+    }
+
+    /** The link for [city]'s saved coordinates (`location.lat`, `location.long`) and its display name. */
+    private fun link(city: JsonObject, name: String, view: WeatherView, pollutant: String?): String {
+        val location = city["location"] as? JsonObject
+        fun coordinate(key: String) = (location?.get(key) as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toDoubleOrNull()
+        return DeepLink.shareUrl(coordinate("lat"), coordinate("long"), name, view, pollutant)
     }
 
     /** `getWeatherEmoji`. */

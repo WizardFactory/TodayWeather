@@ -55,6 +55,8 @@ class StartFlow(
     private val telemetry: Telemetry = Telemetry.NONE,
     /** `window.updateCityInfo(index)`, which `updateCity` calls: the push records of the place follow it. */
     private val cityUpdated: (Int) -> Unit = {},
+    /** A place was saved and selected (an add, or the current position on S01): the user's choice of a saved place. */
+    private val chosen: () -> Unit = {},
 ) {
     /** What the position lookup ended in: the geocoded position, or the message of its failure. */
     sealed interface Located {
@@ -88,19 +90,26 @@ class StartFlow(
      * A chosen Places prediction: named by [PredictionName], geocoded by [query] (S01: its full text,
      * `getGeoInfoByAddr(description)`; S02: its terms joined by commas); a failed geocode shows nothing.
      */
-    suspend fun addPrediction(fullText: String, firstMatch: Int?, word: String, query: String = fullText): Outcome {
-        val name = PredictionName.of(fullText, firstMatch, word)
-        val geoInfo = geocode.byAddress(query, languages()) ?: return Outcome.None
-        return add(GeocodeClient.place(geoInfo, currentPosition = false).copy(name = name))
-    }
-
-    /** S02's find-by-location row: the geocoded position added as an ordinary place with its name. */
-    suspend fun addGeoInfo(geoInfo: JsonObject): Outcome = add(GeocodeClient.place(geoInfo, currentPosition = false))
+    suspend fun addPrediction(fullText: String, firstMatch: Int?, word: String, query: String = fullText): Outcome =
+        add(predictionPlace(fullText, firstMatch, word, query) ?: return Outcome.None)
 
     /** A chosen bundled town, with the address and name SearchCtrl builds; no geocode request. */
-    suspend fun addTown(town: Town): Outcome {
+    suspend fun addTown(town: Town): Outcome = add(townPlace(town))
+
+    /** The place of a chosen Places prediction, named and geocoded as [addPrediction] does; null when the geocode failed. */
+    suspend fun predictionPlace(fullText: String, firstMatch: Int?, word: String, query: String = fullText): Place? {
+        val name = PredictionName.of(fullText, firstMatch, word)
+        val geoInfo = geocode.byAddress(query, languages()) ?: return null
+        return GeocodeClient.place(geoInfo, currentPosition = false).copy(name = name)
+    }
+
+    /** S02's find-by-location row: the geocoded position as an ordinary place with its name. */
+    fun geoInfoPlace(geoInfo: JsonObject): Place = GeocodeClient.place(geoInfo, currentPosition = false)
+
+    /** The place of a bundled town: the address and name SearchCtrl builds, and its coordinates. */
+    fun townPlace(town: Town): Place {
         val info = town.placeInfo()
-        return add(Place(false, false, info.name, info.address, info.country, Location(info.lat, info.long)))
+        return Place(false, false, info.name, info.address, info.country, Location(info.lat, info.long))
     }
 
     /** `saveCity` then `addCity`: an existing place, or a body that does not convert, is "already added". */
@@ -109,9 +118,12 @@ class StartFlow(
         return when (val result = repository.load(city, s.units, languages(), force = true)) {
             is LoadResult.Loaded -> {
                 val saved = city.copy(source = source(result.entry.weather) ?: city.source)
-                if (PlaceList.add(s, saved) == null) return Outcome.Alert(ALREADY_ADDED)
+                // Checked on the state after the load: the same place saved meanwhile (a link's star) is already added,
+                // and nothing is chosen (CODEX-3190-22).
+                if (PlaceList.add(state.current() ?: s, saved) == null) return Outcome.Alert(ALREADY_ADDED)
                 state.change { current -> PlaceList.add(current, saved)?.closeStart() ?: current }
                 telemetry.track("favorite_change", mapOf("action" to "add"))
+                chosen()
                 Outcome.Added
             }
             is LoadResult.Failed -> Outcome.Alert(if (result.unconvertible) ALREADY_ADDED else FAILED_WEATHER)
@@ -195,6 +207,7 @@ class StartFlow(
                     enabled.copy(places = enabled.places.mapIndexed { i, p -> if (i == enabled.placeIndex) updateCity(p, place, source) else p }).closeStart()
                 }
                 if (updated >= 0) cityUpdated(updated)
+                chosen()
                 Outcome.Added
             }
             is LoadResult.Failed -> {
@@ -229,9 +242,8 @@ class StartFlow(
                     location = city.location ?: place.location,
                 )
             }
-            val own = place.location
             val found = city.location
-            return if ((own == null || own.lat == 0.0) && found != null && found.lat != 0.0) withSource.copy(location = found) else withSource
+            return if (!WeatherRequests.usesCoordinates(place) && found != null && found.lat != 0.0) withSource.copy(location = found) else withSource
         }
 
     }

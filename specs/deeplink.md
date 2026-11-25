@@ -190,7 +190,7 @@ Both iOS (`ios/Core/Sources/TWDomain/Share/DeepLink.swift`) and Android (`androi
 - `warnings`
 - `legacyWidget(placeID: String?)` (iOS `todayweather://widget?place=...`) / `legacyWidgetIndex(index: Double)` (Android `todayweather://N`)
 
-### 6.2 Navigation, overlay cleanup, and ephemeral preview
+### 6.2 Navigation, overlay cleanup, and unsaved places
 
 When a valid `DeepLinkTarget` arrives (cold start or warm start, after Cordova migration completes):
 1. **Dismiss transient UI:** close the side menu, settings stack, nationwide/warning overlays, and alarm editor (preserving unsaved-alarm confirmation semantics on iOS as in [AppLaunch.swift](../ios/TodayWeather/Shell/AppLaunch.swift#L269-L273)).
@@ -201,10 +201,10 @@ When a valid `DeepLinkTarget` arrives (cold start or warm start, after Cordova m
      - Resolve catalog `slug` to canonical `(lat, lon, localizedName)`.
      - Search enabled saved places for a nearby coordinate match (threshold `0.01°` on both latitude and longitude; catalog ID match takes precedence if stored).
      - **If matched:** select that saved place, switch to the requested tab (`HOURLY` / `DAILY` / `AIR` with `pollutant` when `AIR`), and reload weather (reason `.deeplink`).
-     - **If unmatched (ephemeral preview):** open the target weather/air screen in an **ephemeral preview state** (not written to persisted `places[]`), displaying a prominent non-blocking **"즐겨찾기 추가" (Add to favorites)** bar/button. Tapping "Add" persists the place (respecting the existing 30-place limit and showing the existing limit message if full) and promotes the preview to a normal saved place. Navigating away via the Locations tab or swiping to another saved place clears the ephemeral preview cleanly.
+     - **If unmatched (unsaved place, [#3180](https://github.com/WizardFactory/TodayWeather/issues/3180)):** open the target weather/air screen on the place **without writing it to persisted `places[]`**. In the header an **outline star stands in the bell's position**; tapping it saves the place at once, with a short notice and no confirmation, and the bell returns. The same state serves a place chosen in the native search, which no longer saves a result directly. **One unsaved place is kept**: it is the last place of the swipe order, stays while the user moves to saved places and back and while the Locations tab shows, is replaced by the next unsaved place (another link or search result), and is gone after the app starts again. It is not in the Locations list and has no alarms or widget. The add respects the platform's place limit and its limit message where the platform has one: the web app's limit is 30; the native Android app has none, as its saved-places screen and the Cordova app had none, so its add never refuses for a count. The WebApp keeps its "Add to favorites" button in the weather header ([§5](#5-web-pwa-behavior-web--infrawebstatic)).
 3. **Onboarding gate (`S01`) bypass on location deep link:**
    - If the app starts in `S01` (`startShows == true`, zero saved places) and a valid `place` or `coordinate` deep link is queued:
-     - Temporarily bypass `S01` and open the requested tab in an ephemeral preview. Keep the saved list empty and onboarding pending until the user explicitly taps Add to favorites. A successful Add uses the existing first-place completion path. Leaving the preview without adding returns to `S01`.
+     - Temporarily bypass `S01` and open the requested tab on the unsaved place. Keep the saved list empty and onboarding pending until the user taps the star. A successful add uses the existing first-place completion path. Without an add, `S01` shows again when the app next starts.
    - For `open` or non-location deep links (`nation*`, `warnings`) while `S01` is active: keep `S01` visible and defer or ignore until onboarding completes.
 4. **Platform-specific guards:**
    - **iOS ([AppScenes.swift](../ios/TodayWeather/AppScenes.swift)):** accept `userActivity` only when `activityType == NSUserActivityTypeBrowsingWeb` and `webpageURL != nil`, submitting into `AppLaunch.shared.entries`.

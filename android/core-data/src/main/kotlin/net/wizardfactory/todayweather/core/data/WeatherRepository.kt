@@ -357,10 +357,15 @@ class WeatherRepository(
         fun summaryRequest(place: Place, units: UnitSettings, languages: List<String>): String? =
             WeatherRequests.url("", place, units)?.let { it + "\n" + WeatherRequests.acceptLanguage(languages) }
 
+        /**
+         * The coordinates when the request uses them ([WeatherRequests.url]: not at latitude 0 with an address), else
+         * the address, so places with different requests never share a key (CODEX-3164-11).
+         */
         fun locationKey(place: Place): String {
             val location = place.location
             return when {
-                location != null && location.lat != 0.0 -> "coord:${WeatherRequests.jsNumber(location.lat)},${WeatherRequests.jsNumber(location.long)}"
+                location != null && WeatherRequests.usesCoordinates(place) ->
+                    "coord:${WeatherRequests.jsNumber(location.lat)},${WeatherRequests.jsNumber(location.long)}"
                 else -> "addr:${place.address.orEmpty()}"
             }
         }
@@ -387,9 +392,7 @@ class WeatherRepository(
                     location = location ?: place.location,
                 )
             }
-            val own = place.location
-            val hasLocation = own != null && own.lat != 0.0
-            return if (!hasLocation && location != null && location.lat != 0.0) place.copy(location = location) else place
+            return if (!WeatherRequests.usesCoordinates(place) && location != null && location.lat != 0.0) place.copy(location = location) else place
         }
 
         private val zoneIds by lazy { java.util.TimeZone.getAvailableIDs().toHashSet() }

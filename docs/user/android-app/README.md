@@ -30,6 +30,8 @@ configured live services; weather values and warnings are dated examples. Images
 are reduced to 720×1600 and a 256-color palette without replacing screen content.
 The pull-to-refresh page keeps its 19 November capture with sample Seoul weather.
 
+[Read the header-search supplement](header-search/README.md) for the search button beside the place name and places shown without being saved (#3180): a search result or a shared `link.todayweather.ai` link opens a place with a star in the bell's position, and the star saves it. The screenshots of this main manual were taken before that change and show the earlier header.
+
 [Read the current-temperature supplement](current-temperature/manual.pdf) for the updated fractional reading in the forecast header. Its [editable source](current-temperature/manual.json) uses a Korean Seoul fixture rendered with the native Android Compose screen under Robolectric SDK 34.
 
 ## Refresh the selected place

@@ -33,6 +33,18 @@ class WeatherRequestsTest {
         }
     }
 
+    /**
+     * CODEX-3164-5: latitude 0 counts as no location only when an address can stand in (Cordova's `if (location.lat)`,
+     * kept by the corpus case `latitude-zero-uses-address`); a linked equator place without one asks by coordinates.
+     */
+    @Test
+    fun latitudeZeroWithoutAnAddressAsksByCoordinates() {
+        val units = UnitSettings.defaults("KR")
+        val equator = Place(currentPosition = false, disable = false, name = "Equator", location = Location(0.0, 30.0))
+        assertEquals("https://server.test.invalid/weather/v000903/coord/0,30" + WeatherRequests.unitsQuery(units),
+            WeatherRequests.url("https://server.test.invalid", equator, units))
+    }
+
     @Test
     fun acceptLanguageIsAWebViewHeader() {
         assertEquals("ko-KR,ko;q=0.9", WeatherRequests.acceptLanguage(listOf("ko-KR")))

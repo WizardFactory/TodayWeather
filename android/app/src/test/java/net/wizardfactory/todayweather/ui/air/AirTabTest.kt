@@ -239,7 +239,7 @@ class AirTabTest {
         rule.onNodeWithTag(AirTags.PAGE).assertExists()
         val glyph = rule.onAllNodes(hasAnyAncestor(hasTestTag(WeatherTabTags.LOCATION)) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Text),
             useUnmergedTree = true).fetchSemanticsNodes().flatMap { node -> node.config[SemanticsProperties.Text].map { it.text } }.toSet()
-        assertEquals(setOf(" $LOCATION_OFF"), glyph)
+        assertEquals(setOf("$LOCATION_OFF "), glyph)
         rule.onNodeWithTag(WeatherTabTags.LOCATION).performClick()
         rule.waitForIdle()
         assertNull("no hand-off", shadowOf(rule.activity).nextStartedActivity)

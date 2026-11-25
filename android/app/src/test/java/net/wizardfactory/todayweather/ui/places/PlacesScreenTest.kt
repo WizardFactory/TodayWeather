@@ -1,5 +1,11 @@
 package net.wizardfactory.todayweather.ui.places
 
+import net.wizardfactory.todayweather.core.data.LinkOpener
+import net.wizardfactory.todayweather.core.data.LinkPreview
+import net.wizardfactory.todayweather.ui.forecast.WeatherTabTags
+import androidx.test.espresso.Espresso
+import kotlin.test.assertNull
+import kotlinx.coroutines.launch
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
@@ -116,6 +122,7 @@ class PlacesScreenTest {
     }
 
     private lateinit var memory: Memory
+    private lateinit var preview: LinkPreview
 
     @After fun stop() = scope.cancel()
 
@@ -124,7 +131,8 @@ class PlacesScreenTest {
     /** While it is set, weather requests wait for it (the rows' loads at entry come before). */
     private var held: CompletableDeferred<Unit>? = null
 
-    private fun show(places: List<Place>, index: Int = 1, startupPage: String = "2", records: List<JsonObject> = emptyList(), device: Device = Device(), withAd: Boolean = false) {
+    private fun show(places: List<Place>, index: Int = 1, startupPage: String = "2", records: List<JsonObject> = emptyList(), device: Device = Device(), withAd: Boolean = false,
+                     startTab: Tab = Tab.LOCATIONS) {
         memory = Memory(AppState(places = places, placeIndex = index, units = UnitSettings.defaults("KR"), settings = Settings(startupPage = startupPage),
             push = PushState(fcmToken = "t", records = records)).closeStart().copy(placeIndex = index))
         val http = HttpGet { url, _ ->
@@ -137,19 +145,26 @@ class PlacesScreenTest {
             }
         }
         val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined)
-        val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
+        // As the app wires it (#3180): the screens read the saved state through the preview of an unsaved place.
+        preview = LinkPreview(memory)
+        val session = WeatherSession(repository, scope, preview, { listOf("ko-KR") }, { null })
+        val opener = LinkOpener(memory.flow, preview, openPlace = { session.openPlace(it.toDouble()) }, reload = { session.reload(WeatherSession.Sender.DEEPLINK) })
         rule.setContent {
-            val state by memory.flow.collectAsState()
+            val savedState by memory.flow.collectAsState()
+            val unsaved by preview.unsaved.collectAsState()
+            val shown = unsaved?.place
+            val state = LinkPreview.overlay(savedState, unsaved)
             val entries by repository.weather.collectAsState()
             val loading by repository.loading.collectAsState()
             val retry by session.retry.collectAsState()
             val context = LocalContext.current
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
             val places = PlacesHost(null, { TownSearch(BundledTowns.load(context)) }) { s ->
-                PlacesPage(memory, repository, session, StartFlow(memory, repository, GeocodeClient("https://server.test.invalid", http), device,
-                    { listOf("ko-KR") }), device, s, removeAlarms = { removed += it })
+                PlacesPage(preview.savedAccess, repository, session, StartFlow(preview.savedAccess, repository, GeocodeClient("https://server.test.invalid", http), device,
+                    { listOf("ko-KR") }), device, s, removeAlarms = { removed += it }, openPlace = opener::show)
             }
-            AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, places = places, startTab = Tab.LOCATIONS,
+            AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, places = places, startTab = startTab,
+                preview = shown != null, onAddPreview = { preview.add() },
                 nativeAd = if (withAd) ({ tab ->
                     DisposableEffect(Unit) {
                         adVisits += tab
@@ -297,8 +312,9 @@ class PlacesScreenTest {
         assertEquals(emptyList<Int>(), removed)
     }
 
+    /** #3180: a chosen result opens without being saved; the header's star saves it and gives way to the bell. */
     @Test
-    fun aTownFromTheSearchIsAddedAndOpens() {
+    fun aTownFromTheSearchOpensUnsavedAndTheStarSavesIt() {
         show(listOf(Place.currentPositionPlaceholder(), seoul))
         rule.onNodeWithTag(PlacesTags.INPUT).performClick()
         rule.waitForIdle()
@@ -308,24 +324,105 @@ class PlacesScreenTest {
         rule.onAllNodesWithTag(PlacesTags.TOWN_DIVIDER).fetchSemanticsNodes().let { assertEquals(1, it.size) }
         rule.onNodeWithTag(PlacesTags.town(0)).performClick()
         rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).assertExists()
+        assertEquals("nothing is saved", listOf(null, "서울"), memory.current().places.map { it.name })
+        assertEquals("부산광역시", preview.unsaved.value?.place?.name)
+        rule.onNodeWithTag(WeatherTabTags.STAR).assertExists()
+        rule.onNodeWithTag(WeatherTabTags.BELL).assertDoesNotExist()
+        rule.onNodeWithTag(WeatherTabTags.SHARE).assertExists()
+        rule.onNodeWithTag(WeatherTabTags.STAR).performClick()
+        rule.waitForIdle()
         val state = memory.current()
         assertEquals("부산광역시", state.places.last().name)
         assertEquals(state.places.lastIndex, state.placeIndex)
-        rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).assertExists()
+        assertNull(preview.unsaved.value?.place)
+        rule.onNodeWithTag(WeatherTabTags.STAR).assertDoesNotExist()
+        rule.onNodeWithTag(WeatherTabTags.BELL).assertExists()
     }
 
     @Test
-    fun findingByLocationGivesARowThatAddsAnOrdinaryPlace() {
-        show(listOf(Place.currentPositionPlaceholder(), seoul))
+    fun findingByLocationGivesARowThatOpensAnOrdinaryPlaceUnsaved() {
+        show(listOf(Place.currentPositionPlaceholder(), seoul.copy(location = Location(35.1, 129.0))))
         rule.onNodeWithTag(PlacesTags.INPUT).performClick()
         rule.onNodeWithTag(PlacesTags.FIND).performClick()
         rule.waitForIdle()
         rule.onNodeWithTag(PlacesTags.GOOGLE_DIVIDER).assertExists()
         rule.onNodeWithTag(PlacesTags.FOUND).performClick()
         rule.waitForIdle()
-        val added = memory.current().places.last()
-        assertEquals("회현동", added.name)
-        assertFalse(added.currentPosition)
+        assertEquals("nothing is saved", 2, memory.current().places.size)
+        val shown = preview.unsaved.value?.place!!
+        assertEquals("회현동", shown.name)
+        assertFalse(shown.currentPosition)
+    }
+
+    /**
+     * #3180: the weather header's search button opens S02's search with the input focused and returns to its tab on
+     * 취소 or Android back; a chosen result opens on that tab. The unsaved place stays while the search is open.
+     */
+    @Test
+    fun theHeaderSearchOpensS02sSearchAndReturnsToItsTab() {
+        show(listOf(Place.currentPositionPlaceholder(), seoul), startTab = Tab.DAILY)
+        rule.onNodeWithTag(ShellTags.page(Tab.DAILY)).assertExists()
+        rule.onNodeWithTag(WeatherTabTags.SEARCH).performClick()
+        rule.waitForIdle()
+        rule.mainClock.advanceTimeBy(200)
+        rule.onNodeWithTag(ShellTags.page(Tab.LOCATIONS)).assertExists()
+        assertEquals(string(R.string.LOC_CANCEL), modeLabel())
+        rule.onNodeWithTag(PlacesTags.INPUT).assertIsFocused()
+        rule.onNodeWithTag(PlacesTags.LIST).assertDoesNotExist()
+        // 취소 returns to Daily.
+        rule.onNodeWithTag(PlacesTags.MODE).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.page(Tab.DAILY)).assertExists()
+        // Android back returns too, without the exit question.
+        rule.onNodeWithTag(WeatherTabTags.SEARCH).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.page(Tab.LOCATIONS)).assertExists()
+        Espresso.pressBack()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.page(Tab.DAILY)).assertExists()
+        rule.onNodeWithTag(ShellTags.EXIT_DIALOG).assertDoesNotExist()
+        // CODEX-3190-5: with the side menu open over the search, back closes the menu first, then returns to Daily.
+        rule.onNodeWithTag(WeatherTabTags.SEARCH).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.MENU).assertExists()
+        Espresso.pressBack()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.MENU).assertDoesNotExist()
+        rule.onNodeWithTag(ShellTags.page(Tab.LOCATIONS)).assertExists()
+        Espresso.pressBack()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.page(Tab.DAILY)).assertExists()
+        // A chosen result opens on Daily, unsaved; a second search from it keeps it until another result is chosen.
+        rule.onNodeWithTag(WeatherTabTags.SEARCH).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(PlacesTags.INPUT).performTextInput("부산")
+        rule.waitForIdle()
+        rule.onNodeWithTag(PlacesTags.town(0)).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.page(Tab.DAILY)).assertExists()
+        assertEquals("부산광역시", preview.unsaved.value?.place?.name)
+        rule.onNodeWithTag(WeatherTabTags.STAR).assertExists()
+        rule.onNodeWithTag(WeatherTabTags.SEARCH).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(PlacesTags.MODE).performClick()
+        rule.waitForIdle()
+        assertEquals("cancelling the search returns to the unsaved place", "부산광역시", preview.unsaved.value?.place?.name)
+        // The Locations tab keeps it but lists the saved places only.
+        rule.onNodeWithTag(ShellTags.tab(Tab.LOCATIONS)).performClick()
+        rule.waitForIdle()
+        assertEquals("부산광역시", preview.unsaved.value?.place?.name)
+        rule.onNodeWithTag(PlacesTags.row(1)).assertExists()
+        rule.onAllNodesWithTag(PlacesTags.row(2)).fetchSemanticsNodes().let { assertEquals(0, it.size) }
+        assertEquals(2, memory.current().places.size)
+        // A saved row opens that place; the unsaved one stays for the swipe back.
+        rule.onNodeWithTag(PlacesTags.row(1)).performClick()
+        rule.waitForIdle()
+        assertEquals(1, memory.current().placeIndex)
+        rule.onNodeWithTag(WeatherTabTags.BELL).assertExists()
+        assertEquals("부산광역시", preview.unsaved.value?.place?.name)
     }
 
     /** #2925 F2, F3: with the keyboard up the button finds at once (a result tap only closes it), and the found row replaces the towns. */
@@ -375,40 +472,31 @@ class PlacesScreenTest {
         rule.onNodeWithTag(PlacesTags.FIND).assertExists()
     }
 
-    /** O17 on S02: the loading overlay shows while a town from the search loads, and goes when it is added. */
+    /** #3180: a result within 0.01° of a saved place selects that place; nothing is added and no message shows. */
     @Test
-    fun theLoadingOverlayShowsWhileAPlaceIsAdded() {
-        show(listOf(Place.currentPositionPlaceholder(), seoul))
-        search("부산")
-        val hold = CompletableDeferred<Unit>().also { held = it }
-        rule.onNodeWithTag(PlacesTags.town(0)).performClick()
-        rule.waitForIdle()
-        rule.onNodeWithTag(NationTags.LOADING).assertExists()
-        hold.complete(Unit)
-        rule.waitForIdle()
-        rule.onNodeWithTag(NationTags.LOADING).assertDoesNotExist()
-        assertEquals("부산광역시", memory.current().places.last().name)
-    }
-
-    /** O09 on S02: a place already saved is not added again; the alert says so (`LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED`). */
-    @Test
-    fun aPlaceAlreadySavedShowsTheDuplicateMessage() {
+    fun aResultAtASavedPlaceSelectsIt() {
         show(listOf(Place.currentPositionPlaceholder(), seoul))
         search("부산")
         rule.onNodeWithTag(PlacesTags.town(0)).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(WeatherTabTags.STAR).performClick()
         rule.waitForIdle()
         val saved = memory.current().places
         assertEquals("부산광역시", saved.last().name)
         rule.onNodeWithTag(ShellTags.tab(Tab.LOCATIONS)).performClick()
         rule.waitForIdle()
+        rule.onNodeWithTag(PlacesTags.row(1)).performClick()
+        rule.waitForIdle()
+        assertEquals(1, memory.current().placeIndex)
+        rule.onNodeWithTag(ShellTags.tab(Tab.LOCATIONS)).performClick()
+        rule.waitForIdle()
         search("부산")
         rule.onNodeWithTag(PlacesTags.town(0)).performClick()
         rule.waitForIdle()
-        rule.onNodeWithText(string(R.string.LOC_ERROR)).assertExists()
-        rule.onNodeWithText(string(R.string.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED)).assertExists()
+        assertNull(preview.unsaved.value?.place)
         assertEquals(saved, memory.current().places)
-        rule.onNodeWithText(string(R.string.LOC_OK), useUnmergedTree = true).performClick()
-        rule.waitForIdle()
+        assertEquals("the saved Busan is selected", 2, memory.current().placeIndex)
+        rule.onNodeWithTag(WeatherTabTags.BELL).assertExists()
         rule.onNodeWithText(string(R.string.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED)).assertDoesNotExist()
     }
 

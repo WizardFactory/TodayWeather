@@ -1,0 +1,50 @@
+{
+  "capture": {
+    "test": "DeepLinkManualCaptureTest",
+    "runner": "Robolectric SDK 34, GraphicsMode NATIVE",
+    "qualifiers": "ko-rKR-w384dp-h832dp-xhdpi",
+    "theme": "light",
+    "date": "2026-11-24",
+    "font_for_pdf": "NanumGothic (macOS system font asset NanumGothic.ttc), not distributed",
+    "host": "macOS (Robolectric native graphics)"
+  },
+  "screenshots": {
+    "saved-place.png": {
+      "sha256": "e46b09b21d756bcfb7623a70071e89fbdb9d0864a136e01db3bfa2f89005aa1b",
+      "size": [
+        768,
+        1664
+      ]
+    },
+    "search.png": {
+      "sha256": "32ed4364e62ec98daa2fc6c4b87bf969dd208c95861efb75ed9bc6c695a7020c",
+      "size": [
+        768,
+        1664
+      ]
+    },
+    "unsaved-place.png": {
+      "sha256": "6b1e74a2f3ac0e2c7680f3d7bab436abea8862fb0bafe3a0101d3c0bf723d46f",
+      "size": [
+        768,
+        1664
+      ]
+    },
+    "added-place.png": {
+      "sha256": "9fcd9ebba918b02e8079bba1ddb9ddbcf68ce51c4eec8adee8ab1d01d4a88652",
+      "size": [
+        768,
+        1664
+      ]
+    }
+  },
+  "manual_sha256": "531459eb41bfc3a466a434cc1d1992ce99c469f2a88f909e57092013dc0ee104",
+  "pdf_sha256": "a3fa7d160cea832a18cf6d3fb7406d81af02fa5e09680b0b06634a0a8ee30416",
+  "sources": {
+    "android/app/src/test/java/net/wizardfactory/todayweather/DeepLinkScreenTest.kt": "27f16c6250d944f7e2a492466da427c4593859a5270c898766ac6ab1e52f962f",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherTab.kt": "84874c0769d69635cd98f74cd6b5f8e48f4a9bf4c07f0688ee6d56b1d247b9d1",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/places/PlacesTab.kt": "fb07d75a6f27d0b6dadeeb663ffd292e882c2cda185452f65542918c58c86082",
+    "android/app/src/main/res/values-ko/link_strings.xml": "c2fc9a1217ae640f5429a3b111beda25fb391a2adc9b64dd43cd5f405686727e",
+    "android/core-domain/src/test/resources/corpus/inputs/kma-seoul.json": "75b92bbcfca72d79438021b4245c4efab4502f5954ba991d3b8c9e70d9578b17"
+  }
+}

@@ -185,4 +185,28 @@ class AlarmPageTest {
         assertEquals(true, page.closed.value)
         assertEquals(0, saves)
     }
+
+    /**
+     * CODEX-3190-15: opening for a saved place selects it (`setCityIndex(fav)`) and says so, the user's choice; an open
+     * without a place and the alarm saves say nothing.
+     */
+    @Test
+    fun openingForASavedPlaceSaysItChoseIt() = runTest {
+        val seoul = Place(false, false, "서울", "대한민국 서울특별시", "KR", Location(37.567, 126.978))
+        val busan = Place(false, false, "부산", "대한민국 부산광역시", "KR", Location(35.18, 129.08))
+        val memory = Memory(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul, busan), placeIndex = 2,
+            units = UnitSettings.defaults("KR")))
+        var chosen = 0
+        val page = AlarmPage(memory, Access(available = true, on = true), post = {}, openSettings = {}, scope = backgroundScope,
+            clock = { now }, zone = { zone }, chosen = { chosen++ })
+        page.open(1)
+        runCurrent()
+        assertEquals(1, memory.value.placeIndex)
+        assertEquals(1, chosen)
+        val again = AlarmPage(memory, Access(available = true, on = true), post = {}, openSettings = {}, scope = backgroundScope,
+            clock = { now }, zone = { zone }, chosen = { chosen++ })
+        again.open(null)
+        runCurrent()
+        assertEquals(1, chosen, "no place, no choice")
+    }
 }

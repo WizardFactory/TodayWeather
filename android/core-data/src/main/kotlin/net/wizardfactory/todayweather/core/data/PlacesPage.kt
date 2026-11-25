@@ -28,8 +28,10 @@ import net.wizardfactory.todayweather.core.storage.PlaceList
  * - [delete] and [setCurrentPosition]: with the row's bell on, the place's alarms go first (`DELETE /push`, no other
  *   record renumbered, A24); turning the current position on the first time, while it has no temperature, finds it,
  *   names it from the geocode and loads it, a weather failure silent;
- * - [findByLocation] and the adds of a search result, one at a time behind the overlay; an add selects the new place
- *   ([added]); failures end in O09 or O03 of type `search` ([popup]), whose OK finds by location again (A26).
+ * - [findByLocation] and a chosen search result, one at a time behind the overlay. A result is not saved (#3180): it
+ *   goes to [openPlace], which shows it as the selected place without saving it, and [opened] follows; the star of the
+ *   weather header saves it. A failed lookup ends in O03 of type `search` ([popup]), whose OK finds by location again
+ *   (A26); a prediction whose geocode failed opens nothing.
  */
 class PlacesPage(
     private val state: StateAccess,
@@ -43,12 +45,14 @@ class PlacesPage(
     /** `window.updateCityInfo(index)`, after the geocode renames the current position. */
     private val cityUpdated: (Int) -> Unit = {},
     private val telemetry: Telemetry = Telemetry.NONE,
+    /** A chosen search result, to show without saving it (#3180). */
+    private val openPlace: (Place) -> Unit,
 ) {
     private val bells = MutableStateFlow<List<Boolean>>(emptyList())
     private val loadingNow = MutableStateFlow(false)
     private val popupNow = MutableStateFlow<StartFlow.Outcome?>(null)
     private val foundNow = MutableStateFlow<JsonObject?>(null)
-    private val addedNow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val openedNow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private var job: Job? = null
 
     /** Each row's bell as the visit opened (`Push.hasPushInfo`, not read again). */
@@ -63,8 +67,8 @@ class PlacesPage(
     /** The geocoded position find-by-location gave, its result row. */
     val found: StateFlow<JsonObject?> = foundNow.asStateFlow()
 
-    /** A search result was added and selected (`goPage()` follows). */
-    val added: SharedFlow<Unit> = addedNow.asSharedFlow()
+    /** A search result was opened (`goPage()` follows). */
+    val opened: SharedFlow<Unit> = openedNow.asSharedFlow()
 
     fun open() {
         val s = state.current() ?: return
@@ -127,17 +131,24 @@ class PlacesPage(
     }
 
     /** A bundled town (`OnSelectResult`). */
-    fun addTown(town: Town) = perform { finish(flow.addTown(town)) }
+    fun openTown(town: Town) = perform { show(flow.townPlace(town)) }
 
     /** A Places prediction, geocoded by its terms joined with commas. */
-    fun addPrediction(fullText: String, firstMatch: Int?, word: String) =
-        perform { finish(flow.addPrediction(fullText, firstMatch, word, SearchQuery.of(fullText))) }
+    fun openPrediction(fullText: String, firstMatch: Int?, word: String) =
+        perform { flow.predictionPlace(fullText, firstMatch, word, SearchQuery.of(fullText))?.let(::show) }
 
     /** The find-by-location row. */
-    fun addFound() {
+    fun openFound() {
         val geoInfo = foundNow.value ?: return
         foundNow.value = null
-        perform { finish(flow.addGeoInfo(geoInfo)) }
+        perform { show(flow.geoInfoPlace(geoInfo)) }
+    }
+
+    /** Opens [place] unless it has neither usable coordinates nor an address: it could never load (CODEX-3195-4). */
+    private fun show(place: Place) {
+        if (!WeatherRequests.usesCoordinates(place) && place.address.isNullOrEmpty()) return
+        openPlace(place)
+        openedNow.tryEmit(Unit)
     }
 
     /** The search was cleared (Cancel, Edit, a new word): the find-by-location row goes too. */
@@ -162,14 +173,6 @@ class PlacesPage(
 
     private fun confirm(failed: StartFlow.Located.Failed) {
         popupNow.value = StartFlow.Outcome.Confirm(SearchLocation.retry(failed.message, flow.recorded, location.enabled()))
-    }
-
-    private fun finish(outcome: StartFlow.Outcome) {
-        when (outcome) {
-            StartFlow.Outcome.Added -> addedNow.tryEmit(Unit)
-            is StartFlow.Outcome.Alert, is StartFlow.Outcome.Confirm -> popupNow.value = outcome
-            StartFlow.Outcome.None -> {}
-        }
     }
 
     /** One action at a time, behind the overlay. */

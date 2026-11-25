@@ -59,6 +59,8 @@ class AlarmPage(
     private val scope: CoroutineScope,
     private val clock: () -> Long = System::currentTimeMillis,
     private val zone: () -> TimeZone = TimeZone::getDefault,
+    /** [open] selected a saved place (`setCityIndex(fav)`): the user's choice of it. */
+    private val chosen: () -> Unit = {},
 ) {
     private val _settings = MutableStateFlow<AlarmSettings?>(null)
     private val _popup = MutableStateFlow<AlarmPopup?>(null)
@@ -79,7 +81,10 @@ class AlarmPage(
         val s = state.current() ?: return
         opened = true
         if (fav != null && (fav != 0 || s.places.getOrNull(0)?.disable == false)) {
-            if (fav >= 0 && fav < s.places.size) state.change { it.copy(placeIndex = fav) }
+            if (fav >= 0 && fav < s.places.size) {
+                state.change { it.copy(placeIndex = fav) }
+                chosen()
+            }
         }
         val current = state.current() ?: return
         val index = current.placeIndex
