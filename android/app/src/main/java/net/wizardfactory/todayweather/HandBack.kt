@@ -3,6 +3,7 @@ package net.wizardfactory.todayweather
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.annotation.Keep
 import net.wizardfactory.todayweather.analytics.ConsentStore
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.CordovaHandBack
@@ -17,7 +18,12 @@ import net.wizardfactory.todayweather.core.storage.CordovaMigration
 class HandBackWriter(private val suite: SharedPreferences, private val consent: () -> String?) {
     private var last: AppState? = null
 
-    /** Held here: SharedPreferences keeps its listeners only weakly. */
+    /**
+     * Held here: SharedPreferences keeps its listeners only weakly. Nothing reads the field, so R8 would remove it and the
+     * listener would be collected (the first 2.0.1 release build: a grant then never reached the suite and
+     * [HandBackConsent] withdrew it at the next start). `check_r8.py` (`KEPT_FIELDS`) fails a release without it.
+     */
+    @field:Keep
     private var consentListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
     /** Hands [state] back (each state the app saved); false when the suite could not be written. */

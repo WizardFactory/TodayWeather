@@ -14,13 +14,18 @@ The check passes when
   header), so the file to upload to Play is complete;
 - R8 obfuscated and shrank the app's own classes (APP_PACKAGE): of the classes it kept, the mapping gives more a
   new name than their own (R8 run with -dontobfuscate renames none), and it maps some to `R8$$REMOVED$$CLASS$$<n>`,
-  the name R8 9.x gives a class it removed (with -dontshrink it removes none).
+  the name R8 9.x gives a class it removed (with -dontshrink it removes none);
+- every field of KEPT_FIELDS is declared in a dex file's class definitions (`class_defs` / `class_data_item`), under the
+  names the mapping gives its class and the field (R8 writes no mapping line for a member it keeps under its own name):
+  the field holds a listener that a registry keeps only weakly, and nothing reads it, so without its keep rule R8 removes
+  it and the listener is collected.
 Prints one ok or FAIL line per check, and the mapping file's SHA-256 for the release notes. Status 1: a check
 failed; 2: usage or an unreadable file.
 """
 import hashlib
 import json
 import re
+import struct
 import sys
 import zipfile
 
@@ -29,6 +34,14 @@ DEX = re.compile(r"classes\d*\.dex")
 APP_PACKAGE = "net.wizardfactory.todayweather."
 CLASS_LINE = re.compile(rb"^(\S+) -> (\S+):\r?$", re.MULTILINE)
 REMOVED = re.compile(r"R8\$\$REMOVED\$\$CLASS\$\$[0-9]+")
+# (class, field): SharedPreferences keeps its change listeners only weakly, so the app holds the analytics choice's
+# listener in this field (@field:Keep); the first 2.0.1 build lost it and withdrew a grant at the next start.
+# app/src/test/.../ListenerKeepTest.kt checks that the app's sources and this list agree.
+KEPT_FIELDS = (
+    ("net.wizardfactory.todayweather.HandBackWriter", "consentListener"),
+)
+# A field in a mapping: `    <type> <name> -> <new name>`; methods have parameters and may have line numbers.
+FIELD_LINE = re.compile(r"^ {4}[^\s(#:]+ ([^\s(]+) -> (\S+)$")
 
 
 def markers(data):
@@ -75,6 +88,97 @@ def own_classes(data):
     return kept, renamed, removed
 
 
+def mapped_names(data):
+    """For each (class, field) of KEPT_FIELDS, the names R8 gave them: the class's mapping line (None when R8 removed
+    the class), the field's line, or the original names where the mapping has no line for them."""
+    names = {pair: list(pair) for pair in KEPT_FIELDS}
+    current = None
+    for raw in data.decode("utf-8", "replace").splitlines():
+        line = raw.rstrip("\r")
+        if not line.startswith((" ", "#")):
+            match = re.match(r"^(\S+) -> (\S+):$", line)
+            current = match.group(1) if match else None
+            for (owner, _), mapped in names.items():
+                if match and owner == current:
+                    mapped[0] = None if REMOVED.fullmatch(match.group(2)) else match.group(2)
+            continue
+        field = FIELD_LINE.match(line)
+        if current and field and (current, field.group(1)) in names:
+            names[(current, field.group(1))][1] = field.group(2)
+    return {pair: (mapped[0], mapped[1]) for pair, mapped in names.items()}
+
+
+def read_uleb128(data, offset):
+    """Read an unsigned LEB128 (at most 5 bytes, 32-bit value) from data at offset; return (value, next_offset)."""
+    value = 0
+    for shift in (0, 7, 14, 21, 28):
+        byte = data[offset]
+        offset += 1
+        if shift == 28 and byte > 0x0f:
+            raise ValueError("uleb128 overflow")
+        value |= (byte & 0x7f) << shift
+        if not byte & 0x80:
+            return value, offset
+    raise ValueError("unterminated uleb128")
+
+
+def dex_fields(data):
+    """The (class descriptor, field name) pairs declared by a dex file's class_defs / class_data_item; empty on error."""
+    try:
+        if len(data) < 0x70 or data[:4] != b"dex\n":
+            return set()
+        endian_tag = struct.unpack_from("<I", data, 0x28)[0]
+        if endian_tag != 0x12345678:
+            return set()
+        string_count, string_off, type_count, type_off = struct.unpack_from("<IIII", data, 0x38)
+        field_count, field_off = struct.unpack_from("<II", data, 0x50)
+        class_def_count, class_def_off = struct.unpack_from("<II", data, 0x60)
+        if (string_off + 4 * string_count > len(data) or type_off + 4 * type_count > len(data) or
+                field_off + 8 * field_count > len(data) or class_def_off + 32 * class_def_count > len(data)):
+            return set()
+
+        def string(index):
+            if index >= string_count:
+                raise IndexError(index)
+            offset = struct.unpack_from("<I", data, string_off + 4 * index)[0]
+            _, offset = read_uleb128(data, offset)  # UTF-16 unit length, followed by MUTF-8 bytes ending in 0
+            return data[offset:data.index(b"\x00", offset)].decode("utf-8", "replace")
+
+        def type_name(index):
+            if index >= type_count:
+                raise IndexError(index)
+            return string(struct.unpack_from("<I", data, type_off + 4 * index)[0])
+
+        found = set()
+        for i in range(class_def_count):
+            class_idx, _, _, _, _, _, class_data_off, _ = struct.unpack_from("<IIIIIIII", data, class_def_off + 32 * i)
+            if class_idx >= type_count:
+                raise IndexError(class_idx)
+            if class_data_off == 0:
+                continue
+            off = class_data_off
+            static_count, off = read_uleb128(data, off)
+            instance_count, off = read_uleb128(data, off)
+            _, off = read_uleb128(data, off)  # direct_methods_size
+            _, off = read_uleb128(data, off)  # virtual_methods_size
+            owner = type_name(class_idx)
+            for count in (static_count, instance_count):
+                field_idx = 0
+                for _ in range(count):
+                    diff, off = read_uleb128(data, off)
+                    _, off = read_uleb128(data, off)  # access_flags
+                    field_idx += diff
+                    if field_idx >= field_count:
+                        raise IndexError(field_idx)
+                    f_class_idx, f_type_idx, f_name_idx = struct.unpack_from("<HHI", data, field_off + 8 * field_idx)
+                    if f_class_idx != class_idx or f_type_idx >= type_count or f_name_idx >= string_count:
+                        raise ValueError("invalid field_id")
+                    found.add((owner, string(f_name_idx)))
+        return found
+    except (struct.error, IndexError, ValueError):
+        return set()
+
+
 def main(argv):
     if len(argv) != 3:
         print("usage: check_r8.py <release.apk> <mapping.txt>", file=sys.stderr)
@@ -119,6 +223,11 @@ def main(argv):
           f"R8 renamed {renamed} of the app's {renamed + kept} classes ({APP_PACKAGE}*): not obfuscated")
     check(removed > 0, f"R8 removed {removed} of the app's classes",
           f"R8 removed none of the app's classes ({APP_PACKAGE}*): not shrunk")
+    fields = set().union(*(dex_fields(data) for data in dex.values())) if dex else set()
+    for (owner, field), (new_owner, new_field) in mapped_names(mapping).items():
+        present = new_owner is not None and ("L" + new_owner.replace(".", "/") + ";", new_field) in fields
+        check(present, f"R8 kept {owner}.{field}",
+              f"R8 removed {owner}.{field}: the listener it holds is kept only weakly and can be collected")
     check(bool(recorded) and recorded == actual, "mapping content has the SHA-256 of its header",
           f"mapping content SHA-256 {actual}, its header records {recorded or 'none'}")
     print(f"- R8 mapping SHA-256: {hashlib.sha256(mapping).hexdigest()}")

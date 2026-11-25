@@ -3,11 +3,15 @@
 The dex files hold the marker strings D8, R8 and L8 write, in the form of the 2.0.x builds (AGP 9.5, R8 9.5.29): the
 unminified release had `~~D8` markers, the minified one an `~~R8` marker with `pg-map-id` in the app's dex and
 `~~L8` with `~~R8` in the desugared library's dex. The mapping header is R8's, whose `pg_map_hash` is the SHA-256 of
-the lines after the header.
+the lines after the header. A field of check_r8.KEPT_FIELDS is looked up in the dex files' class definitions
+(`class_defs` / `class_data_item`) under the names the mapping gives its class and field; R8 9.5.29 writes no mapping line
+for a field it keeps under its own name (the fixed 2.0.1 build kept HandBackWriter and consentListener unrenamed, and the
+mapping lists neither member).
 """
 import hashlib
 import json
 from pathlib import Path
+import struct
 import subprocess
 import sys
 import tempfile
@@ -24,20 +28,81 @@ def marker(tool, **fields):
     return b'~~' + tool.encode() + json.dumps(body, separators=(',', ':')).encode()
 
 
-def dex(*markers):
-    return b'dex\n039\x00' + b'\x00' * 64 + b''.join(b'\x00' + m for m in markers)
+LISTENER_TYPE = 'Landroid/content/SharedPreferences$OnSharedPreferenceChangeListener;'
 
 
-# The app's classes as R8 maps them: kept by a rule, renamed, removed (R8 9.x names removed classes).
+def uleb128(value):
+    out = bytearray()
+    while True:
+        byte, value = value & 0x7f, value >> 7
+        out.append(byte | (0x80 if value else 0))
+        if not value:
+            return bytes(out)
+
+
+def dex(*markers, fields=(), strings=(), declared=True):
+    """A dex file with a header, string/type/field tables, optional class_defs + class_data_item declarations for
+    `fields` ((class, type, name) descriptors), extra `strings`, and the markers."""
+    names = sorted({s for field in fields for s in field} | set(strings))
+    index = {s: i for i, s in enumerate(names)}
+    types = sorted({d for c, ty, _ in fields for d in (c, ty)})
+    type_index = {d: i for i, d in enumerate(types)}
+    by_class = {}
+    if declared:
+        for fid, (c, _, _) in enumerate(fields):
+            by_class.setdefault(c, []).append(fid)
+    class_defs_list = sorted(by_class.items(), key=lambda item: type_index[item[0]])
+    string_ids_off = 0x70
+    type_ids_off = string_ids_off + 4 * len(names)
+    field_ids_off = type_ids_off + 4 * len(types)
+    class_defs_off = field_ids_off + 8 * len(fields)
+    data_off = class_defs_off + 32 * len(class_defs_list)
+    data, offsets = b'', []
+    for s in names:
+        offsets.append(data_off + len(data))
+        data += uleb128(len(s)) + s.encode() + b'\x00'
+    class_defs_bytes = b''
+    for cls_desc, fids in class_defs_list:
+        class_data_off = data_off + len(data)
+        encoded = uleb128(0) + uleb128(len(fids)) + uleb128(0) + uleb128(0)
+        prev = 0
+        for fid in fids:
+            encoded += uleb128(fid - prev) + uleb128(0x0002)  # private
+            prev = fid
+        data += encoded
+        class_defs_bytes += struct.pack('<IIIIIIII', type_index[cls_desc], 0x0001, 0xffffffff, 0, 0xffffffff, 0,
+                                        class_data_off, 0)
+    tables = (b''.join(struct.pack('<I', o) for o in offsets)
+              + b''.join(struct.pack('<I', index[d]) for d in types)
+              + b''.join(struct.pack('<HHI', type_index[c], type_index[ty], index[n]) for c, ty, n in fields)
+              + class_defs_bytes)
+    body = tables + data + b''.join(b'\x00' + m for m in markers)
+    header = bytearray(b'dex\n039\x00' + b'\x00' * (0x70 - 8))
+    struct.pack_into('<II', header, 0x20, 0x70 + len(body), 0x70)
+    struct.pack_into('<I', header, 0x28, 0x12345678)
+    struct.pack_into('<IIII', header, 0x38, len(names), string_ids_off, len(types), type_ids_off)
+    struct.pack_into('<II', header, 0x50, len(fields), field_ids_off)
+    struct.pack_into('<II', header, 0x60, len(class_defs_list), class_defs_off)
+    return bytes(header) + body
+
+
+# The app's classes as R8 maps them: kept by a rule, renamed, removed (R8 9.x names removed classes), and the class
+# whose field holds the analytics choice's listener; the field kept under its own name has no line.
+HAND_BACK = (b'net.wizardfactory.todayweather.HandBackWriter -> e.f:\n'
+             b'# {"id":"sourceFile","fileName":"HandBack.kt"}\n'
+             b'    android.content.SharedPreferences suite -> a\n'
+             b'    1:4:boolean rewrite():44:44 -> b\n')
+KEPT = ('Le/f;', LISTENER_TYPE, 'consentListener')
 SHRUNK = (b'kotlin.Unit -> kotlin.Unit:\n'
           b'net.wizardfactory.todayweather.MainActivity -> net.wizardfactory.todayweather.MainActivity:\n'
           b'    void onCreate(android.os.Bundle) -> onCreate\n'
           b'net.wizardfactory.todayweather.core.domain.Js -> a.b:\n'
           b'    int x -> a\n'
           b'net.wizardfactory.todayweather.ui.chart.Chart -> c.d:\n'
-          b'net.wizardfactory.todayweather.ui.Unused -> R8$$REMOVED$$CLASS$$0:\n')
+          b'net.wizardfactory.todayweather.ui.Unused -> R8$$REMOVED$$CLASS$$0:\n' + HAND_BACK)
 NOT_OBFUSCATED = SHRUNK.replace(b'-> a.b:', b'-> net.wizardfactory.todayweather.core.domain.Js:').replace(
-    b'-> c.d:', b'-> net.wizardfactory.todayweather.ui.chart.Chart:')
+    b'-> c.d:', b'-> net.wizardfactory.todayweather.ui.chart.Chart:').replace(
+    b'-> e.f:', b'-> net.wizardfactory.todayweather.HandBackWriter:')
 NOT_SHRUNK = SHRUNK.replace(b'net.wizardfactory.todayweather.ui.Unused -> R8$$REMOVED$$CLASS$$0:\n', b'')
 
 
@@ -49,7 +114,7 @@ def mapping(map_id=APP_ID, body=SHRUNK, recorded=None):
     return header + body
 
 
-MINIFIED = {'classes.dex': dex(marker('R8', **{'pg-map-id': APP_ID, 'r8-mode': 'full'})),
+MINIFIED = {'classes.dex': dex(marker('R8', **{'pg-map-id': APP_ID, 'r8-mode': 'full'}), fields=[KEPT]),
             'classes2.dex': dex(marker('L8', backend='cf'), marker('R8', **{'pg-map-id': LIB_ID}))}
 
 
@@ -76,6 +141,105 @@ class CheckR8Test(unittest.TestCase):
         self.assertEqual(status, 0, out)
         self.assertNotIn('FAIL', out)
         self.assertIn(f'- R8 mapping SHA-256: {hashlib.sha256(mapping()).hexdigest()}', out)
+        self.assertIn('ok   R8 kept net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
+
+    def app_dex(self, *fields, strings=()):
+        return {**MINIFIED, 'classes.dex': dex(marker('R8', **{'pg-map-id': APP_ID}), fields=fields, strings=strings)}
+
+    def assert_removed(self, entries, body=SHRUNK):
+        status, out, _ = self.run_tool(entries, mapping(body=body))
+        self.assertEqual(status, 1, out)
+        self.assertIn('FAIL R8 removed net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
+
+    def test_fails_when_r8_removed_a_listener_field(self):
+        other = ('Le/f;', 'Landroid/content/SharedPreferences;', 'a')
+        self.assert_removed(self.app_dex(other))
+
+    def test_fails_for_the_first_2_0_1_build(self):
+        # HandBackWriter as the 2.0.1 build of 30698192a mapped it (R8 9.5.29), its dex without the field: the analytics
+        # choice's listener was collected and a grant was withdrawn at the next start.
+        first = (b'net.wizardfactory.todayweather.HandBackWriter -> ql1:\n'
+                 b'# {"id":"sourceFile","fileName":"HandBack.kt"}\n'
+                 b'    android.content.SharedPreferences suite -> a\n'
+                 b'    kotlin.jvm.functions.Function0 consent -> b\n'
+                 b'      # {"id":"com.android.tools.r8.residualsignature","signature":"Lwn;"}\n'
+                 b'    net.wizardfactory.todayweather.core.storage.AppState last -> c\n'
+                 b'    32:37:boolean write(net.wizardfactory.todayweather.core.storage.AppState):28 -> a\n')
+        self.assert_removed(self.app_dex(('Lql1;', 'Landroid/content/SharedPreferences;', 'a')),
+                            SHRUNK.replace(HAND_BACK, first))
+
+    def test_passes_for_the_fixed_2_0_1_build(self):
+        # The class and its field kept under their own names: the mapping lists the class but not the field.
+        fixed = (b'net.wizardfactory.todayweather.HandBackWriter -> net.wizardfactory.todayweather.HandBackWriter:\n'
+                 b'    android.content.SharedPreferences suite -> a\n')
+        field = ('Lnet/wizardfactory/todayweather/HandBackWriter;', LISTENER_TYPE, 'consentListener')
+        status, out, _ = self.run_tool(self.app_dex(field), mapping(body=SHRUNK.replace(HAND_BACK, fixed)))
+        self.assertIn('ok   R8 kept net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
+
+    def test_a_renamed_field_is_found_under_its_new_name(self):
+        renamed = HAND_BACK + (b'    android.content.SharedPreferences$OnSharedPreferenceChangeListener'
+                               b' consentListener -> d\n')
+        status, out, _ = self.run_tool(self.app_dex(('Le/f;', LISTENER_TYPE, 'd')),
+                                       mapping(body=SHRUNK.replace(HAND_BACK, renamed)))
+        self.assertEqual(status, 0, out)
+        self.assertIn('ok   R8 kept net.wizardfactory.todayweather.HandBackWriter.consentListener', out)
+        self.assert_removed(self.app_dex(KEPT), SHRUNK.replace(HAND_BACK, renamed))
+
+    def test_the_field_must_be_in_its_class_under_its_mapped_name(self):
+        self.assert_removed(self.app_dex(('Lg/h;', LISTENER_TYPE, 'consentListener')))
+        self.assert_removed(self.app_dex(('Lnet/wizardfactory/todayweather/HandBackWriter;', LISTENER_TYPE,
+                                          'consentListener')))
+        self.assert_removed(MINIFIED, SHRUNK.replace(b'HandBackWriter -> e.f:', b'HandBackWriter -> R8$$REMOVED$$CLASS$$1:'))
+
+    def test_a_string_of_the_fields_name_is_not_the_field(self):
+        self.assert_removed(self.app_dex(strings=('Le/f;', 'consentListener')))
+
+    def test_a_field_reference_without_a_class_declaration_fails(self):
+        ref_only = {**MINIFIED, 'classes.dex': dex(marker('R8', **{'pg-map-id': APP_ID}), fields=[KEPT], declared=False)}
+        self.assert_removed(ref_only)
+
+    def test_malformed_dex_tables_and_uleb128_fail(self):
+        valid = bytearray(MINIFIED['classes.dex'])
+        # 1. Invalid field type_idx (65535) in field_ids.
+        bad_type = bytearray(valid)
+        _, field_off = struct.unpack_from('<II', bad_type, 0x50)
+        struct.pack_into('<H', bad_type, field_off + 2, 0xffff)
+        self.assert_removed({**MINIFIED, 'classes.dex': bytes(bad_type)})
+
+        # 2. Truncated class_defs table.
+        bad_trunc = bytearray(valid)
+        struct.pack_into('<II', bad_trunc, 0x60, 100, len(bad_trunc) - 8)
+        self.assert_removed({**MINIFIED, 'classes.dex': bytes(bad_trunc)})
+
+        # 3. Unterminated ULEB128 (>5 bytes with continuation bit set) in class_data_item.
+        bad_uleb = bytearray(valid)
+        _, class_def_off = struct.unpack_from('<II', bad_uleb, 0x60)
+        class_data_off = struct.unpack_from('<I', bad_uleb, class_def_off + 24)[0]
+        bad_uleb[class_data_off:class_data_off + 6] = b'\x80\x80\x80\x80\x80\x00'
+        self.assert_removed({**MINIFIED, 'classes.dex': bytes(bad_uleb)})
+
+        # 4. Out-of-range string_idx and unterminated string without NUL byte.
+        bad_str = bytearray(valid)
+        string_count, string_off = struct.unpack_from('<II', bad_str, 0x38)
+        struct.pack_into('<I', bad_str, field_off + 4, string_count + 5)
+        self.assert_removed({**MINIFIED, 'classes.dex': bytes(bad_str)})
+
+        no_nul = bytearray(valid)
+        s0_off = struct.unpack_from('<I', no_nul, string_off)[0]
+        nul_pos = no_nul.index(b'\x00', s0_off + 1)
+        # Point string 0 past the last NUL byte by replacing all trailing NULs with 'x' in a copy that keeps markers.
+        marker_pos = no_nul.index(b'~~R8')
+        tail = no_nul[marker_pos:]
+        no_nul_body = bytearray(no_nul[:marker_pos])
+        for pos in range(s0_off + 1, len(no_nul_body)):
+            if no_nul_body[pos] == 0:
+                no_nul_body[pos] = ord('x')
+        self.assert_removed({**MINIFIED, 'classes.dex': bytes(no_nul_body) + bytes(tail)})
+
+    def test_the_field_may_be_in_another_dex_file(self):
+        entries = {**self.app_dex(), 'classes3.dex': dex(fields=[KEPT])}
+        status, out, _ = self.run_tool(entries)
+        self.assertEqual(status, 0, out)
 
     def test_fails_for_an_unminified_apk(self):
         d8 = marker('D8', **{'desugared-library-identifiers': ['com.tools.android:desugar_jdk_libs_configuration:2.1.5']})
@@ -118,14 +282,14 @@ class CheckR8Test(unittest.TestCase):
     def test_fails_when_r8_did_not_obfuscate(self):
         status, out, _ = self.run_tool(MINIFIED, mapping(body=NOT_OBFUSCATED))
         self.assertEqual(status, 1)
-        self.assertIn('FAIL R8 renamed 0 of the app\'s 3 classes', out)
+        self.assertIn('FAIL R8 renamed 0 of the app\'s 4 classes', out)
         self.assertIn('ok   R8 removed 1 of the app\'s classes', out)
 
     def test_fails_when_r8_did_not_shrink(self):
         status, out, _ = self.run_tool(MINIFIED, mapping(body=NOT_SHRUNK))
         self.assertEqual(status, 1)
         self.assertIn('FAIL R8 removed none of the app\'s classes', out)
-        self.assertIn('ok   R8 renamed 2 of the app\'s 3 classes', out)
+        self.assertIn('ok   R8 renamed 3 of the app\'s 4 classes', out)
 
     def test_fails_when_the_apps_dex_files_have_two_mapping_ids(self):
         other = 'a' * 64
