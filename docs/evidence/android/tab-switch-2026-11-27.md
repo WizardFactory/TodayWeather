@@ -68,7 +68,7 @@ Without ad fill, three alternating rounds produced exactly 36 frames per batch. 
 | Build | Size | Rules (`profgen dumpProfile`) | App rules (`net/wizardfactory`) |
 | --- | ---: | ---: | ---: |
 | Base (master `e3bcbe9a7`, R8 release) | 14,002 bytes | 10,738 | 70 |
-| After (final candidate, R8 release) | 17,324 bytes | 18,877 | 850 |
+| After (final candidate, R8 release) | 17,260 bytes | 18,732 | 838 |
 | After (the `.perf` R8 build of the final phone run, before the journeys checked content) | 17,291 bytes | 18,750 | 847 |
 
 ## Ads
@@ -79,4 +79,4 @@ With real AdMob units on the emulator (test creatives fill), main-thread CPU per
 
 - One phone, one place, one weather state. The emulator's absolute numbers do not carry over to devices.
 - The measurement builds differ from store builds in their application ID, their debug signature, the `profileable` flag and the dummy ad units.
-- The committed profile was regenerated twice after the phone runs began, when review rounds 1 and 2 tightened the journeys' checks. The app code did not change in the second regeneration. The final phone run used the profile from the first regeneration (847 app rules); the committed one has 850.
+- The committed profile was regenerated twice after the phone runs began, when review rounds 1 and 2 tightened the journeys' checks. The app code did not change in the second regeneration. The final phone run used the profile from the first regeneration (847 app rules); the committed one has 838.

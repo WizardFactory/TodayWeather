@@ -21,13 +21,13 @@ private val POPUP_BUTTON = By.res("ionic-popup-button")
 private val WEATHER_RETRY = By.res("weather-retry-dialog")
 
 /**
- * What shows once a tab has its content: the hourly chart (drawn only with forecast data), the air gauge (only with air
- * data), the saved places list. Daily uses the forecast Hourly already loaded.
+ * What a tab draws only with its data: the hourly chart's expander (forecast data), Daily's first card under the chart
+ * (a card exists only for page data), the current weather row of the air header (air data), the saved places list.
  */
 private val CONTENT = mapOf(
     "forecast" to By.res("chart-expander"),
-    "dailyforecast" to By.res("forecast-page"),
-    "air" to By.res("air-gauge"),
+    "dailyforecast" to By.res("forecast-block-2"),
+    "air" to By.res("air-weather"),
     "search" to By.res("places-list"),
 )
 
