@@ -44,6 +44,8 @@ The native apps read the same pair plus per-format switches (#3041, #3059, #3211
 
 The apps do not arbitrate between the banner and the native card: both `true` shows both. To serve the banner instead of the native card, publish `tw_app_banner_enabled=true` and `tw_native_enabled=false`; to go back, the reverse. Rollback of the banner: publish `tw_app_banner_enabled=false` (the shipped default). A release build needs the banner's ad unit (`TW_ADMOB_BANNER_ANDROID`, `TW_ADMOB_BANNER_IOS`, private inputs) for the switch to serve.
 
+Native builds without #3216 (merge `c460c76c5`), including the store releases Android 2.0.0 and 2.0.1, have no banner and ignore `tw_app_banner_enabled`. They still read `tw_native_enabled`, so a value of `false` published to every user leaves those builds without any in-content ad. Before switching from the native card to the banner, publish the pair through a Remote Config condition on the app version (one condition per Android and iOS app) that matches only builds containing #3216. Leave `tw_native_enabled=true` as the default value for everyone else. Before relying on a version boundary, confirm from the build record that the released build contains `c460c76c5`. Remove the condition once the older builds no longer receive meaningful traffic.
+
 Rollback: end the experiment and restore `true`/`0`; restart/fetch on the client.
 Emergency hide: publish `tw_banner_enabled=false`. Offline clients retain their
 last activated policy, so remote rollback is not instantaneous. Normal fetch
