@@ -35,14 +35,22 @@ The native apps read the same pair plus per-format switches (#3041, #3059, #3211
 
 | Parameter | Local default | Accepted values | Effect in the native apps |
 | --- | --- | --- | --- |
-| `tw_banner_enabled` | `true` | `true`/`false` (whole pair) | Every ad format off when `false` (native card, interstitial, anchored banner). |
+| `tw_banner_enabled` | `true` | `true`/`false` (whole pair) | Every ad format off when `false` (native card, interstitial, anchored banner). iOS builds from #3061 to before #3216 apply it to no format; Cordova clients apply it to their banner. |
 | `tw_banner_delay_seconds` | `0` | integer 0..120 (whole pair) | Android: every format waits this long after the app opened. iOS: the anchored banner only. |
 | `tw_app_banner_enabled` | `false` | `true`/`false`; anything but `true` is off | The anchored adaptive banner under the tab bar (#3211). |
 | `tw_native_enabled` | `true` | `true`/`false`; anything but `true` is off | The in-content native card. |
 | `tw_interstitial_enabled` | `true` | `true`/`false`; anything but `true` is off | The forecast interstitial. |
 | `tw_interstitial_chance` | `30` | integer 0..100 (ASCII digits); anything else uses `30` | Chance in percent that an eligible repeat Hourly/Daily transition shows the forecast interstitial (#3213); `0` never, `100` every eligible transition, still at most one display per day. Each draw reads the current value: Android from the activated values at opening and from a fetch that answers after the 12-second deadline; iOS also from published changes in an open app (Realtime API). A chance-only change does not restart ad loading. |
 
-The apps do not arbitrate between the banner and the native card: both `true` shows both. To serve the banner instead of the native card, publish `tw_app_banner_enabled=true` and `tw_native_enabled=false`; to go back, the reverse. Rollback of the banner: publish `tw_app_banner_enabled=false` (the shipped default). A release build needs the banner's ad unit (`TW_ADMOB_BANNER_ANDROID`, `TW_ADMOB_BANNER_IOS`, private inputs) for the switch to serve.
+The apps do not arbitrate between the banner and the native card: both `true` shows both. A release build needs the banner's ad unit (`TW_ADMOB_BANNER_ANDROID`, `TW_ADMOB_BANNER_IOS`, private inputs) for the banner switch to serve.
+
+The native-card builds released before #3216 (merge `c460c76c5`) have no banner and do not read `tw_app_banner_enabled`. These are Android 2.0.0 and 2.0.1, and the iOS builds from #3061 (merge `39385687a`, which removed the early banner) up to but excluding `c460c76c5`. They still read `tw_native_enabled`, so `false` published to every user leaves them without any in-content ad. To serve the banner instead of the native card:
+
+1. Identify the banner-capable release of each app by an identifier the older builds do not share. Firebase conditions evaluate the app version and the build number, one condition per Android or iOS app. `master` at `c460c76c5` still carries Android `2.0.1`/`200010`, the same as the store release, so the banner-capable Android release needs a new `versionCode` (Firebase's build number), and usually a new version name as well. For iOS, take the version and build from the release record, because the archive step sets them. If no identifier separates the builds, keep the native card until such a release ships.
+2. Publish `tw_app_banner_enabled=true` and `tw_native_enabled=false` as conditional values under that condition only. Keep the defaults (`false` and `true`) for everyone else.
+3. Roll back the switch on the same condition. Either remove both conditional values, or publish `tw_app_banner_enabled=false` and `tw_native_enabled=true` under it. Changing only the default, or only the banner value, leaves the conditional native-off value in force.
+
+Keep the condition and the defaults while the banner is served. Removing the condition reverts the banner-capable builds to the defaults, the native card, so it is a rollback. Publishing `tw_native_enabled=false` as the default turns the card off in every older build still in use, which have no banner to replace it. That is a separate decision to give up in-content ads in those builds, not a cleanup step.
 
 Rollback: end the experiment and restore `true`/`0`; restart/fetch on the client.
 Emergency hide: publish `tw_banner_enabled=false`. Offline clients retain their
