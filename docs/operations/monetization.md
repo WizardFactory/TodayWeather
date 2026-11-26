@@ -10,7 +10,7 @@ No new interstitial, purchase or widget flow is introduced.
 - [Event dictionary](../../client/analytics/events.md): fixed enum/field allowlist, no raw location/identity/error labels, route-screen deduplication.
 - [Remote Config parameter fragment](../../client/analytics/remote-config-defaults.json): merge these two parameters into the existing template; never replace an account template wholesale.
 - [Experiment specification](../../client/analytics/banner-experiment.json): a draft 0-vs-30-second first-banner-delay experiment, not a deployable Firebase REST payload.
-- [Daily monetization query](../../client/analytics/daily-monetization.sql) and [retention query](../../client/analytics/retention.sql): GoogleSQL templates requiring the actual dataset and parameters.
+- [Daily monetization query](../../client/analytics/daily-monetization.sql) and [retention query](../../client/analytics/retention.sql): GoogleSQL templates requiring the actual dataset and parameters. The daily query counts impressions, not revenue; see [measurement sources](#measurement-sources).
 
 The pinned `cordova-plugin-firebasex-config@2.0.2` shares Firebase SDK versions
 with existing modules. Config is fetched once per WebView service lifetime with
@@ -99,8 +99,9 @@ Record app version, platform, stream ID, timestamp and sanitized evidence:
 - Offline config startup, invalid config, timed-out callback, guide hide while
   delay is pending, orientation recreation and remote hide/restore all preserve
   screen intent. Validate native layouts on devices.
-- Confirm one automatic `ad_impression` per native impression and monetary values
-  after AdMob/Firebase linkage. Test ads may yield zero/no eligible revenue;
+- Confirm one `ad_lifecycle` `impression` per SDK impression for each ad format.
+  The automatic `ad_impression` in DebugView confirms AdMob/Firebase linkage only;
+  it never reaches BigQuery. Test ads may yield zero/no eligible revenue;
   production revenue evidence requires real eligible traffic, not fabricated data.
 - Rotate twice while a destroy/create callback is pending; recreation stays serialized.
   Native load failure must release the pending callback, and a stale callback must
@@ -112,21 +113,49 @@ Record app version, platform, stream ID, timestamp and sanitized evidence:
 
 ## Metrics and experiment interpretation
 
-Use the GA4 property's `event_date` timezone; the retention query currently
-assumes Asia/Seoul for completed-window checks and must be changed if the property
-differs. Report revenue in USD through `event_value_in_usd`. Missing revenue
-values remain NULL; check value coverage before interpreting eCPM/ARPDAU.
-DAU is distinct non-null installation pseudonyms with `is_active_user=true` in
-completed daily exports; it is not a person count. Restrict to the intended
-app version/streams and exclude known developer installations (both templates
+### Measurement sources
+
+GA4 does not export the automatic AdMob `ad_impression` event to BigQuery, and the
+default integration passes no value or currency with it
+([GA4 automatically collected events](https://support.google.com/analytics/answer/9234069)).
+A BigQuery query over `ad_impression` therefore returns no rows and no revenue even
+when AdMob reports impressions and earnings. Each number has one source:
+
+| Number | Source | Split by |
+| --- | --- | --- |
+| Estimated earnings, impression RPM (eCPM) | AdMob report or API | Date, platform, ad format (`FORMAT`) |
+| Requests, matched requests, impressions, match rate, show rate | AdMob report or API | Date, platform, format, app version (`APP_VERSION_NAME`) |
+| Impressions per active installation | [daily query](../../client/analytics/daily-monetization.sql) over the apps' `ad_lifecycle` `impression` events | Date, platform, version group (`cordova` = 1.x, `native` = 2.0+, `other` = older or missing), format |
+| Next-day return rate | Same daily query | Date, platform, version group (not format) |
+
+The `ad_lifecycle` events come from the Mobile Ads SDK impression callbacks and
+are exported because the apps log them. They cover only installations with
+Analytics collection on (an opt-in, or the native apps' region default since
+#2660), so their totals are lower than AdMob's; use them for
+per-installation rates, not totals. Do not use show rate (impressions/matched)
+as an engagement metric: it depends on how many ads an app preloads, not only on
+what users see. Placement and frequency decisions use impressions per active
+installation with the next-day return rate as the guardrail.
+
+Use the GA4 property's `event_date` timezone; the retention and daily queries
+assume Asia/Seoul for completed-window checks and must be changed if the property
+differs. Active installations are distinct non-null installation pseudonyms with
+`is_active_user=true` in completed daily exports; they are not a person count.
+The next-day return rate is the share of a day's active installations active again
+the next day on the same platform; it stays NULL until the next day's export table
+exists (read from the dataset's `INFORMATION_SCHEMA.TABLES`, so the query needs
+metadata read access) and that day has ended. Late events can still raise it, so rerun the last
+three days. A return counts in either version group, so an update from 1.x
+to 2.x counts as a return when the installation pseudonym survives it (not
+verified on devices). Exclude known developer installations (the templates
 exclude installation pseudonyms carrying `traffic_type=development` or integer
 `debug_mode=1`, including their native automatic events). Consent loss,
 identity reset/reinstall and filtered samples limit comparison with AdMob.
 
-eCPM = estimated revenue / impressions * 1000. ARPDAU = estimated revenue / DAU.
-Reconcile by identical date range, currency, native app, ad unit and reporting
-lag against AdMob estimated reports; select a tolerance after baseline analysis.
-Final payout is a separate accounting value. Diagnostic banner load counts do
+eCPM and ARPDAU come from AdMob earnings, not from BigQuery: ARPDAU = AdMob
+estimated earnings / Firebase active users for the same date range and platform.
+Reconcile by identical date range, timezone, currency, app and ad unit; AdMob
+estimated earnings are not the final payout. Diagnostic banner load counts do
 not yield AdMob fill rate because SDK refresh requests are not observed by the
 app; use AdMob reports/API for true request/match/show-rate metrics.
 
@@ -174,9 +203,11 @@ them in separate tables.
    lower bound of the ATT allow rate; take the status mix from the Analytics query below. Keep match rate
    (matched/requests) and show rate (impressions/matched) in separate columns.
 2. **Analytics query (ATT status detail).** [ios-att-monetization.sql](../../client/analytics/ios-att-monetization.sql)
-   groups iOS active installations, initial banner requests, load failures, impressions, estimated revenue and eCPM by
-   date, app version and the `att_status` user property. It covers only installations that opted in to Analytics, so
-   use it for the status mix and per-status eCPM, not for totals. It cannot give match rate or show rate.
+   groups iOS active installations, initial banner requests, load failures, `ad_lifecycle` impressions per format and
+   impressions per active installation by date, app version and the `att_status` user property. It covers only
+   installations with Analytics collection on (an opt-in, or the native apps' region default since #2660), so use it
+   for the status mix and per-status impressions, not for totals.
+   It cannot give revenue, eCPM, match rate or show rate (see [measurement sources](#measurement-sources)).
 
 Before/after comparison: use the last full 14 days of the previous iOS version and the first full 14 days after the ATT
 release reaches most active users, same weekdays, same countries, same ad unit. State the date range and timezone, app

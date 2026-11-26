@@ -568,3 +568,23 @@ test('ATT status reaches Analytics only as an allowlisted user property after th
     assert.match(sql, /user_properties[\s\S]*'att_status'/);
     assert.match(sql, /GROUP BY event_date, app_version, att_status/);
 });
+
+test('monetization queries count impressions from the app ad_lifecycle event, not the unexported automatic one', () => {
+    // GA4 does not export the automatic AdMob ad_impression to BigQuery, and the default integration carries no value.
+    for (const file of ['analytics/daily-monetization.sql', 'analytics/ios-att-monetization.sql']) {
+        const sql = read(file);
+        assert.doesNotMatch(sql, /'ad_impression'|event_value_in_usd/, file);
+        for (const format of ['banner', 'native', 'interstitial']) {
+            assert.match(sql, new RegExp(`event_name = 'ad_lifecycle' AND action = 'impression' AND ad_format = '${format}'`), `${file} ${format}`);
+        }
+        assert.match(sql, /event_name = 'ad_lifecycle' AND action = 'request' AND ad_format = 'banner'/, file);
+        assert.match(sql, /event_name = 'ad_lifecycle' AND action = 'failed' AND ad_format = 'banner'/, file);
+        assert.match(sql, /impressions_per_active_installation/, file);
+    }
+    const daily = read('analytics/daily-monetization.sql');
+    assert.doesNotMatch(daily, /@app_version/, 'compares version groups instead of one version');
+    assert.match(daily, /GROUP BY event_date, platform, version_group/);
+    assert.match(daily, /next_day_return_rate/);
+    assert.match(daily, /ELSE 'other' END AS version_group/, 'older or missing versions stay out of the native group');
+    assert.match(daily, /LEFT JOIN exported_days x ON x\.day = DATE_ADD\(d\.day, INTERVAL 1 DAY\)/, 'no return rate before the next table');
+});
