@@ -155,10 +155,15 @@ struct BannerPolicyTests {
         var shown: [Bool] = []
         private(set) var ads: TwAds!
 
-        init(policy: [String: String]? = nil, holdFetch: Bool = false, sessionStart: Int64 = 0) {
-            source.fetched = policy
+        /// `switch` is `tw_app_banner_enabled` in the stored and fetched values (#3211); nil leaves it out.
+        init(policy: [String: String]? = nil, holdFetch: Bool = false, sessionStart: Int64 = 0, switch bannerSwitch: String? = "true") {
+            if let bannerSwitch { source.activated[RemoteBannerConfig.appBannerEnabledKey] = bannerSwitch }
+            source.fetched = policy.map { policy in
+                bannerSwitch.map { policy.merging([RemoteBannerConfig.appBannerEnabledKey: $0]) { $1 } } ?? policy
+            }
             if holdFetch { source.held = ["fetch"] }
             let config = RemoteBannerConfig(source: source, clock: clock)
+            config.onChange = { [unowned self] in self.ads?.configChanged() }
             ads = TwAds(adapter: banner, config: config, clock: clock, sessionStart: sessionStart,
                         track: { [unowned self] name, params in
                             let value = params["action"] ?? params["delay_seconds"]
@@ -201,21 +206,83 @@ struct BannerPolicyTests {
         #expect(run.shown == [false, true, false, true])
     }
 
-    @Test func theKillSwitchKeepsTheLoadedBannerHidden() {
+    @Test func theKillSwitchRequestsNoBanner() {
         let run = Ads(policy: ["tw_banner_enabled": "false", "tw_banner_delay_seconds": "0"])
         run.ads.onAdapterReady()
-        run.banner.load()
+        #expect(run.banner.creates == 0, "tw_banner_enabled false: no ad format loads (#3211 AC4)")
         #expect(!run.ads.shown && run.shown == [false])
         #expect(run.tracked == ["ad_lifecycle hide"], "no exposure while the kill switch is on")
     }
 
-    @Test func theFirstShowWaitsForTheFinishedPolicy() {
+    @Test func theFirstRequestWaitsForTheFinishedPolicy() {
         let run = Ads(policy: ["tw_banner_enabled": "true", "tw_banner_delay_seconds": "0"], holdFetch: true)
         run.ads.onAdapterReady()
-        run.banner.load()
+        #expect(run.banner.creates == 0, "the fetch may still turn the banner off")
         #expect(!run.ads.shown)
         run.clock.advance(12_000)
-        #expect(run.ads.shown, "after the 12 s bound the activated or default policy applies")
+        #expect(run.banner.creates == 1, "after the 12 s bound the activated or default policy applies")
+        run.banner.load()
+        #expect(run.ads.shown)
+    }
+
+    // MARK: Format switches (#3211)
+
+    @Test func theDefaultsRequestNoBanner() {
+        let run = Ads(switch: nil)
+        run.ads.onAdapterReady()
+        run.clock.advance(60_000)
+        #expect(run.source.values()[RemoteBannerConfig.appBannerEnabledKey] == "false", "registered off in the defaults")
+        #expect(run.banner.creates == 0 && !run.ads.shown)
+        #expect(!run.tracked.contains { $0.hasPrefix("ad_policy_exposure") })
+    }
+
+    @Test func anOfflineFirstStartReadsTheDefaultsOnly() {
+        let source = FakeRemoteConfig()
+        source.failing = ["fetch"]
+        let config = RemoteBannerConfig(source: source, clock: VirtualClock())
+        config.load()
+        #expect(config.ready && !config.appBannerEnabled && config.nativeEnabled && config.policy == .default)
+    }
+
+    @Test(arguments: [
+        ("true", "true", true, true), ("true", "false", true, false), ("false", "true", false, true),
+        ("false", "false", false, false), ("TRUE", "true", false, true), ("1", "true", false, true),
+    ] as [(String, String, Bool, Bool)])
+    func theBannerAndNativeSwitchesCombineIndependently(_ banner: String, _ native: String, _ bannerOn: Bool, _ nativeOn: Bool) {
+        let source = FakeRemoteConfig()
+        source.fetched = ["tw_app_banner_enabled": banner, "tw_native_enabled": native,
+                          "tw_banner_enabled": "true", "tw_banner_delay_seconds": "0"]
+        let config = RemoteBannerConfig(source: source, clock: VirtualClock())
+        config.load()
+        #expect(config.appBannerEnabled == bannerOn && config.nativeEnabled == nativeOn && config.policy.enabled)
+    }
+
+    @Test func aPublishedSwitchRequestsTheBannerAndTurningItOffDestroysIt() {
+        let run = Ads(switch: "false")
+        run.ads.onAdapterReady()
+        #expect(run.banner.creates == 0)
+        run.source.publish([RemoteBannerConfig.appBannerEnabledKey: "true"])
+        #expect(run.banner.creates == 1, "an open app applies the published switch")
+        run.banner.load()
+        #expect(run.ads.shown)
+        run.source.publish([RemoteBannerConfig.appBannerEnabledKey: "false"])
+        #expect(!run.ads.shown && run.banner.destroys == 1, "no empty strip stays")
+        run.ads.refresh()
+        #expect(run.banner.creates == 1, "a width change loads nothing while the banner is off")
+    }
+
+    @Test func withdrawnPermissionHidesAndDestroysTheBannerAndAReturnLoadsANewOne() {
+        let run = Ads()
+        run.ads.onAdapterReady()
+        run.banner.load()
+        #expect(run.ads.shown)
+        run.ads.setPermitted(false)
+        #expect(!run.ads.shown && run.banner.destroys == 1)
+        run.clock.advance(5000)
+        run.ads.setPermitted(true)
+        #expect(run.banner.creates == 2)
+        run.banner.load()
+        #expect(run.ads.shown)
     }
 
     @Test func aPageHidesTheBanner() {

@@ -29,8 +29,11 @@ public final class RemoteBannerConfig {
 
     public static let nativeEnabledKey = "tw_native_enabled"
     public static let interstitialEnabledKey = "tw_interstitial_enabled"
+    /// The anchored banner (#3211), off unless the value is exactly "true".
+    public static let appBannerEnabledKey = "tw_app_banner_enabled"
     public private(set) var nativeEnabled = true
     public private(set) var interstitialEnabled = true
+    public private(set) var appBannerEnabled = false
 
     public private(set) var policy = BannerPolicy.default
     /// The policy is final: applied, failed or timed out (`isBannerPolicyReady`).
@@ -63,6 +66,7 @@ public final class RemoteBannerConfig {
         var defaults = RemoteBannerPolicy.defaults
         defaults[Self.nativeEnabledKey] = "true"
         defaults[Self.interstitialEnabledKey] = "true"
+        defaults[Self.appBannerEnabledKey] = "false"
         source.setDefaults(defaults) { [weak self] ok in
             guard let self, !self.closed else { return }
             guard ok else { return self.finish("bridge_or_fetch_failed") }
@@ -107,9 +111,11 @@ public final class RemoteBannerConfig {
     private func applyFormats(_ values: [String: String]) -> Bool {
         let native = values[Self.nativeEnabledKey, default: "true"] == "true"
         let interstitial = values[Self.interstitialEnabledKey, default: "true"] == "true"
-        guard native != nativeEnabled || interstitial != interstitialEnabled else { return false }
+        let appBanner = values[Self.appBannerEnabledKey] == "true"
+        guard native != nativeEnabled || interstitial != interstitialEnabled || appBanner != appBannerEnabled else { return false }
         nativeEnabled = native
         interstitialEnabled = interstitial
+        appBannerEnabled = appBanner
         return true
     }
 

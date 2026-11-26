@@ -13,8 +13,9 @@ import UIKit
 ///   EEA, the United Kingdom and Switzerland, 2026-11-24), when the shell is created (after the Cordova migration, after
 ///   `AnalyticsGuard` turned collection off); the menu's 이용 통계 row changes it.
 /// - The ads start when the shell first shows a tab, as TabCtrl's `TwAds.init()` (S01 comes first, IN-10): Remote
-///   Config and UMP gate native cards and forecast interstitials. A build without valid AdMob
-///   identifiers (`AdsSettings`) requests no ads.
+///   Config and UMP gate native cards, forecast interstitials and the anchored banner under the tab bar (#3211,
+///   `tw_app_banner_enabled`). `tw_banner_enabled` gates every format. A build without valid AdMob identifiers
+///   (`AdsSettings`) requests no ads; one without a banner unit requests no banner.
 /// - Crashlytics collects crash reports with a configured Firebase app, independent of the analytics choice, as in
 ///   the Cordova build.
 @MainActor
@@ -33,10 +34,20 @@ final class Monetization {
     }()
 
     private(set) var nativeAds: ForecastNativeAds?
+    /// The anchored banner shows (the slot under the tab bar, #3211).
+    private(set) var bannerShown = false
+    @ObservationIgnored private(set) var banner: AdMobBanner?
+    @ObservationIgnored private var twAds: TwAds?
+    @ObservationIgnored private var sessionStart: Int64?
+    @ObservationIgnored private var width: CGFloat?
     @ObservationIgnored private var interstitial: ForecastInterstitial?
     @ObservationIgnored let analytics: UsageAnalytics
     @ObservationIgnored private let settings: AdsSettings?
     @ObservationIgnored var readTracking: @MainActor () -> TrackingStatus = { GoogleAdsPlatform.trackingStatus }
+    /// Remote Config of the ads: Firebase's with a configured app, else none (the defaults). Tests give fixed values.
+    @ObservationIgnored var configSource: @MainActor () -> (any BannerConfigSource)? = {
+        AnalyticsGuard.firebaseConfigured ? FirebaseBannerConfigSource() : nil
+    }
     @ObservationIgnored private let openURL: @MainActor (URL) -> Void
     @ObservationIgnored private let clock = MainClock()
     @ObservationIgnored private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "admob")
@@ -76,7 +87,22 @@ final class Monetization {
 
     func uiStarted() {
         windowStarted = true
+        // The banner's `tw_banner_delay_seconds` counts from the window's appearance (`sessionStart` of TwAds).
+        if sessionStart == nil { sessionStart = clock.nowMs }
         startAdsIfShown()
+    }
+
+    /// The window's width changed (a rotation or a resized window): a new banner for the width (`orientationchange`).
+    func windowWidthChanged(_ newWidth: CGFloat) {
+        defer { width = newWidth }
+        guard let old = width, abs(old - newWidth) >= 0.5 else { return }
+        twAds?.refresh()
+    }
+
+    /// The banner for `ShellView(banner:)` while it shows; nil reserves no space.
+    var bannerView: AnyView? {
+        guard bannerShown, let banner, banner.view != nil else { return nil }
+        return AnyView(BannerSlot(banner: banner))
     }
 
     /// An analytics event of the schema (`Monetization.track`): the weather path's `weather_fetch` and `weather_load`
@@ -172,7 +198,7 @@ final class Monetization {
         let platform = GoogleAdsPlatform()
         let analytics = self.analytics
         let log = self.log
-        let source: (any BannerConfigSource)? = AnalyticsGuard.firebaseConfigured ? FirebaseBannerConfigSource() : nil
+        let source = configSource()
         platform.onTrackingRead = { [weak shell] status in
             if shell?.trackingStatus != status { shell?.trackingStatus = status }
         }
@@ -191,7 +217,20 @@ final class Monetization {
         interstitial = ForecastInterstitial(unitID: settings.interstitialUnit, request: { platform.makeRequest() },
                                             track: { name, params in _ = trackAd(name, params) })
         if pageScreen() == nil { interstitial?.markVisible(shell.selected) }
-        config.onChange = { [weak self] in self?.refreshEligibility() }
+        if let unit = settings.bannerUnit {
+            // AdMobBanner logs its own lifecycle lines; TwAds' show and hide go through `trackAd`.
+            let banner = AdMobBanner(unitID: unit, platform: platform, track: { name, params in analytics.track(name, params) })
+            let ads = TwAds(adapter: banner, config: config, clock: clock, sessionStart: sessionStart ?? clock.nowMs,
+                            track: { name, params in _ = trackAd(name, params) },
+                            log: { log.notice("\($0, privacy: .public)") })
+            ads.onShownChange = { [weak self] in self?.bannerShown = $0 }
+            self.banner = banner
+            twAds = ads
+        }
+        config.onChange = { [weak self] in
+            self?.twAds?.configChanged()
+            self?.refreshEligibility()
+        }
         let consent = AdsConsent(platform: platform, releaseAds: settings.releaseAds, clock: clock,
                                  track: { name, params in analytics.track(name, params) },
                                  log: { log.notice("\($0, privacy: .public)") },
@@ -212,9 +251,15 @@ final class Monetization {
         if previousPersonalization != personalized {
             nativeAds?.setEnabled(false)
             interstitial?.setEnabled(false)
+            // The banner's request carries the old choice too: a new one loads with the current choice.
+            twAds?.setPermitted(false)
             previousPersonalization = personalized
         }
-        let allowed = consent.permitsRequests && config.ready && !privacyFormOpen
+        let permitted = consent.permitsRequests && !privacyFormOpen
+        // The banner has its own switch and delay (TwAds); it shares this consent and privacy-form gate.
+        twAds?.setPermitted(permitted)
+        // `tw_banner_enabled` gates every format, as on Android (#3211).
+        let allowed = permitted && config.ready && config.policy.enabled
         nativeAds?.setEnabled(allowed && config.nativeEnabled)
         interstitial?.setEnabled(allowed && config.interstitialEnabled)
     }

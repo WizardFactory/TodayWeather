@@ -27,6 +27,20 @@ SDK leaves defaults. Invalid pairs are rejected atomically.
 | `tw_banner_enabled` | `true` | `true`/`false` | Remote kill switch; can only restrict existing SDK/screen eligibility. |
 | `tw_banner_delay_seconds` | `0` | integer 0..120 | Earliest banner opportunity since service creation. Guide/start hiding remains authoritative. |
 
+### Native apps (Android and iOS 2.0.x)
+
+The native apps read the same pair plus per-format switches (#3041, #3059, #3211). Remote Config applies at app open from the stored activated values, then after the fetch; iOS also activates published changes to the format switches in an open app (Realtime API).
+
+| Parameter | Local default | Accepted values | Effect in the native apps |
+| --- | --- | --- | --- |
+| `tw_banner_enabled` | `true` | `true`/`false` (whole pair) | Every ad format off when `false` (native card, interstitial, anchored banner). |
+| `tw_banner_delay_seconds` | `0` | integer 0..120 (whole pair) | Android: every format waits this long after the app opened. iOS: the anchored banner only. |
+| `tw_app_banner_enabled` | `false` | `true`/`false`; anything but `true` is off | The anchored adaptive banner under the tab bar (#3211). |
+| `tw_native_enabled` | `true` | `true`/`false`; anything but `true` is off | The in-content native card. |
+| `tw_interstitial_enabled` | `true` | `true`/`false`; anything but `true` is off | The forecast interstitial. |
+
+The apps do not arbitrate between the banner and the native card: both `true` shows both. To serve the banner instead of the native card, publish `tw_app_banner_enabled=true` and `tw_native_enabled=false`; to go back, the reverse. Rollback of the banner: publish `tw_app_banner_enabled=false` (the shipped default). A release build needs the banner's ad unit (`TW_ADMOB_BANNER_ANDROID`, `TW_ADMOB_BANNER_IOS`, private inputs) for the switch to serve.
+
 Rollback: end the experiment and restore `true`/`0`; restart/fetch on the client.
 Emergency hide: publish `tw_banner_enabled=false`. Offline clients retain their
 last activated policy, so remote rollback is not instantaneous. Normal fetch

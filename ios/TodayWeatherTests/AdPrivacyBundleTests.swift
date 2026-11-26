@@ -60,9 +60,10 @@ struct AdPrivacyBundleTests {
 
     @Test func debugBuildUsesGoogleTestIdentifiers() {
         #expect(info["GADApplicationIdentifier"] as? String == AdsSettings.testAppID)
-        #expect(info["TWAdMobBannerUnit"] == nil)
+        #expect(info["TWAdMobBannerUnit"] as? String == AdsSettings.testBannerUnit)
         #expect(AdsSettings.current == AdsSettings(nativeUnit: AdsSettings.testNativeUnit,
-                                                   interstitialUnit: AdsSettings.testInterstitialUnit, releaseAds: false))
+                                                   interstitialUnit: AdsSettings.testInterstitialUnit,
+                                                   bannerUnit: AdsSettings.testBannerUnit, releaseAds: false))
         #expect(AdsSettings.trafficType(AdsSettings.current) == "development")
         var swapped = info
         swapped["TWAdMobNativeUnit"] = AdsSettings.testInterstitialUnit
@@ -104,6 +105,25 @@ struct AdPrivacyBundleTests {
             #expect(AdsSettings.from(info: candidate, debug: false) == nil)
         }
         #expect(AdsSettings.from(info: configured, debug: true) == nil)
+    }
+
+    /// The anchored banner's unit (#3211) is optional at runtime: without a valid one only the banner is off.
+    @Test func theBannerUnitIsOptionalAndMustBeItsOwn() {
+        let native = "ca-app-pub-1234567890123456/1234567890"
+        let interstitial = "ca-app-pub-1234567890123456/1234567891"
+        let banner = "ca-app-pub-1234567890123456/1234567892"
+        let configured = ["GADApplicationIdentifier": "ca-app-pub-1234567890123456~1234567890",
+                          "TWAdMobNativeUnit": native, "TWAdMobInterstitialUnit": interstitial, "TWAdMobBannerUnit": banner]
+        #expect(AdsSettings.from(info: configured, debug: false)?.bannerUnit == banner)
+        for invalid in ["", native, interstitial, "ca-app-pub-1111111111111111/1234567892", AdsSettings.testBannerUnit, "malformed"] {
+            var candidate = configured
+            candidate["TWAdMobBannerUnit"] = invalid
+            let settings = AdsSettings.from(info: candidate, debug: false)
+            #expect(settings != nil && settings?.bannerUnit == nil, "\(invalid)")
+        }
+        let debug = ["GADApplicationIdentifier": AdsSettings.testAppID, "TWAdMobNativeUnit": AdsSettings.testNativeUnit,
+                     "TWAdMobInterstitialUnit": AdsSettings.testInterstitialUnit, "TWAdMobBannerUnit": banner]
+        #expect(AdsSettings.from(info: debug, debug: true)?.bannerUnit == nil, "debug builds take only Google's test unit")
     }
 
     /// Every SDK request uses the live #2945 privacy decision.

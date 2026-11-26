@@ -5203,7 +5203,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <!-- Main Diagram -->
     <div class="diagram-container" data-detail-level="read"
          data-preset-badge-editorial-plate="ARCHIFY / PLATE 04">
-      <svg viewBox="0 0 1014 528" data-layout-contract="readable-v2" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="signal-flow" data-quality-profile="showcase" data-node-ui="">
+      <svg viewBox="0 0 1029 652" data-layout-contract="readable-v2" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="signal-flow" data-quality-profile="showcase" data-node-ui="">
         <title id="archify-diagram-title">TodayWeather iOS ad delivery</title>
         <desc id="archify-diagram-description">SwiftUI navigation, iOS privacy and the device-local day</desc>
         <!-- Definitions -->
@@ -5250,14 +5250,17 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Swimlanes -->
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-0" x="40" y="52" width="958" height="104" rx="10" class="c-lane" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-0" x="40" y="52" width="973" height="104" rx="10" class="c-lane" stroke-width="1"/>
         <text x="54" y="74" class="t-muted" font-size="10" font-weight="600">01 / SwiftUI tab bar</text>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-1" x="40" y="176" width="958" height="104" rx="10" class="c-lane" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-1" x="40" y="176" width="973" height="104" rx="10" class="c-lane" stroke-width="1"/>
         <text x="54" y="198" class="t-muted" font-size="10" font-weight="600">02 / Forecast presenter</text>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-2" x="40" y="300" width="958" height="104" rx="10" class="c-lane" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-2" x="40" y="300" width="973" height="104" rx="10" class="c-lane" stroke-width="1"/>
         <text x="54" y="322" class="t-muted" font-size="10" font-weight="600">03 / In-scroll native card</text>
+
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-3" x="40" y="424" width="973" height="104" rx="10" class="c-lane" stroke-width="1"/>
+        <text x="54" y="446" class="t-muted" font-size="10" font-weight="600">04 / Anchored banner</text>
 
         <!-- Phase headers -->
 
@@ -5266,13 +5269,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 
         <!-- Edge paths -->
-        <path data-edge-from="eligibility" data-edge-to="open" data-edge-label="Pass through" data-edge-key="0" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="392,119;554,119" d="M 392 119 L 554 119" class="a-default" data-animate="edge" style="--step:5" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="eligibility" data-edge-to="reserve" data-edge-label="Eligible, draw &lt; 10%" data-edge-key="1" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="314,145;314,217" d="M 314 145 L 314 217" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="open" data-edge-to="slot" data-edge-key="2" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="632,145;632,341" d="M 632 145 L 632 341" class="a-default" data-animate="edge" style="--step:7" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="reserve" data-edge-to="show" data-edge-label="Saved" data-edge-key="3" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="392,243;434,243" d="M 392 243 L 434 243" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="show" data-edge-to="open" data-edge-label="Dismissed or failed" data-edge-key="4" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="512,217;512,166;608,166;608,145" d="M 512 217 L 512 174 Q 512 166 520 166 L 600 166 Q 608 166 608 158 L 608 145" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="slot" data-edge-to="creative" data-edge-key="5" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="710,367;742,367" d="M 710 367 L 742 367" class="a-default" data-animate="edge" style="--step:10" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="tap" data-edge-to="eligibility" data-edge-key="6" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="204,119;236,119" d="M 204 119 L 236 119" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="bannergate" data-edge-to="bannershow" data-edge-label="Loaded" data-edge-key="0" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="204,491;250.8,491" d="M 204 491 L 250.8 491" class="a-default" data-animate="edge" style="--step:5" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="eligibility" data-edge-to="open" data-edge-label="Pass through" data-edge-key="1" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="406.8,119;568.8,119" d="M 406.8 119 L 568.8 119" class="a-default" data-animate="edge" style="--step:6" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="eligibility" data-edge-to="reserve" data-edge-label="Eligible, draw &lt; 10%" data-edge-key="2" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="328.8,145;328.8,217" d="M 328.8 145 L 328.8 217" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="open" data-edge-to="slot" data-edge-key="3" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="646.8,145;646.8,341" d="M 646.8 145 L 646.8 341" class="a-default" data-animate="edge" style="--step:8" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="reserve" data-edge-to="show" data-edge-label="Saved" data-edge-key="4" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="406.8,243;448.79999999999995,243" d="M 406.8 243 L 448.79999999999995 243" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="show" data-edge-to="open" data-edge-label="Dismissed or failed" data-edge-key="5" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="526.8,217;526.8,166;622.8,166;622.8,145" d="M 526.8 217 L 526.8 174 Q 526.8 166 534.8 166 L 614.8 166 Q 622.8 166 622.8 158 L 622.8 145" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="slot" data-edge-to="creative" data-edge-key="6" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="724.8,367;756.8,367" d="M 724.8 367 L 756.8 367" class="a-default" data-animate="edge" style="--step:11" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="tap" data-edge-to="eligibility" data-edge-key="7" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="204,119;250.8,119" d="M 204 119 L 250.8 119" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.4" marker-end="url(#arrowhead)"/>
 
         <!-- Nodes -->
         <g id="node-tap" data-node-id="tap" data-node-label="Tap forecast tab" tabindex="0" role="button" aria-label="Focus Tap forecast tab, Hourly or Daily, SwiftUI tab bar" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Hourly or Daily" data-node-context="SwiftUI tab bar">
@@ -5291,119 +5295,147 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
         <g id="node-eligibility" data-node-id="eligibility" data-node-label="Check repeat visit" tabindex="0" role="button" aria-label="Focus Check repeat visit, Read past source chart, SwiftUI tab bar" aria-pressed="false" data-node-kind="security" data-node-sublabel="Read past source chart" data-node-context="SwiftUI tab bar">
           <title>Check repeat visit · Read past source chart · SwiftUI tab bar</title>
-          <rect x="236" y="93" width="156" height="52" rx="8" class="c-mask"/>
-          <rect x="236" y="93" width="156" height="52" rx="8" class="c-security" data-animate="node" style="--step:1" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(242 99) scale(0.6875)">
+          <rect x="250.8" y="93" width="156" height="52" rx="8" class="c-mask"/>
+          <rect x="250.8" y="93" width="156" height="52" rx="8" class="c-security" data-animate="node" style="--step:1" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(256.8 99) scale(0.6875)">
             <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="314.4" y="114" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Check repeat visit</text>
-          <text data-detail="context" x="314" y="131" class="t-muted" font-size="8" text-anchor="middle">Read past source chart</text>
+          <text data-node-label="" data-detail-anchor="" x="329.20000000000005" y="114" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Check repeat visit</text>
+          <text data-detail="context" x="328.8" y="131" class="t-muted" font-size="8" text-anchor="middle">Read past source chart</text>
         </g>
 
         <g id="node-open" data-node-id="open" data-node-label="Select destination" tabindex="0" role="button" aria-label="Focus Select destination, Record visible forecast, SwiftUI tab bar" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Record visible forecast" data-node-context="SwiftUI tab bar">
           <title>Select destination · Record visible forecast · SwiftUI tab bar</title>
-          <rect x="554" y="93" width="156" height="52" rx="8" class="c-mask"/>
-          <rect x="554" y="93" width="156" height="52" rx="8" class="c-frontend" data-animate="node" style="--step:4" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(560 99) scale(0.6875)">
+          <rect x="568.8" y="93" width="156" height="52" rx="8" class="c-mask"/>
+          <rect x="568.8" y="93" width="156" height="52" rx="8" class="c-frontend" data-animate="node" style="--step:4" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(574.8 99) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="632.4" y="114" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Select destination</text>
-          <text data-detail="context" x="632" y="131" class="t-muted" font-size="8" text-anchor="middle">Record visible forecast</text>
+          <text data-node-label="" data-detail-anchor="" x="647.1999999999999" y="114" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Select destination</text>
+          <text data-detail="context" x="646.8" y="131" class="t-muted" font-size="8" text-anchor="middle">Record visible forecast</text>
         </g>
 
         <g id="node-reserve" data-node-id="reserve" data-node-label="Reserve local day" tabindex="0" role="button" aria-label="Focus Reserve local day, Persist shared allowance, Forecast presenter" aria-pressed="false" data-node-kind="database" data-node-sublabel="Persist shared allowance" data-node-context="Forecast presenter">
           <title>Reserve local day · Persist shared allowance · Forecast presenter</title>
-          <rect x="236" y="217" width="156" height="52" rx="8" class="c-mask"/>
-          <rect x="236" y="217" width="156" height="52" rx="8" class="c-database" data-animate="node" style="--step:2" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(242 223) scale(0.6875)">
+          <rect x="250.8" y="217" width="156" height="52" rx="8" class="c-mask"/>
+          <rect x="250.8" y="217" width="156" height="52" rx="8" class="c-database" data-animate="node" style="--step:2" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(256.8 223) scale(0.6875)">
             <ellipse cx="8" cy="4" rx="5" ry="2"/>
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="314" y="238" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Reserve local day</text>
-          <text data-detail="context" x="314" y="255" class="t-muted" font-size="8" text-anchor="middle">Persist shared allowance</text>
+          <text data-node-label="" data-detail-anchor="" x="328.8" y="238" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Reserve local day</text>
+          <text data-detail="context" x="328.8" y="255" class="t-muted" font-size="8" text-anchor="middle">Persist shared allowance</text>
         </g>
 
         <g id="node-show" data-node-id="show" data-node-label="Present ready ad" tabindex="0" role="button" aria-label="Focus Present ready ad, At most once per day, Forecast presenter" aria-pressed="false" data-node-kind="external" data-node-sublabel="At most once per day" data-node-context="Forecast presenter">
           <title>Present ready ad · At most once per day · Forecast presenter</title>
-          <rect x="434" y="217" width="156" height="52" rx="8" class="c-mask"/>
-          <rect x="434" y="217" width="156" height="52" rx="8" class="c-external" data-animate="node" style="--step:3" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(440 223) scale(0.6875)">
+          <rect x="448.79999999999995" y="217" width="156" height="52" rx="8" class="c-mask"/>
+          <rect x="448.79999999999995" y="217" width="156" height="52" rx="8" class="c-external" data-animate="node" style="--step:3" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(454.79999999999995 223) scale(0.6875)">
             <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="512" y="238" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Present ready ad</text>
-          <text data-detail="context" x="512" y="255" class="t-muted" font-size="8" text-anchor="middle">At most once per day</text>
+          <text data-node-label="" data-detail-anchor="" x="526.8" y="238" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Present ready ad</text>
+          <text data-detail="context" x="526.8" y="255" class="t-muted" font-size="8" text-anchor="middle">At most once per day</text>
         </g>
 
         <g id="node-slot" data-node-id="slot" data-node-label="Reach card slot" tabindex="0" role="button" aria-label="Focus Reach card slot, Scroll past core content, In-scroll native card" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Scroll past core content" data-node-context="In-scroll native card">
           <title>Reach card slot · Scroll past core content · In-scroll native card</title>
-          <rect x="554" y="341" width="156" height="52" rx="8" class="c-mask"/>
-          <rect x="554" y="341" width="156" height="52" rx="8" class="c-frontend" data-animate="node" style="--step:10" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(560 347) scale(0.6875)">
+          <rect x="568.8" y="341" width="156" height="52" rx="8" class="c-mask"/>
+          <rect x="568.8" y="341" width="156" height="52" rx="8" class="c-frontend" data-animate="node" style="--step:10" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(574.8 347) scale(0.6875)">
             <rect x="2" y="3" width="12" height="10" rx="2"/>
             <path d="M2 6.5h12"/>
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="632" y="362" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Reach card slot</text>
-          <text data-detail="context" x="632" y="379" class="t-muted" font-size="8" text-anchor="middle">Scroll past core content</text>
+          <text data-node-label="" data-detail-anchor="" x="646.8" y="362" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Reach card slot</text>
+          <text data-detail="context" x="646.8" y="379" class="t-muted" font-size="8" text-anchor="middle">Scroll past core content</text>
         </g>
 
         <g id="node-creative" data-node-id="creative" data-node-label="Display native ad" tabindex="0" role="button" aria-label="Focus Display native ad, Ready at insertion point, In-scroll native card" aria-pressed="false" data-node-kind="external" data-node-sublabel="Ready at insertion point" data-node-context="In-scroll native card">
           <title>Display native ad · Ready at insertion point · In-scroll native card</title>
-          <rect x="742" y="341" width="156" height="52" rx="8" class="c-mask"/>
-          <rect x="742" y="341" width="156" height="52" rx="8" class="c-external" data-animate="node" style="--step:11" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(748 347) scale(0.6875)">
+          <rect x="756.8" y="341" width="156" height="52" rx="8" class="c-mask"/>
+          <rect x="756.8" y="341" width="156" height="52" rx="8" class="c-external" data-animate="node" style="--step:11" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(762.8 347) scale(0.6875)">
             <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="820" y="362" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Display native ad</text>
-          <text data-detail="context" x="820" y="379" class="t-muted" font-size="8" text-anchor="middle">Ready at insertion point</text>
+          <text data-node-label="" data-detail-anchor="" x="834.8" y="362" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Display native ad</text>
+          <text data-detail="context" x="834.8" y="379" class="t-muted" font-size="8" text-anchor="middle">Ready at insertion point</text>
+        </g>
+
+        <g id="node-bannergate" data-node-id="bannergate" data-node-label="Check banner switches" tabindex="0" role="button" aria-label="Focus Check banner switches, UMP ready, both flags, final policy, Anchored banner" aria-pressed="false" data-node-kind="security" data-node-sublabel="UMP ready, both flags, final policy" data-node-context="Anchored banner">
+          <title>Check banner switches · UMP ready, both flags, final policy · Anchored banner</title>
+          <rect x="48" y="465" width="156" height="52" rx="8" class="c-mask"/>
+          <rect x="48" y="465" width="156" height="52" rx="8" class="c-security" data-animate="node" style="--step:12" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(54 471) scale(0.6875)">
+            <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
+            <path d="m5.8 8 1.5 1.5 3-3"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="126" y="497.2" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Check banner switches</text>
+          <text data-detail="context" x="126" y="510.9" class="t-muted" font-size="7" text-anchor="middle">UMP ready, both flags, final policy</text>
+        </g>
+
+        <g id="node-bannershow" data-node-id="bannershow" data-node-label="Show adaptive banner" tabindex="0" role="button" aria-label="Focus Show adaptive banner, Under tab bar after delay, Anchored banner" aria-pressed="false" data-node-kind="external" data-node-sublabel="Under tab bar after delay" data-node-context="Anchored banner">
+          <title>Show adaptive banner · Under tab bar after delay · Anchored banner</title>
+          <rect x="250.8" y="465" width="156" height="52" rx="8" class="c-mask"/>
+          <rect x="250.8" y="465" width="156" height="52" rx="8" class="c-external" data-animate="node" style="--step:12" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(256.8 471) scale(0.6875)">
+            <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
+            <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="335.8" y="486" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Show adaptive banner</text>
+          <text data-detail="context" x="328.8" y="503" class="t-muted" font-size="8" text-anchor="middle">Under tab bar after delay</text>
         </g>
 
         <!-- Edge labels -->
-        <g data-detail="context" data-edge-from="eligibility" data-edge-to="open" data-edge-label="Pass through" data-edge-key="0">
-          <rect x="439.2" y="99" width="67.6" height="14" rx="3" class="c-mask"/>
-          <text x="473" y="109" class="t-muted" font-size="8" text-anchor="middle">Pass through</text>
+        <g data-detail="context" data-edge-from="bannergate" data-edge-to="bannershow" data-edge-label="Loaded" data-edge-key="0">
+          <rect x="208" y="471" width="38.8" height="14" rx="3" class="c-mask"/>
+          <text x="227.4" y="481" class="t-muted" font-size="8" text-anchor="middle">Loaded</text>
         </g>
-        <g data-detail="context" data-edge-from="eligibility" data-edge-to="reserve" data-edge-label="Eligible, draw &lt; 10%" data-edge-key="1">
-          <rect x="261" y="171" width="106" height="14" rx="3" class="c-mask"/>
-          <text x="314" y="181" class="t-muted" font-size="8" text-anchor="middle">Eligible, draw &lt; 10%</text>
+        <g data-detail="context" data-edge-from="eligibility" data-edge-to="open" data-edge-label="Pass through" data-edge-key="1">
+          <rect x="453.99999999999994" y="99" width="67.6" height="14" rx="3" class="c-mask"/>
+          <text x="487.79999999999995" y="109" class="t-muted" font-size="8" text-anchor="middle">Pass through</text>
+        </g>
+        <g data-detail="context" data-edge-from="eligibility" data-edge-to="reserve" data-edge-label="Eligible, draw &lt; 10%" data-edge-key="2">
+          <rect x="275.8" y="171" width="106" height="14" rx="3" class="c-mask"/>
+          <text x="328.8" y="181" class="t-muted" font-size="8" text-anchor="middle">Eligible, draw &lt; 10%</text>
         </g>
 
-        <g data-detail="context" data-edge-from="reserve" data-edge-to="show" data-edge-label="Saved" data-edge-key="3">
-          <rect x="396" y="223" width="34" height="14" rx="3" class="c-mask"/>
-          <text x="413" y="233" class="t-muted" font-size="8" text-anchor="middle">Saved</text>
+        <g data-detail="context" data-edge-from="reserve" data-edge-to="show" data-edge-label="Saved" data-edge-key="4">
+          <rect x="410.79999999999995" y="223" width="34" height="14" rx="3" class="c-mask"/>
+          <text x="427.79999999999995" y="233" class="t-muted" font-size="8" text-anchor="middle">Saved</text>
         </g>
-        <g data-detail="context" data-edge-from="show" data-edge-to="open" data-edge-label="Dismissed or failed" data-edge-key="4">
-          <rect x="509.4" y="146" width="101.2" height="14" rx="3" class="c-mask"/>
-          <text x="560" y="156" class="t-muted" font-size="8" text-anchor="middle">Dismissed or failed</text>
+        <g data-detail="context" data-edge-from="show" data-edge-to="open" data-edge-label="Dismissed or failed" data-edge-key="5">
+          <rect x="524.1999999999999" y="146" width="101.2" height="14" rx="3" class="c-mask"/>
+          <text x="574.8" y="156" class="t-muted" font-size="8" text-anchor="middle">Dismissed or failed</text>
         </g>
 
 
 
         <!-- Legend -->
         <g data-legend="" data-legend-bridge="">
-          <text x="20" y="428" class="t-primary" font-size="12" font-weight="650">Legend</text>
-          <g data-legend-semantic-kind="frontend" data-legend-kind="frontend" data-legend-label="User UI" data-legend-x="20" data-legend-baseline="448" data-legend-width="76">
-            <rect x="20" y="440" width="14" height="9" rx="2" class="c-frontend" stroke-width="1"/>
-            <text x="42" y="448" class="t-muted" font-size="7.5" font-weight="500">User UI</text>
+          <text x="20" y="552" class="t-primary" font-size="12" font-weight="650">Legend</text>
+          <g data-legend-semantic-kind="frontend" data-legend-kind="frontend" data-legend-label="User UI" data-legend-x="20" data-legend-baseline="572" data-legend-width="76">
+            <rect x="20" y="564" width="14" height="9" rx="2" class="c-frontend" stroke-width="1"/>
+            <text x="42" y="572" class="t-muted" font-size="7.5" font-weight="500">User UI</text>
           </g>
-          <g data-legend-semantic-kind="security" data-legend-kind="security" data-legend-label="Policy" data-legend-x="103" data-legend-baseline="448" data-legend-width="71">
-            <rect x="103" y="440" width="14" height="9" rx="2" class="c-security" stroke-width="1"/>
-            <text x="125" y="448" class="t-muted" font-size="7.5" font-weight="500">Policy</text>
+          <g data-legend-semantic-kind="security" data-legend-kind="security" data-legend-label="Policy" data-legend-x="103" data-legend-baseline="572" data-legend-width="71">
+            <rect x="103" y="564" width="14" height="9" rx="2" class="c-security" stroke-width="1"/>
+            <text x="125" y="572" class="t-muted" font-size="7.5" font-weight="500">Policy</text>
           </g>
-          <g data-legend-semantic-kind="database" data-legend-kind="database" data-legend-label="Context / trace" data-legend-x="181" data-legend-baseline="448" data-legend-width="113">
-            <rect x="181" y="440" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
-            <text x="203" y="448" class="t-muted" font-size="7.5" font-weight="500">Context / trace</text>
+          <g data-legend-semantic-kind="database" data-legend-kind="database" data-legend-label="Context / trace" data-legend-x="181" data-legend-baseline="572" data-legend-width="113">
+            <rect x="181" y="564" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
+            <text x="203" y="572" class="t-muted" font-size="7.5" font-weight="500">Context / trace</text>
           </g>
-          <g data-legend-semantic-kind="external" data-legend-kind="external" data-legend-label="External system" data-legend-x="301" data-legend-baseline="448" data-legend-width="113">
-            <rect x="301" y="440" width="14" height="9" rx="2" class="c-external" stroke-width="1"/>
-            <text x="323" y="448" class="t-muted" font-size="7.5" font-weight="500">External system</text>
+          <g data-legend-semantic-kind="external" data-legend-kind="external" data-legend-label="External system" data-legend-x="301" data-legend-baseline="572" data-legend-width="113">
+            <rect x="301" y="564" width="14" height="9" rx="2" class="c-external" stroke-width="1"/>
+            <text x="323" y="572" class="t-muted" font-size="7.5" font-weight="500">External system</text>
           </g>
         </g>
       </svg>
@@ -5604,6 +5636,18 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <li>UMP and SDK readiness precede requests. ATT and TCF determine personalization.</li>
           <li>Independent native and interstitial switches govern loaded and pending inventory.</li>
           <li>Hourly, Daily and Air use compact cards. Saved places uses a stacked card after the last visible row.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>Remote Config switches (#3211)</h3>
+        </div>
+        <ul>
+          <li>tw_banner_enabled off stops every format. tw_app_banner_enabled (default off) and tw_native_enabled (default on) switch the banner and the card independently.</li>
+          <li>Both on shows both. Banner requests follow the native card&#39;s ATT and TCF rule; a published switch change applies in an open app.</li>
+          <li>Off or unfilled, the banner reserves no strip under the tab bar.</li>
         </ul>
       </div>
     </div>

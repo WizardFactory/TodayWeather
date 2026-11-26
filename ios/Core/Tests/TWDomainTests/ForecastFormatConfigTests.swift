@@ -24,6 +24,7 @@ struct ForecastFormatConfigTests {
         config.load()
         #expect(source.values()["tw_native_enabled"] == "true")
         #expect(source.values()["tw_interstitial_enabled"] == "true")
+        #expect(source.values()["tw_app_banner_enabled"] == "false")
     }
 
     @Test func formatControlsApplyIndependentlyOfMalformedLegacyValues() {

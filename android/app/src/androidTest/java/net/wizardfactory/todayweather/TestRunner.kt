@@ -87,6 +87,9 @@ class TestTodayWeatherApp : TodayWeatherApp() {
         TestRunner.args.getString("weather") == "production" && TestRunner.args.getString("photos") == "feed")
         BuildConfig.WEATHER_PHOTOS_URL else ""
     override fun deviceRegion() = TestRunner.args.getString("analyticsRegion") ?: super.deviceRegion()
+
+    /** `adFormats` `banner`, `native` or `off` (#3211): fixed Remote Config values instead of Firebase's. */
+    override fun remoteConfigSource() = TestRunner.args.getString("adFormats")?.let(::FixedRemoteConfig) ?: super.remoteConfigSource()
     // Manual and store captures read live data but never send analytics.
     override fun analyticsSdk() = (if (TestRunner.args.getString("manual") == "true") SilentAnalyticsSdk else super.analyticsSdk())
         .also { analyticsSdkInUse = it }
@@ -156,3 +159,24 @@ fun AndroidComposeTestRule<*, *>.closeStartChoice() {
 
 /** Body helper for assertions. */
 fun PushRequest.records(): List<JsonElement> = (body as kotlinx.serialization.json.JsonArray).toList()
+
+/**
+ * Remote Config answering with fixed format switches (#3211), so a device run can show each format without changing
+ * the Firebase console: `banner` (anchored banner only), `native` (native card only), `off` (`tw_banner_enabled`
+ * false, every format off).
+ */
+class FixedRemoteConfig(mode: String) : net.wizardfactory.todayweather.analytics.RemoteConfigSource {
+    private val values = mapOf(
+        "tw_banner_enabled" to (mode != "off").toString(),
+        "tw_banner_delay_seconds" to "0",
+        "tw_app_banner_enabled" to (mode != "native").toString(),
+        "tw_native_enabled" to (mode != "banner").toString(),
+        "tw_interstitial_enabled" to "false",
+    )
+
+    override fun setDefaults(defaults: Map<String, Any>, done: (Boolean) -> Unit) = done(true)
+    override fun setSettings(fetchTimeoutSeconds: Long, minimumFetchIntervalSeconds: Long, done: (Boolean) -> Unit) = done(true)
+    override fun loadActivated(done: (Boolean) -> Unit) = done(true)
+    override fun fetchAndActivate(done: (Boolean) -> Unit) = done(true)
+    override fun values() = values
+}

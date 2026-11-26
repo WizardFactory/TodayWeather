@@ -1,11 +1,14 @@
 import Foundation
 
-/// A matching iOS app ID and two distinct format-specific ad units from the built app bundle.
+/// A matching iOS app ID and two distinct format-specific ad units from the built app bundle, with an optional
+/// anchored banner unit (#3211).
 struct AdsSettings: Equatable {
     /// Google's iOS demo units for Native Advanced and Interstitial (developers.google.com/admob/ios/test-ads).
     static let testAppID = "ca-app-pub-3940256099942544~1458002511"
     static let testNativeUnit = "ca-app-pub-3940256099942544/3986624511"
     static let testInterstitialUnit = "ca-app-pub-3940256099942544/4411468910"
+    /// Google's iOS adaptive banner demo unit.
+    static let testBannerUnit = "ca-app-pub-3940256099942544/2435281174"
 
     /// The app ID of a Release build without the private value (Support/App.xcconfig): no AdMob app has it,
     /// and it only keeps the Ads SDK from stopping the app at launch.
@@ -13,6 +16,8 @@ struct AdsSettings: Equatable {
 
     let nativeUnit: String
     let interstitialUnit: String
+    /// The anchored banner's unit (#3211); nil when the build has none or a malformed one: then only the banner is off.
+    var bannerUnit: String? = nil
     /// A Release build with real ad units (`clientConfig.releaseAds`): UMP is never bypassed.
     let releaseAds: Bool
 
@@ -33,7 +38,13 @@ struct AdsSettings: Equatable {
         } else {
             guard app.1 != "ca-app-pub-3940256099942544", app.1 != "ca-app-pub-0000000000000000" else { return nil }
         }
-        return AdsSettings(nativeUnit: native, interstitialUnit: interstitial, releaseAds: !debug)
+        var banner = info["TWAdMobBannerUnit"] as? String
+        if let unit = banner {
+            let valid = unit.wholeMatch(of: /(ca-app-pub-[0-9]{16})\/[0-9]{10}/).map { $0.1 == app.1 } ?? false
+            let allowed = debug ? unit == testBannerUnit : unit != native && unit != interstitial
+            if !valid || !allowed { banner = nil }
+        }
+        return AdsSettings(nativeUnit: native, interstitialUnit: interstitial, bannerUnit: banner, releaseAds: !debug)
     }
 
     /// This build: `DEBUG` is the Debug configuration's compilation condition.
