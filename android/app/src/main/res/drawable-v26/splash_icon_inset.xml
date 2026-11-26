@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launch splash masks its icon to a centred circle of about 2/3 of the icon area (#3223): 240 dp or 288 dp on
+     Android 12+ depending on the icon background, 240 dp under core-splashscreen's ring on API 26-30, whose hole is
+     rounded to whole pixels. A 26% inset per side draws the imported full-bleed splash_icon at 48% of the icon size,
+     inside the mask at every density (SplashIconTest). -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/splash_icon"
+    android:inset="26%" />
