@@ -17,7 +17,10 @@ class NativeInventoryTest {
         inventory.setEnabled(true)
     }
 
-    private fun visit(tab: Tab, key: Any = Any()) = inventory.open(tab, key) { displayed = it }
+    /** A visit whose slot is already in view when it opens: the #3041 cases. */
+    private fun visit(tab: Tab, key: Any = Any()) = open(tab, key).also { it.reach() }
+
+    private fun open(tab: Tab, key: Any = Any()) = inventory.open(tab, key) { displayed = it }
 
     private fun dispatch() {
         while (pending.isNotEmpty()) pending.removeFirst()()
@@ -147,5 +150,63 @@ class NativeInventoryTest {
         inventory.setEnabled(false)
         dispatch()
         assertEquals(2, loads.size)
+    }
+
+    @Test fun fillBeforeTheSlotIsReachedIsShownInThatVisit() {
+        start()
+        val first = open(Tab.HOURLY)
+        assertNull(displayed)
+        dispatch()
+        loads.single()("cold-start")
+        assertEquals("cold-start", displayed)
+        first.reach()
+        assertEquals("cold-start", displayed)
+        assertEquals("the visit took the fill, so the next spare is requested", 1, pending.size)
+        visit(Tab.DAILY)
+        assertNull(displayed)
+        visit(Tab.HOURLY)
+        assertEquals("the tab keeps its assigned ad", "cold-start", displayed)
+        assertTrue(released.isEmpty())
+    }
+
+    @Test fun fillAfterTheSlotIsReachedWaitsForTheNextVisit() {
+        start()
+        val key = Any()
+        open(Tab.HOURLY, key).reach()
+        dispatch()
+        loads.single()("late")
+        assertNull("the reader passed the slot, so nothing is inserted", displayed)
+        open(Tab.HOURLY, key).reach()
+        assertNull("one decision per visit", displayed)
+        inventory.end(key)
+        open(Tab.HOURLY)
+        assertEquals("late", displayed)
+    }
+
+    @Test fun anOverlayKeepsThePendingVisitAndItsLaterFill() {
+        start()
+        val key = Any()
+        val visit = open(Tab.AIR, key)
+        visit.detach()
+        displayed = null
+        dispatch()
+        loads.single()("under-the-menu")
+        assertNull("no renderer while the overlay covers the page", displayed)
+        open(Tab.AIR, key).reach()
+        assertEquals("under-the-menu", displayed)
+    }
+
+    @Test fun reachingAnotherVisitsSlotOrReachingTwiceDecidesNothing() {
+        start()
+        val old = open(Tab.HOURLY)
+        val current = open(Tab.DAILY)
+        old.reach()
+        dispatch()
+        loads.single()("daily")
+        assertEquals("daily", displayed)
+        current.reach()
+        current.reach()
+        assertEquals("daily", displayed)
+        assertTrue(released.isEmpty())
     }
 }
