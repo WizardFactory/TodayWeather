@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The launch splash masks its icon to a centred circle of 2/3 of the icon area (#3223), so the imported full-bleed
-     splash_icon is drawn at half size in the middle. API 24-25 have no fractional insets; there core-splashscreen draws
-     the icon at 240 dp (Theme.SplashScreen.IconBackground), so 60 dp per side is the same 25%. -->
+<!-- The launch splash masks its icon to a centred circle of about 2/3 of the icon area (#3223), so the imported
+     full-bleed splash_icon is drawn at about half size in the middle. API 24-25 have no fractional insets; there
+     core-splashscreen draws the icon at 240 dp (Theme.SplashScreen.IconBackground) under a ring whose hole, rounded to
+     whole pixels, can be a little smaller than 2/3, so 63 dp per side (26%) keeps the art inside it at every density
+     (SplashIconTest). -->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
     android:drawable="@drawable/splash_icon"
-    android:inset="60dp" />
+    android:inset="63dp" />

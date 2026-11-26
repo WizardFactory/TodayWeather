@@ -4,7 +4,7 @@ Consumes [intent](../intent/android-splash-icon.md) and [spec](../specs/android-
 
 | # | Change | Files | Check |
 | --- | --- | --- | --- |
-| 1 | Test: resolve the theme's splash icon at API 24 and 34, lay it out at 240/288 dp, map the PNG's farthest opaque pixel into the drawn bounds, assert radius <= L/3 | `app/src/test/.../SplashIconTest.kt` | Red on the current theme |
+| 1 | Test: resolve the theme's splash icon at API 24 and 34 and 14 densities; check the child is the imported art at >= 40% size and its visible pixels fit the platform circle and the compat ring hole (1 px margin); on SDK 34 also render the drawable and check the drawn pixels (review round 1: CODEX-1, CODEX-2) | `app/src/test/.../SplashIconTest.kt` | Red on the current theme and on the 25%/60 dp insets |
 | 2 | Inset drawable and theme switch | `res/drawable/splash_icon_inset.xml`, `res/drawable-v26/splash_icon_inset.xml`, `res/values/themes.xml` | Test green; `ImportedClientAssetsTest` green |
 | 3 | Emulator screenshots of the cold-start splash | API 36 (`tw_api36_capture`), API 24 (`tw_api24`) | Complete icon visible |
 
