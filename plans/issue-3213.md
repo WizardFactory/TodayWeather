@@ -16,7 +16,7 @@ Source: [#3213](https://github.com/WizardFactory/TodayWeather/issues/3213), the 
 
 | Area | Files |
 | --- | --- |
-| Android | `analytics/RemoteBannerConfig.kt` (key, default, parser, `interstitialChance` property outside the published state, defaults, late-fetch apply), `ads/ForecastVisits.kt` (chance reader replaces `REPEAT_CHANCE`), `ads/ForecastInterstitial.kt` (passes the reader), `MainActivity.kt` (reads the state) |
+| Android | `analytics/RemoteBannerConfig.kt` (key, default, parser, `interstitialChance` property outside the published state, defaults, late-fetch apply), `ads/ForecastVisits.kt` (chance reader replaces `REPEAT_CHANCE`), `ads/ForecastInterstitial.kt` (passes the reader), `MainActivity.kt` (reads `opened.adConfig.interstitialChance`) |
 | iOS | `TWDomain/Ads/RemoteBannerConfig.swift`, `TWDomain/Ads/ForecastAdVisits.swift`, `TodayWeather/Ads/ForecastInterstitial.swift`, `Monetization.swift`, `FirebaseBridges.swift` |
 | Tests | `ForecastVisitsTest.kt`, new `InterstitialChanceConfigTest.kt`, `ForecastInterstitialDeviceTest.kt` (and its declared count in the release-CI adb double `android/tools/release-ci/test/adb`); `ForecastAdVisitsTests.swift`, `ForecastFormatConfigTests.swift` |
 | Documents | `docs/rewrite/android-forecast-ad-placement.md` (#3041 design notes), `android/README.md`, `ios/README.md`, `docs/user/ios-app/README.md`, `plans/issue-3059.md` (historical note), both ad-delivery Archify diagrams (JSON and regenerated HTML) |
@@ -29,7 +29,7 @@ Sibling tasks #3211 and #3212 edit the same config files; these edits only add c
 | --- | --- | --- |
 | AC1 | Default 30 when the key is absent; 0 never and 100 always; an invalid value uses 30; a draw just below the threshold shows and one at the threshold does not | `InterstitialChanceConfigTest`, `ForecastVisitsTest.theConfiguredChanceDecidesEachEligibleReturn`; `ForecastFormatConfigTests.interstitialChance*`, `ForecastAdVisitsTests.theConfiguredChanceDecidesEachEligibleReturn` |
 | AC2 | Existing interstitial tests (daily cap, first-visit protection, reservation) still pass on both platforms | Android `ads`/`analytics` unit packages and `ForecastInterstitialDeviceTest`; iOS `swift test` and app-hosted `ForecastInterstitialTests` |
-| AC3 | A fetched value applies to later draws without a reinstall | Stored-then-fetched and published-update tests on both platforms; `aChangedChanceAppliesToTheNextDrawWithoutANewInstance` on both |
+| AC3 | A fetched value applies to later draws without a reinstall | Android: stored-then-fetched and fetch-after-timeout tests (`InterstitialChanceConfigTest`); iOS: stored-then-fetched and published realtime-update tests (`ForecastFormatConfigTests`); `aChangedChanceAppliesToTheNextDrawWithoutANewInstance` on both |
 | AC4 | No repository document states 10% as the current chance | `rg` over the repository for the old statements; regenerated diagrams |
 
 ## User scenarios
