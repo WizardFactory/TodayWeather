@@ -50,7 +50,7 @@ The native-card builds released before #3216 (merge `c460c76c5`) have no banner 
 2. Publish `tw_app_banner_enabled=true` and `tw_native_enabled=false` as conditional values under that condition only. Keep the defaults (`false` and `true`) for everyone else.
 3. Roll back the switch on the same condition. Either remove both conditional values, or publish `tw_app_banner_enabled=false` and `tw_native_enabled=true` under it. Changing only the default, or only the banner value, leaves the conditional native-off value in force.
 
-Removing the condition alone reverts the banner-capable builds to the defaults, the native card, so it is a rollback too. To keep the banner after the older builds stop receiving meaningful traffic, first publish `tw_app_banner_enabled=true` and `tw_native_enabled=false` as the defaults, then remove the condition.
+Keep the condition and the defaults while the banner is served. Removing the condition reverts the banner-capable builds to the defaults, the native card, so it is a rollback. Publishing `tw_native_enabled=false` as the default turns the card off in every older build still in use, which have no banner to replace it. That is a separate decision to give up in-content ads in those builds, not a cleanup step.
 
 Rollback: end the experiment and restore `true`/`0`; restart/fetch on the client.
 Emergency hide: publish `tw_banner_enabled=false`. Offline clients retain their
