@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -18,9 +19,14 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdListener
@@ -87,9 +93,10 @@ internal class NativeCard(
     private var darkTheme: Boolean? = null
     private var destroyed = false
 
-    fun mount(host: FrameLayout, compact: Boolean, dark: Boolean) {
+    fun mount(host: FrameLayout, compact: Boolean, dark: Boolean, inView: Boolean) {
         if (destroyed) return
         val card = view ?: register(host, compact).also { view = it }
+        card.visibility = if (inView) View.VISIBLE else View.INVISIBLE
         if (card.parent !== host) {
             (card.parent as? ViewGroup)?.removeView(card)
             host.removeAllViews()
@@ -117,7 +124,7 @@ internal class NativeCard(
     }
 }
 
-/** Keep the visit in the tab/city composition. A card requested after a miss belongs to a future visit. */
+/** Keep the visit in the tab/city composition. A fill after the reader reached the slot belongs to a future visit. */
 @Composable
 fun rememberNativeAdSlot(ads: NativeForecastAds, tab: Tab, dark: Boolean): @Composable () -> Unit {
     val visitKey = remember(ads, tab) { Any() }
@@ -128,21 +135,72 @@ fun rememberNativeAdSlot(ads: NativeForecastAds, tab: Tab, dark: Boolean): @Comp
 @Composable
 private fun NativeAdSlot(ads: NativeForecastAds, tab: Tab, visitKey: Any, dark: Boolean) {
     var creative by remember(ads, visitKey) { mutableStateOf<NativeCard?>(null) }
+    val slot = remember(ads, visitKey) { SlotReach() }
     DisposableEffect(ads, visitKey) {
         val visit = ads.open(tab, visitKey) { creative = it }
-        onDispose { visit.detach() }
+        slot.visit = visit
+        if (slot.reached) visit.reach()
+        onDispose {
+            slot.visit = null
+            visit.detach()
+        }
     }
-    creative?.let { card ->
-        val compact = tab != Tab.LOCATIONS
-        AndroidView(
-            factory = { FrameLayout(it) },
-            update = { card.mount(it, compact, dark) },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = if (compact) 6.dp else 12.dp)
-                .testTag("admob-native-card"),
-            onRelease = { it.removeAllViews() },
-        )
+    SlotAnchor { slot.reach() }
+    creative?.let { NativeCardHost(it, compact = tab != Tab.LOCATIONS, dark = dark) }
+}
+
+/**
+ * The SDK records an impression from the Android view, which the Compose scroll clip does not hide: below the
+ * viewport, under the tab bar, the view would count as visible. It stays INVISIBLE, keeping its size, while no part
+ * of the card is inside the viewport (#3212).
+ */
+@Composable
+internal fun NativeCardHost(card: NativeCard, compact: Boolean, dark: Boolean) {
+    var inView by remember(card) { mutableStateOf(false) }
+    AndroidView(
+        factory = { FrameLayout(it) },
+        update = { card.mount(it, compact, dark, inView) },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = if (compact) 6.dp else 12.dp)
+            .onGloballyPositioned { inView = it.isAttached && !it.boundsInWindow().isEmpty }
+            .testTag("admob-native-card"),
+        onRelease = { it.removeAllViews() },
+    )
+}
+
+/** Remembers a reach that the layout reported before the visit was attached. */
+private class SlotReach {
+    var visit: NativeInventory<NativeCard>.Visit? = null
+    var reached = false
+
+    fun reach() {
+        reached = true
+        visit?.reach()
     }
 }
+
+/**
+ * The card's insertion point, without height. Its probe extends far below it without taking space; the scroll
+ * container clips the probe's bounds to its viewport, so they are empty until the insertion point is above the
+ * viewport's bottom edge. A point already scrolled past also counts as reached, as on iOS (`ForecastNativeSlot`).
+ */
+@Composable
+internal fun SlotAnchor(onReached: () -> Unit) {
+    val reached = rememberUpdatedState(onReached)
+    Layout(
+        content = {
+            Box(Modifier.onGloballyPositioned { probe ->
+                if (probe.isAttached && !probe.boundsInWindow().isEmpty) reached.value()
+            })
+        },
+        modifier = Modifier.fillMaxWidth().testTag(NATIVE_SLOT_ANCHOR),
+    ) { measurables, constraints ->
+        val probe = measurables.single().measure(Constraints.fixed(1, PROBE_HEIGHT_PX))
+        layout(constraints.minWidth, 0) { probe.place(0, 0) }
+    }
+}
+
+internal const val NATIVE_SLOT_ANCHOR = "admob-native-anchor"
+private const val PROBE_HEIGHT_PX = 100_000
 
 private fun bindNativeCreative(view: NativeAdView, ad: NativeAd) {
     fun asset(id: Int, value: String?): TextView = view.findViewById<TextView>(id).apply {

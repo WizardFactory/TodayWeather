@@ -41,6 +41,10 @@ internal class NativeInventory<T : Any>(
         if (value) prepareSpare()
     }
 
+    /**
+     * Opens a visit. An ad on hand is taken at once; otherwise the visit stays pending, and a fill that arrives
+     * before its slot is reached is shown in it (#3212).
+     */
     fun open(tab: Tab, key: Any, show: (T?) -> Unit): Visit {
         discardExpired()
         current?.takeIf { it.key === key }?.let {
@@ -48,12 +52,9 @@ internal class NativeInventory<T : Any>(
             return it
         }
         current?.close()
-        val entry = assigned[tab] ?: spare?.also {
-            assigned[tab] = it
-            spare = null
-        }
-        val visit = Visit(key, tab, entry?.ad)
+        val visit = Visit(key, tab)
         current = visit
+        take(tab)?.let { visit.decide(it.ad) }
         visit.attach(show)
         prepareSpare()
         return visit
@@ -61,6 +62,11 @@ internal class NativeInventory<T : Any>(
 
     fun end(key: Any) {
         current?.takeIf { it.key === key }?.close()
+    }
+
+    private fun take(tab: Tab): Entry<T>? = assigned[tab] ?: spare?.also {
+        assigned[tab] = it
+        spare = null
     }
 
     private fun prepareSpare() {
@@ -80,8 +86,16 @@ internal class NativeInventory<T : Any>(
                     ad?.let(release)
                 } else {
                     loading = false
-                    if (ad == null) retryAfter = clock() + 60_000L
-                    else spare = Entry(ad, clock())
+                    if (ad == null) {
+                        retryAfter = clock() + 60_000L
+                    } else {
+                        spare = Entry(ad, clock())
+                        // The reader has not reached the slot yet: the card appears below the viewport.
+                        current?.takeIf { it.pending }?.let { visit ->
+                            take(visit.tab)?.let { visit.decide(it.ad) }
+                            prepareSpare()
+                        }
+                    }
                 }
             }
         }
@@ -101,13 +115,25 @@ internal class NativeInventory<T : Any>(
         }
     }
 
-    /** One decision per actual page visit. Changing a menu or search overlay only detaches its renderer. */
-    inner class Visit(val key: Any, val tab: Tab, private var creative: T?) {
+    /**
+     * One decision per actual page visit, made by an ad on hand at opening, a fill before the slot is reached, or a
+     * miss once it is reached. Changing a menu or search overlay only detaches its renderer.
+     */
+    inner class Visit(val key: Any, val tab: Tab) {
+        private var creative: T? = null
         private var render: ((T?) -> Unit)? = null
+        internal var pending = true
+            private set
 
         internal fun attach(show: (T?) -> Unit) {
             render = show
             show(creative)
+        }
+
+        internal fun decide(ad: T) {
+            pending = false
+            creative = ad
+            render?.invoke(ad)
         }
 
         internal fun clear() {
@@ -116,6 +142,18 @@ internal class NativeInventory<T : Any>(
         }
 
         fun detach() { render = null }
+
+        /** The slot's insertion point came into the viewport: decide now. A later fill waits for another visit. */
+        fun reach() {
+            if (current !== this || !pending) return
+            discardExpired()
+            val entry = take(tab)
+            pending = false
+            if (entry != null) {
+                decide(entry.ad)
+                prepareSpare()
+            }
+        }
 
         internal fun close() {
             if (current === this) current = null

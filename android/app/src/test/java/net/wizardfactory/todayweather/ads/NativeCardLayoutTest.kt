@@ -33,15 +33,15 @@ class NativeCardLayoutTest {
             registrations++
             LayoutInflater.from(context).inflate(R.layout.native_forecast_ad_compact, host, false) as NativeAdView
         }, releaseAd = { releases++ })
-        card.mount(first, compact = true, dark = false)
+        card.mount(first, compact = true, dark = false, inView = true)
         val registered = first.getChildAt(0)
-        card.mount(second, compact = true, dark = true)
+        card.mount(second, compact = true, dark = true, inView = true)
         first.removeAllViews() // Compose can release an old wrapper after the new one was mounted.
         assertSame(registered, second.getChildAt(0))
         assertEquals(Color.WHITE, registered.findViewById<TextView>(R.id.ad_attribution).currentTextColor)
         assertEquals(1, registrations)
         card.destroy()
-        card.mount(first, compact = true, dark = false)
+        card.mount(first, compact = true, dark = false, inView = true)
         card.destroy()
         assertEquals(0, first.childCount)
         assertEquals(0, second.childCount)
