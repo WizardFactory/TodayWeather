@@ -4,6 +4,9 @@
 -- GA4 does not export the automatic AdMob `ad_impression` to BigQuery, and the default integration passes no
 -- value, so this query reports no revenue. Take earnings from the AdMob report by platform and format
 -- (docs/operations/monetization.md). Rows cover only installations with Analytics collection on.
+-- Rates divide by reporting installations: active installations that sent an event carrying measurement_version
+-- (any value type; iOS Cordova stores a double). Older Cordova builds (before 1.1) and sessions without the apps'
+-- measurement events send automatic events only, so they count as active but cannot report impressions.
 -- version_group: cordova = 1.x, native = 2.0 and later, other = older or missing versions. Uses completed daily partitions only; rerun the last three days.
 WITH raw AS (
   SELECT event_date, PARSE_DATE('%Y%m%d', event_date) AS day, event_name, user_pseudo_id, is_active_user, platform,
@@ -11,6 +14,7 @@ WITH raw AS (
       WHEN SAFE_CAST(SPLIT(app_info.version, '.')[SAFE_OFFSET(0)] AS INT64) >= 2 THEN 'native'
       ELSE 'other' END AS version_group,
     (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'traffic_type') AS traffic_type,
+    EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key = 'measurement_version') AS reporting,
     (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'debug_mode') AS debug_mode,
     (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'action') AS action,
     (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'ad_format') AS ad_format
@@ -27,6 +31,7 @@ WITH raw AS (
 ), daily AS (
   SELECT event_date, platform, version_group, ANY_VALUE(day) AS day,
     COUNT(DISTINCT IF(is_active_user, user_pseudo_id, NULL)) AS active_installations,
+    COUNT(DISTINCT IF(is_active_user AND reporting, user_pseudo_id, NULL)) AS reporting_installations,
     COUNTIF(event_name = 'ad_lifecycle' AND action = 'impression' AND ad_format = 'banner') AS banner_impressions,
     COUNTIF(event_name = 'ad_lifecycle' AND action = 'impression' AND ad_format = 'native') AS native_impressions,
     COUNTIF(event_name = 'ad_lifecycle' AND action = 'impression' AND ad_format = 'interstitial') AS interstitial_impressions,
@@ -42,26 +47,29 @@ WITH raw AS (
   WHERE REGEXP_CONTAINS(table_name, r'^events_[0-9]{8}$')
 ), active AS (
   SELECT DISTINCT day, platform, version_group, user_pseudo_id FROM eligible WHERE is_active_user
+), reporting_active AS (
+  SELECT DISTINCT day, platform, version_group, user_pseudo_id FROM eligible WHERE is_active_user AND reporting
 ), returns AS (
-  -- Returned = active again on the next day on the same platform, in either version group (an update counts).
+  -- Base: reporting installations. Returned = active again on the next day on the same platform, in either version
+  -- group (an update counts), with any event.
   SELECT a.day, a.platform, a.version_group, COUNT(DISTINCT n.user_pseudo_id) AS returned_installations
-  FROM active a
+  FROM reporting_active a
   LEFT JOIN (SELECT DISTINCT day, platform, user_pseudo_id FROM active) n
     ON n.platform = a.platform AND n.user_pseudo_id = a.user_pseudo_id AND n.day = DATE_ADD(a.day, INTERVAL 1 DAY)
   WHERE a.day BETWEEN @start_date AND @end_date
   GROUP BY a.day, a.platform, a.version_group
 )
-SELECT d.event_date, d.platform, d.version_group, d.active_installations,
+SELECT d.event_date, d.platform, d.version_group, d.active_installations, d.reporting_installations,
   d.banner_impressions, d.native_impressions, d.interstitial_impressions,
   d.banner_impressions + d.native_impressions + d.interstitial_impressions AS ad_impressions,
-  SAFE_DIVIDE(d.banner_impressions + d.native_impressions + d.interstitial_impressions, d.active_installations)
-    AS impressions_per_active_installation,
-  SAFE_DIVIDE(d.banner_impressions, d.active_installations) AS banner_impressions_per_active_installation,
-  SAFE_DIVIDE(d.native_impressions, d.active_installations) AS native_impressions_per_active_installation,
-  SAFE_DIVIDE(d.interstitial_impressions, d.active_installations) AS interstitial_impressions_per_active_installation,
+  SAFE_DIVIDE(d.banner_impressions + d.native_impressions + d.interstitial_impressions, d.reporting_installations)
+    AS impressions_per_reporting_installation,
+  SAFE_DIVIDE(d.banner_impressions, d.reporting_installations) AS banner_impressions_per_reporting_installation,
+  SAFE_DIVIDE(d.native_impressions, d.reporting_installations) AS native_impressions_per_reporting_installation,
+  SAFE_DIVIDE(d.interstitial_impressions, d.reporting_installations) AS interstitial_impressions_per_reporting_installation,
   -- NULL until the next day's daily table exists and that day has ended; late events can still raise it (rerun).
   IF(x.day IS NOT NULL AND DATE_ADD(d.day, INTERVAL 1 DAY) < CURRENT_DATE('Asia/Seoul'),
-    SAFE_DIVIDE(r.returned_installations, d.active_installations), NULL) AS next_day_return_rate,
+    SAFE_DIVIDE(r.returned_installations, d.reporting_installations), NULL) AS next_day_return_rate,
   d.initial_banner_requests, d.banner_load_failures, d.weather_loads
 FROM daily d LEFT JOIN returns r USING (day, platform, version_group)
 LEFT JOIN exported_days x ON x.day = DATE_ADD(d.day, INTERVAL 1 DAY)

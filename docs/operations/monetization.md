@@ -135,7 +135,7 @@ when AdMob reports impressions and earnings. Each number has one source:
 | --- | --- | --- |
 | Estimated earnings, impression RPM (eCPM) | AdMob report or API | Date, platform, ad format (`FORMAT`) |
 | Requests, matched requests, impressions, match rate, show rate | AdMob report or API | Date, platform, format, app version (`APP_VERSION_NAME`) |
-| Impressions per active installation | [daily query](../../client/analytics/daily-monetization.sql) over the apps' `ad_lifecycle` `impression` events | Date, platform, version group (`cordova` = 1.x, `native` = 2.0+, `other` = older or missing), format |
+| Impressions per reporting installation | [daily query](../../client/analytics/daily-monetization.sql) over the apps' `ad_lifecycle` `impression` events | Date, platform, version group (`cordova` = 1.x, `native` = 2.0+, `other` = older or missing), format |
 | Next-day return rate | Same daily query | Date, platform, version group (not format) |
 
 The `ad_lifecycle` events come from the Mobile Ads SDK impression callbacks and
@@ -144,15 +144,22 @@ Analytics collection on (an opt-in, or the native apps' region default since
 #2660), so their totals are lower than AdMob's; use them for
 per-installation rates, not totals. Do not use show rate (impressions/matched)
 as an engagement metric: it depends on how many ads an app preloads, not only on
-what users see. Placement and frequency decisions use impressions per active
+what users see. Placement and frequency decisions use impressions per reporting
 installation with the next-day return rate as the guardrail.
 
 Use the GA4 property's `event_date` timezone; the retention and daily queries
 assume Asia/Seoul for completed-window checks and must be changed if the property
 differs. Active installations are distinct non-null installation pseudonyms with
 `is_active_user=true` in completed daily exports; they are not a person count.
-The next-day return rate is the share of a day's active installations active again
-the next day on the same platform; it stays NULL until the next day's export table
+Rates divide by reporting installations: active installations that sent at least
+one event carrying `measurement_version` that day (any value type; iOS Cordova
+stores it as a double). Automatic events also come from installations that can
+never report `ad_lifecycle`: Cordova builds before 1.1 (on 2026-11-14..25 most
+of the Cordova actives, Android 1.0.8 and iOS 1.0.10) and sessions without the
+apps' measurement events. Counting them would understate impressions per
+installation. `active_installations` stays in the output for context.
+The next-day return rate is the share of a day's reporting installations active
+again the next day on the same platform, with any event; it stays NULL until the next day's export table
 exists (read from the dataset's `INFORMATION_SCHEMA.TABLES`, so the query needs
 metadata read access) and that day has ended. Late events can still raise it, so rerun the last
 three days. A return counts in either version group, so an update from 1.x
@@ -214,8 +221,8 @@ them in separate tables.
    lower bound of the ATT allow rate; take the status mix from the Analytics query below. Keep match rate
    (matched/requests) and show rate (impressions/matched) in separate columns.
 2. **Analytics query (ATT status detail).** [ios-att-monetization.sql](../../client/analytics/ios-att-monetization.sql)
-   groups iOS active installations, initial banner requests, load failures, `ad_lifecycle` impressions per format and
-   impressions per active installation by date, app version and the `att_status` user property. It covers only
+   groups iOS active and reporting installations, initial banner requests, load failures, `ad_lifecycle` impressions per
+   format and impressions per reporting installation by date, app version and the `att_status` user property. It covers only
    installations with Analytics collection on (an opt-in, or the native apps' region default since #2660), so use it
    for the status mix and per-status impressions, not for totals.
    It cannot give revenue, eCPM, match rate or show rate (see [measurement sources](#measurement-sources)).
