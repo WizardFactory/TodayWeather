@@ -681,6 +681,20 @@
       "edge": null
     },
     {
+      "id": "android-scheme-numeric-userinfo-nonnumeric-port",
+      "description": "Android custom-scheme link with numeric userinfo and non-numeric port on canonical host is rejected rather than falling back to widget index",
+      "url": "todayweather://2@link.todayweather.ai:abc/warnings",
+      "native": null,
+      "edge": null
+    },
+    {
+      "id": "https-numeric-userinfo-nonnumeric-port",
+      "description": "HTTPS link with numeric userinfo and non-numeric port on canonical host is rejected",
+      "url": "https://2@link.todayweather.ai:abc/warnings",
+      "native": null,
+      "edge": null
+    },
+    {
       "id": "legacy-ios-widget-uppercase-scheme-rejected",
       "description": "Legacy iOS widget link keeps case-sensitive lowercase scheme prefix",
       "url": "TODAYWEATHER://widget?place=seoul",

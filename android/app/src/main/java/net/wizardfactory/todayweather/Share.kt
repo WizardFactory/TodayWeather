@@ -67,15 +67,14 @@ class EntryLinks {
         val data = intent.data ?: return false
         val custom = data.scheme.equals(EntryLink.SCHEME, ignoreCase = true)
         val https = data.scheme.equals("https", ignoreCase = true)
-        val link = when {
-            (https || custom) && data.host.equals(DeepLink.HOST, ignoreCase = true) -> true
-            custom -> false
-            else -> return false
-        }
+        if (!custom && !(https && data.host.equals(DeepLink.HOST, ignoreCase = true))) return false
         if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return true
         val url = intent.dataString ?: return true
-        if (link) DeepLink.parse(url)?.let { targets.trySend(it) }
-        else EntryLink.placeIndex(url)?.let { indexes.trySend(it) }
+        when (val target = DeepLink.parse(url)) {
+            is DeepLinkTarget.LegacyWidgetIndex -> indexes.trySend(target.index)
+            null -> {}
+            else -> targets.trySend(target)
+        }
         return true
     }
 

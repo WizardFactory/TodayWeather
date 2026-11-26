@@ -197,6 +197,7 @@ class ShareTest {
         assertTrue(links.accept(view("TODAYWEATHER://LINK.todayweather.ai/air/jeju?pollutant=o3")))
         assertTrue(links.accept(view("todayweather://link.todayweather.ai/warnings")))
         assertTrue(links.accept(view("todayweather://2@link.todayweather.ai/warnings")))
+        assertTrue(links.accept(view("todayweather://2@link.todayweather.ai:abc/warnings")), "non-numeric port on the link host is consumed and queues neither target nor index")
         assertTrue(links.accept(view("todayweather://link.todayweather.ai/unknown")), "an unknown path on the link host is still consumed")
         assertTrue(links.accept(view("todayweather://link.todayweather.ai/place/seoul").addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)),
             "Recents replays nothing")

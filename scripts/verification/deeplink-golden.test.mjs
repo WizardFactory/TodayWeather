@@ -85,7 +85,9 @@ function rawAuthorityHost(rawUrl) {
   const match = /^[A-Za-z][A-Za-z0-9+.-]*:\/\/([^/?#]*)/.exec(rawUrl);
   if (!match) return null;
   const hostAndPort = match[1].slice(match[1].lastIndexOf("@") + 1);
-  return hostAndPort.replace(/:(\d*)$/, "").toLowerCase();
+  const colonIdx = hostAndPort.indexOf(":");
+  const host = colonIdx >= 0 ? hostAndPort.slice(0, colonIdx) : hostAndPort;
+  return host.toLowerCase();
 }
 
 function referenceParseNative(rawUrl) {

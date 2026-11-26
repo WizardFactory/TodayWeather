@@ -83,7 +83,6 @@ object DeepLink {
     private val COORDINATE = Regex("""^-?(?:\d+\.?\d*|\.\d+)$""")
     private val LANG = Regex("^[a-z]{2,3}$")
     private val URL = Regex("""^([A-Za-z][A-Za-z0-9+.-]*)://([^/?#]*)([^#]*)""")
-    private val PORT = Regex(""":(\d*)$""")
 
     /** The target of [url], or null for another host or scheme, an unknown path or invalid required parameters. */
     fun parse(url: String): DeepLinkTarget? {
@@ -94,9 +93,11 @@ object DeepLink {
         if (!isHttps && !isCustom) return null
         val hostAndPort = authority.substringAfterLast('@')
         // `new URL`: an empty port or one up to 65535; anything else after a colon is no URL.
-        val port = PORT.find(hostAndPort)
-        val validPort = port == null || port.groupValues[1].isEmpty() || port.groupValues[1].toBigInteger() <= 65535.toBigInteger()
-        val host = if (port != null) hostAndPort.removeRange(port.range) else hostAndPort
+        val host = hostAndPort.substringBefore(':')
+        val hasColon = ':' in hostAndPort
+        val portPart = if (hasColon) hostAndPort.substringAfter(':') else ""
+        val validPort = !hasColon || portPart.isEmpty() ||
+            (portPart.all { it in '0'..'9' } && portPart.toBigInteger() <= 65535.toBigInteger())
         if (host.equals(HOST, ignoreCase = true)) {
             if (!validPort) return null
             val rawPath = pathAndQuery.substringBefore('?').ifEmpty { "/" }
