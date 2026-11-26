@@ -101,12 +101,15 @@ final class Monetization {
     func bannerWindowAppeared(_ window: UUID) {
         if !bannerWindows.contains(window) { bannerWindows.append(window) }
         ownerWidthChanged()
+        refreshEligibility()
     }
 
     func bannerWindowDisappeared(_ window: UUID) {
         bannerWindows.removeAll { $0 == window }
         windowWidths[window] = nil
         ownerWidthChanged()
+        // CODEX-3211-7: without a window nothing can show the banner, so it is not requested.
+        refreshEligibility()
     }
 
     /// A window's width changed (a rotation or a resized window): a new banner for the showing window's width
@@ -125,6 +128,9 @@ final class Monetization {
         guard let old = width, abs(old - newWidth) >= 0.5 else { return }
         twAds?.refresh()
     }
+
+    /// The forecast interstitial may load and show now (tests).
+    var interstitialEnabled: Bool { interstitial?.enabled == true }
 
     /// Whether `window` is the one that shows the banner.
     func showsBanner(in window: UUID) -> Bool { bannerWindows.first == window }
@@ -292,8 +298,9 @@ final class Monetization {
             previousPersonalization = personalized
         }
         let permitted = consent.permitsRequests && !privacyFormOpen
-        // The banner has its own switch and delay (TwAds); it shares this consent and privacy-form gate.
-        twAds?.setPermitted(permitted)
+        // The banner has its own switch and delay (TwAds); it shares this consent and privacy-form gate, and needs a
+        // window to show in.
+        twAds?.setPermitted(permitted && !bannerWindows.isEmpty)
         // `tw_banner_enabled` gates every format, as on Android (#3211).
         let allowed = permitted && config.ready && config.policy.enabled
         nativeAds?.setEnabled(allowed && config.nativeEnabled)

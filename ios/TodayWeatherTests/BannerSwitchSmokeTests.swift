@@ -41,11 +41,14 @@ extension HostedShellTests {
                              "tw_app_banner_enabled": mode == "native" ? "false" : "true",
                              "tw_native_enabled": mode == "banner" ? "false" : "true",
                              // All off: every format switch stays on, so only tw_banner_enabled can stop them.
-                             "tw_interstitial_enabled": mode == "off" ? "true" : "false"])
+                             "tw_interstitial_enabled": mode == "banner" ? "false" : "true"])
             }
             let shell = ShellFixture.shell()
             shell.select(.forecast)
             monetization.attach(shell)
+            // The window the banner shows in, as `RootView` registers it.
+            let window = UUID()
+            monetization.bannerWindowAppeared(window)
             monetization.uiStarted()
             let content = try WeatherScreenshotTests.content("kma-seoul-hourly")
             let tab = TabContent(title: content.page.title, page: AnyView(WeatherPageView(content: content, theme: .light)))
@@ -96,17 +99,27 @@ extension HostedShellTests {
                 #expect(frame.minY >= tabBar.maxY - 0.5 && abs(frame.maxY - size.height) < 0.5, "under the tab bar: \(frame)")
             case "native":
                 #expect(monetization.nativeAds?.enabled == true)
+                #expect(monetization.interstitialEnabled, "the interstitial switch alone decides here")
                 #expect(!monetization.bannerShown && monetization.banner?.view == nil, "no banner request")
                 #expect(slot == nil, "no reserved strip")
             default:
                 #expect(monetization.nativeAds?.enabled == false && !monetization.bannerShown && monetization.banner?.view == nil,
                         "tw_banner_enabled false: no format loads")
+                #expect(!monetization.interstitialEnabled, "the interstitial switch is on, the all-ads gate keeps it off")
                 #expect(slot == nil)
             }
             let image = UIGraphicsImageRenderer(bounds: hosted.window.bounds).image { _ in
                 hosted.window.drawHierarchy(in: hosted.window.bounds, afterScreenUpdates: true)
             }
             try image.pngData()?.write(to: output.appending(path: "\(mode).png"))
+            if mode == "banner" {
+                // CODEX-3211-7: without a window the banner is destroyed and not requested; a window brings it back.
+                monetization.bannerWindowDisappeared(window)
+                #expect(!monetization.bannerShown && monetization.banner?.view == nil)
+                monetization.bannerWindowAppeared(window)
+                for _ in 0..<300 where !monetization.bannerShown { try await Task.sleep(for: .milliseconds(200)) }
+                #expect(monetization.bannerShown, "a returning window loads a new banner")
+            }
             print("BANNER-CAPTURE \(mode) shown=\(monetization.bannerShown) native=\(monetization.nativeAds?.enabled == true) \(output.path)")
         }
     }

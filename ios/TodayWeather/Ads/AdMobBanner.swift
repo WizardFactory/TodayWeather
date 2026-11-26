@@ -116,7 +116,7 @@ private struct BannerHost: UIViewRepresentable {
     let view: BannerView
 
     func makeUIView(context: Context) -> UIView {
-        let container = UIView()
+        let container = Container()
         container.backgroundColor = .black
         attach(to: container)
         return container
@@ -124,6 +124,22 @@ private struct BannerHost: UIViewRepresentable {
 
     func updateUIView(_ container: UIView, context: Context) {
         attach(to: container)
+    }
+
+    /// CODEX-3211-6: the banner presents its full-screen content from the window it is in, which can differ from the key
+    /// window when several iPad windows are open.
+    private final class Container: UIView {
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard let banner = subviews.first as? BannerView, var top = window?.rootViewController else { return }
+            while let presented = top.presentedViewController { top = presented }
+            banner.rootViewController = top
+        }
+
+        override func didAddSubview(_ subview: UIView) {
+            super.didAddSubview(subview)
+            if window != nil { didMoveToWindow() }
+        }
     }
 
     private func attach(to container: UIView) {

@@ -9,7 +9,7 @@ Dated screenshots of the Remote Config format switches with Google test ad units
 | `android-native-only.png` | `AdsDeviceTest#aTestNativeCardLoadsOnAllFourPagesWhileAnalyticsStaysOff`, `-e adFormats native`, tw_api34_play emulator (API 34) | banner false, native true | Google native test ad on all four tabs; no banner (test passed). The SDK's test-ad validator bubbles overlay the page. |
 | `ios-banner-only.png` | `BannerSwitchSmokeTests` `banner`, iPhone 16 simulator iOS 26.5 | banner true, native false | Test banner under the tab bar; native inventory disabled |
 | `ios-native-only.png` | same, `native` | banner false, native true | Google native test creative in Hourly; no banner request, no slot |
-| `ios-all-off.png` | same, `off` (first round, interstitial switch off) | `tw_banner_enabled` false | Neither format requested. The rerun after review round 1 with every format switch on passed the same assertions; its image was not kept. |
+| `ios-all-off.png` | same, `off` (after review round 2) | `tw_banner_enabled` false; every format switch on | No banner, native or interstitial enabled |
 
 Note: on tw_api36_capture (API 36) the native-only run found no native card within 120 s; the SDK logged "Incorrect native ad response. Click actions were not properly specified", and the unchanged master build (f69254ec5) failed the same way there the same day. The same test passed on tw_api34_play.
 
