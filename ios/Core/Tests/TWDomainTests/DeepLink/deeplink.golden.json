@@ -568,6 +568,122 @@
       "url": "todayweather://",
       "native": null,
       "edge": null
+    },
+    {
+      "id": "android-scheme-open-root",
+      "description": "Android custom-scheme handoff root path opens app",
+      "url": "todayweather://link.todayweather.ai/",
+      "legacyPlatform": "android",
+      "native": { "kind": "open", "lang": null },
+      "edge": null
+    },
+    {
+      "id": "android-scheme-open-no-path",
+      "description": "Android custom-scheme handoff without trailing path opens app",
+      "url": "todayweather://link.todayweather.ai",
+      "legacyPlatform": "android",
+      "native": { "kind": "open", "lang": null },
+      "edge": null
+    },
+    {
+      "id": "android-scheme-open-mixed-case",
+      "description": "Android custom-scheme handoff tolerates mixed-case scheme, host, and trailing slash",
+      "url": "TODAYWEATHER://LINK.TodayWeather.AI/open/?lang=KO",
+      "legacyPlatform": "android",
+      "native": { "kind": "open", "lang": "ko" },
+      "edge": null
+    },
+    {
+      "id": "android-scheme-place-daily",
+      "description": "Android custom-scheme handoff opens catalog place on daily tab",
+      "url": "todayweather://link.todayweather.ai/place/seoul?view=daily",
+      "legacyPlatform": "android",
+      "native": {
+        "kind": "place",
+        "slug": "seoul",
+        "view": "daily",
+        "pollutant": null
+      },
+      "edge": null
+    },
+    {
+      "id": "android-scheme-air-pollutant",
+      "description": "Android custom-scheme handoff opens air tab with explicit pollutant",
+      "url": "todayweather://link.todayweather.ai/air/jeju?pollutant=o3",
+      "legacyPlatform": "android",
+      "native": {
+        "kind": "place",
+        "slug": "jeju",
+        "view": "air",
+        "pollutant": "o3"
+      },
+      "edge": null
+    },
+    {
+      "id": "android-scheme-loc-coordinate",
+      "description": "Android custom-scheme handoff opens coordinate link with UTF-8 name, view, and pollutant",
+      "url": "todayweather://link.todayweather.ai/loc?lat=37.383&lon=127.119&name=%EC%84%B1%EB%82%A8%EC%8B%9C%20%EB%B6%84%EB%8B%B9%EA%B5%AC&view=air&pollutant=pm10",
+      "legacyPlatform": "android",
+      "native": {
+        "kind": "coordinate",
+        "lat": 37.383,
+        "lon": 127.119,
+        "name": "성남시 분당구",
+        "view": "air",
+        "pollutant": "pm10"
+      },
+      "edge": null
+    },
+    {
+      "id": "android-scheme-nation-weather",
+      "description": "Android custom-scheme handoff opens nationwide weather overlay",
+      "url": "todayweather://link.todayweather.ai/nation/weather",
+      "legacyPlatform": "android",
+      "native": { "kind": "nationWeather" },
+      "edge": null
+    },
+    {
+      "id": "android-scheme-warnings",
+      "description": "Android custom-scheme handoff opens weather warnings overlay",
+      "url": "todayweather://link.todayweather.ai/warnings",
+      "legacyPlatform": "android",
+      "native": { "kind": "warnings" },
+      "edge": null
+    },
+    {
+      "id": "android-scheme-wrong-host",
+      "description": "Android custom-scheme handoff rejects non-canonical hosts",
+      "url": "todayweather://todayweather.ai/place/seoul",
+      "native": null,
+      "edge": null
+    },
+    {
+      "id": "android-scheme-wrong-host-suffix",
+      "description": "Android custom-scheme handoff rejects spoofed host suffixes",
+      "url": "todayweather://link.todayweather.ai.evil.example/place/seoul",
+      "native": null,
+      "edge": null
+    },
+    {
+      "id": "android-scheme-invalid-slug",
+      "description": "Android custom-scheme handoff rejects invalid slug characters",
+      "url": "todayweather://link.todayweather.ai/place/Seoul_KR",
+      "native": null,
+      "edge": null
+    },
+    {
+      "id": "android-scheme-invalid-loc",
+      "description": "Android custom-scheme handoff rejects out-of-range coordinates",
+      "url": "todayweather://link.todayweather.ai/loc?lat=91&lon=126.978",
+      "native": null,
+      "edge": null
+    },
+    {
+      "id": "android-scheme-path-traversal",
+      "description": "Android custom-scheme handoff rejects encoded path traversal",
+      "url": "todayweather://link.todayweather.ai/place/%2e%2e/etc/passwd",
+      "native": null,
+      "edge": null
     }
   ],
   "shareBuildCases": [
