@@ -7,7 +7,7 @@
     "node": "16.20.2"
   },
   "dependencies": {
-    "mongoose": "5.1.2",
+    "mongoose": "6.13.12",
     "async": "2.6.2",
     "xml2js": "0.4.19"
   }
