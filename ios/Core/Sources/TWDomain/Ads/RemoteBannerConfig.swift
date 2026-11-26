@@ -19,7 +19,8 @@ public protocol BannerConfigSource: AnyObject {
 
 /// The banner policy of an app open (`Monetization.loadConfig`, port of the Android `RemoteBannerConfig`): the
 /// defaults, then the activated values, then a fetch; each valid pair applies. It is ready when the fetch has applied
-/// or failed, or after 12 s. The legacy banner policy then stays fixed. Late and live format switches still apply.
+/// or failed, or after 12 s. The delay then stays fixed. Late and live format switches still apply, and so does
+/// `tw_banner_enabled`, the gate of every format (#3211), read from a valid pair.
 /// Without Firebase, the defaults apply immediately.
 @MainActor
 public final class RemoteBannerConfig {
@@ -112,10 +113,14 @@ public final class RemoteBannerConfig {
         let native = values[Self.nativeEnabledKey, default: "true"] == "true"
         let interstitial = values[Self.interstitialEnabledKey, default: "true"] == "true"
         let appBanner = values[Self.appBannerEnabledKey] == "true"
-        guard native != nativeEnabled || interstitial != interstitialEnabled || appBanner != appBannerEnabled else { return false }
+        // The all-ads gate follows a valid pair; an invalid one keeps the current gate. The delay is not changed here.
+        let allAds = RemoteBannerPolicy.parse(values)?.enabled ?? policy.enabled
+        guard native != nativeEnabled || interstitial != interstitialEnabled || appBanner != appBannerEnabled
+                || allAds != policy.enabled else { return false }
         nativeEnabled = native
         interstitialEnabled = interstitial
         appBannerEnabled = appBanner
+        policy.enabled = allAds
         return true
     }
 

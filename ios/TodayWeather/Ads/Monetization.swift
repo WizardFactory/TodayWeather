@@ -39,6 +39,11 @@ final class Monetization {
     @ObservationIgnored private(set) var banner: AdMobBanner?
     @ObservationIgnored private var twAds: TwAds?
     @ObservationIgnored private var sessionStart: Int64?
+    /// The windows that can show the banner, in the order they appeared; the first one shows it (CODEX-3211-3: one
+    /// `BannerView` cannot be in two iPad windows).
+    private var bannerWindows: [UUID] = []
+    @ObservationIgnored private var windowWidths: [UUID: CGFloat] = [:]
+    /// The width the current banner was requested for (the owner window's).
     @ObservationIgnored private var width: CGFloat?
     @ObservationIgnored private var interstitial: ForecastInterstitial?
     @ObservationIgnored let analytics: UsageAnalytics
@@ -92,14 +97,44 @@ final class Monetization {
         startAdsIfShown()
     }
 
-    /// The window's width changed (a rotation or a resized window): a new banner for the width (`orientationchange`).
-    func windowWidthChanged(_ newWidth: CGFloat) {
+    /// A window's root appeared; the first window still open shows the banner.
+    func bannerWindowAppeared(_ window: UUID) {
+        if !bannerWindows.contains(window) { bannerWindows.append(window) }
+        ownerWidthChanged()
+    }
+
+    func bannerWindowDisappeared(_ window: UUID) {
+        bannerWindows.removeAll { $0 == window }
+        windowWidths[window] = nil
+        ownerWidthChanged()
+    }
+
+    /// A window's width changed (a rotation or a resized window): a new banner for the showing window's width
+    /// (`orientationchange`).
+    func windowWidthChanged(_ window: UUID, _ newWidth: CGFloat) {
+        windowWidths[window] = newWidth
+        ownerWidthChanged()
+    }
+
+    /// The width of the window that shows the banner.
+    var bannerWindowWidth: CGFloat? { bannerWindows.first.flatMap { windowWidths[$0] } }
+
+    private func ownerWidthChanged() {
+        guard let newWidth = bannerWindowWidth else { return }
         defer { width = newWidth }
         guard let old = width, abs(old - newWidth) >= 0.5 else { return }
         twAds?.refresh()
     }
 
-    /// The banner for `ShellView(banner:)` while it shows; nil reserves no space.
+    /// Whether `window` is the one that shows the banner.
+    func showsBanner(in window: UUID) -> Bool { bannerWindows.first == window }
+
+    /// The banner for `ShellView(banner:)` of `window` while it shows there; nil reserves no space.
+    func bannerView(for window: UUID) -> AnyView? {
+        showsBanner(in: window) ? bannerView : nil
+    }
+
+    /// The banner while it shows; nil reserves no space.
     var bannerView: AnyView? {
         guard bannerShown, let banner, banner.view != nil else { return nil }
         return AnyView(BannerSlot(banner: banner))
@@ -219,7 +254,8 @@ final class Monetization {
         if pageScreen() == nil { interstitial?.markVisible(shell.selected) }
         if let unit = settings.bannerUnit {
             // AdMobBanner logs its own lifecycle lines; TwAds' show and hide go through `trackAd`.
-            let banner = AdMobBanner(unitID: unit, platform: platform, track: { name, params in analytics.track(name, params) })
+            let banner = AdMobBanner(unitID: unit, platform: platform, track: { name, params in analytics.track(name, params) },
+                                     width: { [weak self] in self?.bannerWindowWidth })
             let ads = TwAds(adapter: banner, config: config, clock: clock, sessionStart: sessionStart ?? clock.nowMs,
                             track: { name, params in _ = trackAd(name, params) },
                             log: { log.notice("\($0, privacy: .public)") })

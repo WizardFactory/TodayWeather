@@ -55,6 +55,8 @@ struct ShellInsets: Equatable {
 struct RootView: View {
     let launch: AppLaunch
     @Environment(\.scenePhase) private var phase
+    /// This window, for the one anchored banner (#3211): only the first open window shows it.
+    @State private var window = UUID()
 
     var body: some View {
         Group {
@@ -64,7 +66,7 @@ struct RootView: View {
                     // S01 (IN-10), created with the shell while the start gate holds.
                     if let start = launch.startPage { StartView(page: start) } else { SplashView() }
                 case .tab: ShellView(model: shell, content: { launch.tabContent($0) },
-                                     banner: Monetization.shared.bannerView,
+                                     banner: Monetization.shared.bannerView(for: window),
                                      page: launch.pageView)
                         .environment(\.forecastNativeAds, launch.pageScreen == nil ? Monetization.shared.nativeAds : nil)
                         .environment(\.forecastChartRead, { tab in Monetization.shared.chartRead(tab) })
@@ -79,8 +81,10 @@ struct RootView: View {
                 Monetization.shared.nativeAds?.prepareSpare()
             }
         }
-        // #3211: a new width loads a new anchored banner.
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { Monetization.shared.windowWidthChanged($0) }
+        // #3211: a new width of the window showing the anchored banner loads a new one for it.
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { Monetization.shared.windowWidthChanged(window, $0) }
+        .onAppear { Monetization.shared.bannerWindowAppeared(window) }
+        .onDisappear { Monetization.shared.bannerWindowDisappeared(window) }
         .task { launch.start(); Monetization.shared.uiStarted() }
     }
 }

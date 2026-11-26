@@ -185,6 +185,8 @@ final class FakeBanner: BannerAdapter {
     /// The oldest waiting load answers; nothing happens when none waits (the tests' counts show that).
     func load() { if !pending.isEmpty { pending.removeFirst().loaded() } }
     func fail() { if !pending.isEmpty { pending.removeFirst().failed() } }
+    /// The oldest waiting load never answers, as the SDK drops a destroyed banner's callbacks.
+    func drop() { if !pending.isEmpty { pending.removeFirst() } }
 }
 
 @MainActor

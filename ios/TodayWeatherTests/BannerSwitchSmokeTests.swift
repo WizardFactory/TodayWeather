@@ -39,7 +39,9 @@ extension HostedShellTests {
             monetization.configSource = {
                 FixedConfig(["tw_banner_enabled": mode == "off" ? "false" : "true", "tw_banner_delay_seconds": "0",
                              "tw_app_banner_enabled": mode == "native" ? "false" : "true",
-                             "tw_native_enabled": mode == "banner" ? "false" : "true", "tw_interstitial_enabled": "false"])
+                             "tw_native_enabled": mode == "banner" ? "false" : "true",
+                             // All off: every format switch stays on, so only tw_banner_enabled can stop them.
+                             "tw_interstitial_enabled": mode == "off" ? "true" : "false"])
             }
             let shell = ShellFixture.shell()
             shell.select(.forecast)
@@ -106,6 +108,25 @@ extension HostedShellTests {
             }
             try image.pngData()?.write(to: output.appending(path: "\(mode).png"))
             print("BANNER-CAPTURE \(mode) shown=\(monetization.bannerShown) native=\(monetization.nativeAds?.enabled == true) \(output.path)")
+        }
+    }
+
+    /// CODEX-3211-3: one banner view, so only the first open window shows it and its width decides the banner's.
+    @MainActor struct BannerWindowTests {
+        @Test func theFirstOpenWindowShowsTheBanner() {
+            let analytics = UsageAnalytics(sdk: PrivacyRowsTests.Sdk(), records: PrivacyRowsTests.Records(),
+                                           trafficType: "development", region: "KR")
+            let monetization = Monetization(analytics: analytics, settings: nil, openURL: { _ in })
+            let first = UUID(), second = UUID()
+            monetization.windowWidthChanged(second, 700)
+            monetization.bannerWindowAppeared(first)
+            monetization.bannerWindowAppeared(second)
+            monetization.windowWidthChanged(first, 400)
+            #expect(monetization.showsBanner(in: first) && !monetization.showsBanner(in: second))
+            #expect(monetization.bannerWindowWidth == 400)
+            #expect(monetization.bannerView(for: second) == nil)
+            monetization.bannerWindowDisappeared(first)
+            #expect(monetization.showsBanner(in: second) && monetization.bannerWindowWidth == 700)
         }
     }
 

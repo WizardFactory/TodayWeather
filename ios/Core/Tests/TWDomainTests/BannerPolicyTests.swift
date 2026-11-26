@@ -121,7 +121,7 @@ struct BannerPolicyTests {
         #expect(logs.lines.contains("remote_config invalid_values"))
     }
 
-    @Test func twelveSecondsBoundThePolicyAndLaterAnswersAreIgnored() {
+    @Test func twelveSecondsBoundTheDelayAndALateKillSwitchStillApplies() {
         let clock = VirtualClock()
         let source = FakeRemoteConfig()
         source.fetched = ["tw_banner_enabled": "false", "tw_banner_delay_seconds": "0"]
@@ -134,7 +134,9 @@ struct BannerPolicyTests {
         clock.advance(1)
         #expect(config.ready && config.policy == .default)
         source.answer("fetch", true)
-        #expect(config.policy == .default, "an answer after the timeout is ignored")
+        // #3211: tw_banner_enabled gates every format on iOS and applies late, as the format switches do; the delay
+        // stays as it was at the timeout.
+        #expect(config.policy == BannerPolicy(enabled: false, delaySeconds: 0), "a late kill switch applies")
         #expect(logs.lines == ["remote_config timeout"])
     }
 
@@ -269,6 +271,39 @@ struct BannerPolicyTests {
         #expect(!run.ads.shown && run.banner.destroys == 1, "no empty strip stays")
         run.ads.refresh()
         #expect(run.banner.creates == 1, "a width change loads nothing while the banner is off")
+    }
+
+    /// CODEX-3211-1/2: a late kill switch requests nothing, and a width change cancelled by a switch-off does not
+    /// block later width changes.
+    @Test func aLateKillSwitchRequestsNothing() {
+        let run = Ads(policy: ["tw_banner_enabled": "false", "tw_banner_delay_seconds": "0"], holdFetch: true)
+        run.ads.onAdapterReady()
+        run.clock.advance(RemoteBannerConfig.timeoutMs)
+        #expect(run.banner.creates == 1, "the stored values allowed it at the timeout")
+        run.source.answer("fetch", true)
+        #expect(!run.ads.shown && run.banner.destroys == 1, "the late kill switch destroys the request")
+        run.banner.load()
+        #expect(!run.ads.shown)
+    }
+
+    @Test func aWidthChangeCancelledBySwitchingOffDoesNotBlockTheNextOne() {
+        let run = Ads()
+        run.ads.onAdapterReady()
+        run.banner.load()
+        run.clock.advance(5000)
+        run.ads.refresh()
+        #expect(run.banner.creates == 2, "the width change is in flight")
+        run.ads.setPermitted(false)
+        run.clock.advance(5000)
+        run.ads.setPermitted(true)
+        #expect(run.banner.creates == 3)
+        run.banner.drop()
+        run.banner.load()
+        #expect(run.ads.shown)
+        run.clock.advance(5000)
+        run.ads.refresh()
+        run.clock.advance(5000)
+        #expect(run.banner.creates == 4, "a later width change loads a banner for the new width")
     }
 
     @Test func withdrawnPermissionHidesAndDestroysTheBannerAndAReturnLoadsANewOne() {

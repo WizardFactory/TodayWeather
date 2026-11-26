@@ -103,6 +103,7 @@ public final class TwAds {
             requested = false
             revision += 1
             creating = false
+            rotating = false
             rotateAgain = false
             bannerLoaded = false
             destroyBanner()

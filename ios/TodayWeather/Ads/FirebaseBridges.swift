@@ -80,7 +80,7 @@ final class FirebaseBannerConfigSource: BannerConfigSource {
     func observeFormatUpdates(_ notify: @escaping @MainActor () -> Void) {
         guard registration == nil else { return }
         let formatKeys: Set<String> = [RemoteBannerConfig.nativeEnabledKey, RemoteBannerConfig.interstitialEnabledKey,
-                                       RemoteBannerConfig.appBannerEnabledKey]
+                                       RemoteBannerConfig.appBannerEnabledKey, RemoteBannerPolicy.enabledKey]
         registration = config.addOnConfigUpdateListener { update, error in
             guard error == nil, let update, !formatKeys.isDisjoint(with: update.updatedKeys) else { return }
             Task { @MainActor in notify() }

@@ -171,7 +171,8 @@ class FixedRemoteConfig(mode: String) : net.wizardfactory.todayweather.analytics
         "tw_banner_delay_seconds" to "0",
         "tw_app_banner_enabled" to (mode != "native").toString(),
         "tw_native_enabled" to (mode != "banner").toString(),
-        "tw_interstitial_enabled" to "false",
+        // All off: every format switch stays on, so only tw_banner_enabled can stop them.
+        "tw_interstitial_enabled" to (mode == "off").toString(),
     )
 
     override fun setDefaults(defaults: Map<String, Any>, done: (Boolean) -> Unit) = done(true)

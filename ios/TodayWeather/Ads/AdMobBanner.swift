@@ -21,17 +21,21 @@ final class AdMobBanner: NSObject, BannerAdapter, BannerViewDelegate {
     @ObservationIgnored private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "admob")
     @ObservationIgnored private var onLoaded: (@MainActor () -> Void)?
     @ObservationIgnored private var onFailed: (@MainActor () -> Void)?
+    /// The width of the window that shows the banner (#3211); nil: the key window's.
+    @ObservationIgnored private let width: @MainActor () -> CGFloat?
 
-    init(unitID: String, platform: any AdsPlatform, track: @escaping @MainActor (String, [String: AnalyticsValue]) -> Void) {
+    init(unitID: String, platform: any AdsPlatform, track: @escaping @MainActor (String, [String: AnalyticsValue]) -> Void,
+         width: @escaping @MainActor () -> CGFloat? = { nil }) {
         self.unitID = unitID
         self.platform = platform
         self.track = track
+        self.width = width
     }
 
     func create(onLoaded: @escaping @MainActor () -> Void, onFailed: @escaping @MainActor () -> Void) {
         destroy()
         let root = GoogleAdsPlatform.topViewController()
-        let width = root?.view.window?.bounds.width ?? UIScreen.main.bounds.width
+        let width = self.width() ?? root?.view.window?.bounds.width ?? UIScreen.main.bounds.width
         let banner = BannerView(adSize: currentOrientationAnchoredAdaptiveBanner(width: width))
         banner.adUnitID = unitID
         banner.rootViewController = root

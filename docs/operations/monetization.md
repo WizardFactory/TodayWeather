@@ -29,7 +29,7 @@ SDK leaves defaults. Invalid pairs are rejected atomically.
 
 ### Native apps (Android and iOS 2.0.x)
 
-The native apps read the same pair plus per-format switches (#3041, #3059, #3211). Remote Config applies at app open from the stored activated values, then after the fetch; iOS also activates published changes to the format switches in an open app (Realtime API).
+The native apps read the same pair plus per-format switches (#3041, #3059, #3211). Remote Config applies at app open from the stored activated values, then after the fetch; iOS also activates published changes to the format switches and `tw_banner_enabled` in an open app (Realtime API), and applies them from a fetch that answers after the 12-second deadline; the delay stays as it was at the deadline.
 
 | Parameter | Local default | Accepted values | Effect in the native apps |
 | --- | --- | --- | --- |
