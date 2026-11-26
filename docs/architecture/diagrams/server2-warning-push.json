@@ -7,13 +7,9 @@
     "quality_profile": "showcase",
     "column_fit": "spread",
     "animation": "none",
-    "viewBox": [
-      1080,
-      680
-    ],
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "8ce3dbe5f8534d72bded7cfb2a92537a58d5940a",
+      "revision": "b6cae089598931f0f4b6b900cf10da3ce57122a7",
       "provider": "github",
       "link_mode": "local-only"
     }
@@ -27,8 +23,8 @@
       "sources": [
         {
           "path": "server2/src/warnings/collector.rs",
-          "line": 1,
-          "end_line": 300
+          "line": 146,
+          "end_line": 508
         }
       ]
     },
@@ -40,8 +36,8 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/warning_feed.rs",
-          "line": 202,
-          "end_line": 285
+          "line": 224,
+          "end_line": 327
         }
       ]
     },
@@ -53,13 +49,13 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/warnings.rs",
-          "line": 325,
-          "end_line": 591
+          "line": 215,
+          "end_line": 723
         },
         {
           "path": "server2/src/warnings/zones.rs",
-          "line": 213,
-          "end_line": 257
+          "line": 50,
+          "end_line": 61
         }
       ]
     },
@@ -71,13 +67,18 @@
       "sources": [
         {
           "path": "server2/src/push/service.rs",
-          "line": 378,
-          "end_line": 462
+          "line": 252,
+          "end_line": 273
         },
         {
           "path": "server2/src/warnings/store.rs",
-          "line": 542,
-          "end_line": 595
+          "line": 663,
+          "end_line": 715
+        },
+        {
+          "path": "server2/src/warnings/zones.rs",
+          "line": 75,
+          "end_line": 414
         }
       ]
     },
@@ -90,7 +91,7 @@
         {
           "path": "server2/src/push/deliver/ledger.rs",
           "line": 64,
-          "end_line": 125
+          "end_line": 176
         }
       ]
     },
@@ -102,8 +103,8 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/fcm.rs",
-          "line": 244,
-          "end_line": 318
+          "line": 246,
+          "end_line": 429
         }
       ]
     }
@@ -113,7 +114,7 @@
       "id": "warning-step-0",
       "from": "collector",
       "to": "s3",
-      "y": 170,
+      "y": 160,
       "label": "Publish raw + catalog",
       "variant": "security"
     },
@@ -121,7 +122,7 @@
       "id": "warning-step-1",
       "from": "collector",
       "to": "feed",
-      "y": 206,
+      "y": 204,
       "label": "Pass persisted rows",
       "variant": "default"
     },
@@ -129,7 +130,7 @@
       "id": "warning-step-2",
       "from": "feed",
       "to": "s3",
-      "y": 242,
+      "y": 248,
       "label": "Events then CAS head",
       "variant": "security"
     },
@@ -137,7 +138,7 @@
       "id": "warning-step-3",
       "from": "worker",
       "to": "feed",
-      "y": 278,
+      "y": 292,
       "label": "Read new feed",
       "variant": "default"
     },
@@ -145,7 +146,7 @@
       "id": "warning-step-4",
       "from": "worker",
       "to": "state",
-      "y": 314,
+      "y": 336,
       "label": "Select eligible alerts",
       "variant": "default"
     },
@@ -153,7 +154,7 @@
       "id": "warning-step-5",
       "from": "worker",
       "to": "s3",
-      "y": 350,
+      "y": 380,
       "label": "Claim endpoint",
       "variant": "security"
     },
@@ -161,23 +162,23 @@
       "id": "warning-auth",
       "from": "worker",
       "to": "fcm",
+      "y": 424,
       "label": "Prepare OAuth",
-      "variant": "default",
-      "y": 386
+      "variant": "default"
     },
     {
       "id": "warning-guard",
       "from": "worker",
       "to": "state",
+      "y": 468,
       "label": "Recheck durable state",
-      "variant": "security",
-      "y": 422
+      "variant": "security"
     },
     {
       "id": "warning-step-6",
       "from": "worker",
       "to": "fcm",
-      "y": 458,
+      "y": 512,
       "label": "Submit once",
       "variant": "emphasis"
     },
@@ -185,7 +186,7 @@
       "id": "warning-step-7",
       "from": "fcm",
       "to": "worker",
-      "y": 494,
+      "y": 556,
       "label": "Outcome or unknown",
       "variant": "return"
     },
@@ -193,7 +194,7 @@
       "id": "warning-step-8",
       "from": "worker",
       "to": "s3",
-      "y": 530,
+      "y": 600,
       "label": "Record sanitized result",
       "variant": "dashed"
     }
@@ -203,9 +204,9 @@
       "dot": "emerald",
       "title": "Source and district selection",
       "items": [
-        "The collector publishes every source page and its catalog before the feed hook. Only an acknowledged head makes events visible.",
-        "The first feed and worker reads are silent. Later events must be less than five minutes old.",
-        "For 전남광주통합특별시, resolve Gwangju and Jeonnam by district and skip unmapped districts. Apply the inclusive alert window and deduplicate package/token."
+        "The collector publishes every source page and its catalog before the feed hook. Only an acknowledged head makes events visible; the first feed and worker reads are silent and later events must be under five minutes old.",
+        "For 전남광주통합특별시, resolve Gwangju and Jeonnam by district and skip unmapped districts; then apply KMA 235-zone sub-zone matching (embedded kma_warning_subzones.json, safe over-warn fallback on empty/unknown third; shared with current.specialInfo).",
+        "Apply release, expiry, active announcement, inclusive alert time window, and package/token deduplication."
       ]
     },
     {

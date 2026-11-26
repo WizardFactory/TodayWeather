@@ -1,0 +1,57 @@
+{
+  "task": "Issue3085",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3085",
+  "scope": "Mirror #3084 granular KMA 2026-06-01 warning sub-zone matching (Tier A/B/C + safe over-warn fallbacks + #3078 combined province alignment) under server2/ with provenance-recorded embedded mapping data, unit/integration/delivery tests, and zero legacy runtime dependencies. No merge, deployment, or live provider calls.",
+  "server2_paths": [
+    "server2/config/tasks/Issue3085.json",
+    "server2/src/warnings/data/kma_warning_subzones.json",
+    "server2/src/warnings/data/PROVENANCE.md",
+    "server2/src/warnings/zones.rs",
+    "server2/tests/warnings/legacy.rs",
+    "server2/tests/warnings/golden.rs",
+    "server2/tests/warnings/recovery.rs",
+    "server2/tests/warnings/seed.rs",
+    "server2/tests/warnings/fixtures/oracle-expected.json",
+    "server2/tests/warnings/fixtures/PROVENANCE.md",
+    "server2/tests/delivery/warnings.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/domestic/parity.rs",
+    "server2/tests/domestic/recorded.rs",
+    "server2/tests/domestic/support.rs",
+    "server2/examples/kma_checkpoint.rs",
+    "server2/examples/warnings_smoke.rs",
+    "server2/tools/kma_smoke.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-3085.md",
+      "category": "documentation",
+      "reason": "Maintain #3085 intent contract only; no runtime implementation outside server2"
+    },
+    {
+      "path": "specs/issue-3085.md",
+      "category": "documentation",
+      "reason": "Maintain #3085 specification only; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-3085.md",
+      "category": "documentation",
+      "reason": "Maintain #3085 implementation plan only; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Document server2 granular KMA warning sub-zone matching contract for current.specialInfo, summaries, and warning push recipient selection (#3085)"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-warning-push.json",
+      "category": "documentation",
+      "reason": "Update Archify source diagram for server2 granular KMA warning sub-zone matching (#3085)"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-warning-push.html",
+      "category": "documentation",
+      "reason": "Regenerate Archify HTML artifact from docs/architecture/diagrams/server2-warning-push.json (#3085)"
+    }
+  ]
+}

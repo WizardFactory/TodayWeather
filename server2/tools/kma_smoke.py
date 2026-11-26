@@ -65,8 +65,8 @@ class Origin(g.Peer):
 
 COMBINED_PROVINCE = '전남광주통합특별시'
 COMBINED_TOWNS = {
-    (35.16, 126.85): ('서구', '치평동', ['광주서부']),
-    (34.81, 126.46): ('무안군', '삼향읍', ['무안군북부']),
+    (35.16, 126.85): ('서구', '치평동', ['광주동부']),
+    (34.81, 126.46): ('무안군', '삼향읍', ['무안군남부']),
     (35.00, 126.70): ('없는구', '', []),
 }
 
@@ -92,7 +92,7 @@ class CombinedWarningOrigin(http.server.BaseHTTPRequestHandler):
                      cancel='0', tmFc=int(self.tm_fc), tmSeq=index, startTime=int(self.tm_fc),
                      allEndTime=0, endTime=0)
                 for index, (code, name) in enumerate(
-                    [('L1130110', '광주서부'), ('L1053410', '무안군북부')], start=1)
+                    [('L1130120', '광주동부'), ('L1053420', '무안군남부')], start=1)
             ]
             response = dict(response=dict(header={'resultCode': '00'},
                                           body=dict(items={'item': rows}, totalCount=len(rows),

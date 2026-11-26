@@ -165,3 +165,106 @@ pub fn replay(sc: &Value) -> RecordedStore {
         .store_for(id)
         .unwrap_or_else(|| panic!("recorded scenario {id}"))
 }
+
+/// #3085: true for the two pinned S02/S15 scenarios querying `서울특별시/종로구/청운효자동`
+/// against pre-#3084 legacy (all 4 Seoul sub-zones). Under #3084/#3085, 종로구 narrows to
+/// `서울서북권` (`L1100400`) plus `L1100000`/`L1000000` and excludes sibling `서울동남권` (`L1100100`).
+pub fn is_narrowed_seoul_warning_scenario(id: &str) -> bool {
+    matches!(id, "domestic-special-info" | "warning-two-zones")
+}
+
+/// Replay store aligned with #3084/#3085 narrowed Seoul zone lookups for the two affected
+/// recorded scenarios, and unmodified for all other 96 scenarios.
+pub fn replay_for_scenario(sc: &Value) -> RecordedStore {
+    let id = sc["id"].as_str().unwrap();
+    let store = replay(sc);
+    if is_narrowed_seoul_warning_scenario(id) {
+        store.with_expected_special_zones(vec![
+            "L1100400".into(),
+            "L1100000".into(),
+            "L1000000".into(),
+        ])
+    } else {
+        store
+    }
+}
+
+/// Expected wire body bytes and independently computed Express weak ETag for the two narrowed
+/// Seoul warning scenarios, preserving every other field and exact JSON key order from `sc["body"]`.
+pub fn expected_narrowed_seoul_body_and_etag(sc: &Value) -> Result<(String, &'static str), String> {
+    use server2::gateway::OrderedJson;
+
+    fn utf16(s: &str) -> Vec<u16> {
+        s.encode_utf16().collect()
+    }
+    fn ostr(s: &str) -> OrderedJson {
+        OrderedJson::String(utf16(s))
+    }
+    fn replace_field(
+        entries: &mut [(Vec<u16>, OrderedJson)],
+        name: &str,
+        value: OrderedJson,
+    ) -> Result<(), String> {
+        let key = utf16(name);
+        let (_, slot) = entries
+            .iter_mut()
+            .find(|(k, _)| *k == key)
+            .ok_or_else(|| format!("missing expected field `{name}` in recorded fixture"))?;
+        *slot = value;
+        Ok(())
+    }
+
+    let id = sc["id"].as_str().unwrap();
+    let mut expected_ordered = OrderedJson::parse(sc["body"].as_str().unwrap().as_bytes())
+        .map_err(|e| format!("{id}: failed to parse recorded body as OrderedJson: {e:?}"))?;
+    let current_key = utf16("current");
+    let OrderedJson::Object(top_entries) = &mut expected_ordered else {
+        return Err(format!("{id}: recorded body is not a JSON object"));
+    };
+    let (_, OrderedJson::Object(cur_entries)) = top_entries
+        .iter_mut()
+        .find(|(k, _)| *k == current_key)
+        .ok_or_else(|| format!("{id}: missing `current` in recorded body"))?
+    else {
+        return Err(format!("{id}: recorded `current` is not a JSON object"));
+    };
+    let expected_etag = match id {
+        "domestic-special-info" => {
+            let special_key = utf16("specialInfo");
+            let before = cur_entries.len();
+            cur_entries.retain(|(k, _)| *k != special_key);
+            if cur_entries.len() == before {
+                return Err(format!("{id}: recorded fixture missing `specialInfo`"));
+            }
+            replace_field(cur_entries, "summaryWeather", ostr("어제와 비슷, 맑음"))?;
+            replace_field(cur_entries, "summary", ostr("어제와 비슷, 맑음"))?;
+            // Independently computed Express weak ETag (byte length 32986, base64-no-pad MD5).
+            r#"W/"80da-22VAYrzbo8ML076i4eBQ4A""#
+        }
+        "warning-two-zones" => {
+            let narrowed_info = OrderedJson::Array(vec![OrderedJson::Object(vec![
+                (utf16("weather"), OrderedJson::Number(9.0)),
+                (utf16("weatherStr"), ostr("한파")),
+                (utf16("level"), OrderedJson::Number(1.0)),
+                (utf16("levelStr"), ostr("주의보")),
+                (utf16("locationName"), ostr("서울서북권")),
+            ])]);
+            replace_field(cur_entries, "specialInfo", narrowed_info)?;
+            replace_field(
+                cur_entries,
+                "summaryWeather",
+                ostr("한파주의보, Similar to yesterday"),
+            )?;
+            replace_field(
+                cur_entries,
+                "summary",
+                ostr("한파주의보, Similar to yesterday"),
+            )?;
+            // Independently computed Express weak ETag (byte length 32436, base64-no-pad MD5).
+            r#"W/"7eb4-SiEkTe4NsbB3Y9uLpE7rXQ""#
+        }
+        _ => unreachable!(),
+    };
+    let expected = String::from_utf8(expected_ordered.to_bytes()).unwrap();
+    Ok((expected, expected_etag))
+}

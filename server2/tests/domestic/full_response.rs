@@ -1451,8 +1451,8 @@ async fn combined_province_domestic_response_includes_special_info_with_whitespa
     let peer = Peer::persistent();
     let mut state = ZoneState::on_seed(None);
     for (area_code, area_name) in [
-        ("L1130110", "광주서부"),
-        ("L1053410", "무안군북부"),
+        ("L1130120", "광주동부"),
+        ("L1053420", "무안군남부"),
         ("L1052500", "흑산도.홍도"),
     ] {
         state.insert(Entry {
@@ -1487,8 +1487,8 @@ async fn combined_province_domestic_response_includes_special_info_with_whitespa
         AssemblyConfig::default(),
     );
     for (region, city, town, expected_zone) in [
-        ("전남광주통합특별시", " 무안군 ", "삼향읍", "무안군북부"),
-        (" 전남광주통합특별시 ", " 서구 ", "치평동", "광주서부"),
+        ("전남광주통합특별시", " 무안군 ", "삼향읍", "무안군남부"),
+        (" 전남광주통합특별시 ", " 서구 ", "치평동", "광주동부"),
         ("전남광주통합특별시", " 신안군 ", "흑 산면", "흑산도.홍도"),
     ] {
         let mut request = super::source_s3::request();

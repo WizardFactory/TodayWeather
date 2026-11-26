@@ -1043,6 +1043,62 @@ async fn an_s12_error_immediately_after_claim_records_a_terminal_failure_without
     }
 }
 
+#[test]
+fn seoul_subzone_warning_selection_targets_only_affected_districts() {
+    use server2::push::deliver::warnings::{Group, active, message};
+    use server2::warnings::zones::{Town, ZoneState, ZoneTable, prepare_events};
+    use server2::world::js::Val;
+
+    let now = 1_795_222_800_000_i64; // 2026-11-21T01:00:00Z
+    let events = prepare_events(&[
+        serde_json::json!({
+            "areaCode": "L1100200", "areaName": "서울동북권",
+            "warnVar": 4, "warnStress": 0, "command": "1", "cancel": "0",
+            "tmFc": 202611210900_i64, "tmSeq": 1, "endTime": 0, "allEndTime": 0
+        }),
+        serde_json::json!({
+            "areaCode": "L1100300", "areaName": "서울서남권",
+            "warnVar": 4, "warnStress": 0, "command": "1", "cancel": "0",
+            "tmFc": 202611210900_i64, "tmSeq": 1, "endTime": 0, "allEndTime": 0
+        }),
+    ]);
+    let mut state = ZoneState::default();
+    state.apply(&events);
+    let group = Group {
+        id: "202611210900|1|4|0".into(),
+        event: events[0].clone(),
+        zones: vec!["L1100200".into(), "L1100300".into()],
+        observed_at: now,
+    };
+    let table = ZoneTable::shared(now);
+    let zones_of = |second: &str, third: &str| {
+        table.zones_for_town(&Town {
+            first: "서울특별시".into(),
+            second: second.into(),
+            third: third.into(),
+        })
+    };
+    let nowon = zones_of("노원구", "상계1동");
+    let yeongdeungpo = zones_of("영등포구", "여의동");
+    let gangnam = zones_of("강남구", "역삼동");
+    let jongno = zones_of("종로구", "청운효자동");
+
+    assert!(active(&group, &nowon, &state, now));
+    assert!(active(&group, &yeongdeungpo, &state, now));
+    assert!(!active(&group, &gangnam, &state, now));
+    assert!(!active(&group, &jongno, &state, now));
+
+    let ko = Val::Str("ko".into());
+    assert_eq!(
+        message(&group, &nowon, &ko, now).text,
+        Val::Str("서울동북권".into())
+    );
+    assert_eq!(
+        message(&group, &yeongdeungpo, &ko, now).text,
+        Val::Str("서울서남권".into())
+    );
+}
+
 struct CombinedProvinceGeocode;
 impl server2::push::deliver::Fetch for CombinedProvinceGeocode {
     fn get(
@@ -1201,10 +1257,11 @@ async fn combined_province_warning_delivery_routes_by_district_without_leakage()
     );
     assert_eq!(w.poll().await.unwrap().attempted, 0);
 
-    // 1. Gwangju warning (L1130110 광주서부) must reach only the two Gwangju devices.
+    // 1. Gwangju-wide warning (L1130100 광주광역시, parent of both 광주동부 서구 and 광주서부 광산구)
+    // must reach only the two Gwangju devices.
     let mut gwangju_rows = rows();
-    gwangju_rows[0]["areaCode"] = serde_json::json!("L1130110");
-    gwangju_rows[0]["areaName"] = serde_json::json!("광주서부");
+    gwangju_rows[0]["areaCode"] = serde_json::json!("L1130100");
+    gwangju_rows[0]["areaName"] = serde_json::json!("광주광역시");
     publish(&feed, &zones, gwangju_rows).await;
     let first = w.poll().await.unwrap();
     assert_eq!(
@@ -1228,10 +1285,10 @@ async fn combined_province_warning_delivery_routes_by_district_without_leakage()
         ])
     );
 
-    // 2. Jeonnam warning (L1053410 무안군북부) must reach only the Jeonnam device.
+    // 2. Jeonnam warning (L1053420 무안군남부, matching 삼향읍 under #3085) must reach only the Jeonnam device.
     let mut jeonnam_rows = rows();
-    jeonnam_rows[0]["areaCode"] = serde_json::json!("L1053410");
-    jeonnam_rows[0]["areaName"] = serde_json::json!("무안군북부");
+    jeonnam_rows[0]["areaCode"] = serde_json::json!("L1053420");
+    jeonnam_rows[0]["areaName"] = serde_json::json!("무안군남부");
     jeonnam_rows[0]["tmSeq"] = serde_json::json!(2);
     publish(&feed, &zones, jeonnam_rows).await;
     let second = w.poll().await.unwrap();

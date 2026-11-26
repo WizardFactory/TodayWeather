@@ -26,3 +26,7 @@ produced on 2026-10-13 by executing the legacy modules at `ca8735cf` with Node.j
 and a stubbed `mongoose`, using an uncommitted oracle script retained with the task's local
 evidence (SHA-256 `eceb166f7f5785072cc53d77bab2bb7a21f66017a013df192efa0f59f3db4fd4`).
 The S02 goldens in `../../golden/records.json` remain the wire-parity authority.
+
+Updated on 2026-11-21 for #3084/#3085: `towns` and `partialInfo` expectations in
+`oracle-expected.json` were refreshed against the granular `server/lib/kmaWarningZones.js`
+output (KMA 2026-06-01 235-zone sub-zone mapping).

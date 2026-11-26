@@ -460,17 +460,23 @@ async fn zone_changes_older_than_sixty_days_after_the_seed_are_kept() {
             .unwrap();
     }
     let service = peer.service(FixedClock::at("2026-10-04T00:10:00.000Z"));
-    let town = Town {
+    let nowon = Town {
         first: "서울특별시".into(),
-        second: "종로구".into(),
-        third: "청운효자동".into(),
+        second: "노원구".into(),
+        third: "상계1동".into(),
     };
     let got =
-        server2::warnings::service::special_info_json(&service.special_info(&town).await.unwrap());
+        server2::warnings::service::special_info_json(&service.special_info(&nowon).await.unwrap());
     assert_eq!(
         String::from_utf8(got.to_bytes()).unwrap(),
         r#"[{"weather":12,"weatherStr":"폭염","level":1,"levelStr":"주의보","locationName":"서울동북권"}]"#
     );
+    let jongno = Town {
+        first: "서울특별시".into(),
+        second: "종로구".into(),
+        third: "청운효자동".into(),
+    };
+    assert!(service.special_info(&jongno).await.unwrap().is_empty());
 }
 #[tokio::test]
 async fn a_day_larger_than_one_read_is_paged_whole_acquisitions() {
@@ -546,11 +552,18 @@ async fn publish_zone_row(
         .await
         .unwrap();
 }
-fn jongno() -> Town {
+fn gangnam() -> Town {
     Town {
         first: "서울특별시".into(),
-        second: "종로구".into(),
-        third: "청운효자동".into(),
+        second: "강남구".into(),
+        third: "역삼동".into(),
+    }
+}
+fn nowon() -> Town {
+    Town {
+        first: "서울특별시".into(),
+        second: "노원구".into(),
+        third: "상계1동".into(),
     }
 }
 #[tokio::test]
@@ -580,7 +593,7 @@ async fn zone_replay_starts_from_the_seed_sync_not_its_export_time() {
         )
         .await;
         let service = peer.service(FixedClock::at("2026-10-13T00:10:00.000Z"));
-        assert!(service.special_info(&jongno()).await.unwrap().is_empty());
+        assert!(service.special_info(&gangnam()).await.unwrap().is_empty());
     }
 }
 #[tokio::test]
@@ -605,12 +618,12 @@ async fn zone_refresh_timeout_serves_valid_memory() {
     );
     peer.fault("slow-all", "index/v2/unused.json").await;
     // Cold: the waiter times out, the owned task still fills memory.
-    assert!(service.special_info(&jongno()).await.is_err());
+    assert!(service.special_info(&gangnam()).await.is_err());
     let filled = Instant::now();
     loop {
         tokio::time::sleep(Duration::from_millis(200)).await;
         // Memory younger than refresh + stale answers even though every refresh times out.
-        if let Ok(list) = service.special_info(&jongno()).await {
+        if let Ok(list) = service.special_info(&gangnam()).await {
             assert_eq!(list.len(), 1);
             break;
         }
@@ -619,7 +632,7 @@ async fn zone_refresh_timeout_serves_valid_memory() {
             "owned refresh never filled memory"
         );
     }
-    let again = service.special_info(&jongno()).await.unwrap();
+    let again = service.special_info(&gangnam()).await.unwrap();
     assert_eq!(again.len(), 1);
 }
 
@@ -1020,11 +1033,7 @@ async fn an_offered_zone_state_answers_from_memory() {
     tokio::time::timeout(Duration::from_secs(1), waiting)
         .await
         .expect("an offer ends the wait");
-    let town = Town {
-        first: "서울특별시".into(),
-        second: "종로구".into(),
-        third: "청운효자동".into(),
-    };
+    let town = nowon();
     // The store is empty, so only the offer holds this warning.
     assert_eq!(service.special_info(&town).await.unwrap().len(), 1);
     service.clear_memory().await;
@@ -1142,9 +1151,9 @@ async fn an_offer_answers_after_a_failed_zone_read() {
         FixedClock::at("2026-09-26T00:10:00.000Z"),
         ServiceConfig::default(),
     );
-    assert!(service.special_info(&jongno()).await.is_err());
+    assert!(service.special_info(&nowon()).await.is_err());
     store.offer_zone_state(offered_warning());
-    assert_eq!(service.special_info(&jongno()).await.unwrap().len(), 1);
+    assert_eq!(service.special_info(&nowon()).await.unwrap().len(), 1);
 }
 
 /// The read is late for this request, and the offer it did not wait for still answers it.
@@ -1163,7 +1172,7 @@ async fn an_offer_answers_a_request_whose_zone_read_is_late() {
     peer.fault("slow-all", "x").await;
     let reading = {
         let service = service.clone();
-        tokio::spawn(async move { service.special_info(&jongno()).await })
+        tokio::spawn(async move { service.special_info(&nowon()).await })
     };
     tokio::time::sleep(Duration::from_millis(5)).await;
     store.offer_zone_state(offered_warning());
@@ -1183,13 +1192,13 @@ async fn an_offer_during_a_zone_read_replaces_what_the_read_found() {
     peer.fault("slow-all", "x").await;
     let reading = {
         let service = service.clone();
-        tokio::spawn(async move { service.special_info(&jongno()).await })
+        tokio::spawn(async move { service.special_info(&nowon()).await })
     };
     tokio::time::sleep(Duration::from_millis(5)).await;
     store.offer_zone_state(offered_warning());
     assert_eq!(reading.await.unwrap().unwrap().len(), 1, "this request");
     assert_eq!(
-        service.special_info(&jongno()).await.unwrap().len(),
+        service.special_info(&nowon()).await.unwrap().len(),
         1,
         "the next"
     );
@@ -1206,7 +1215,7 @@ async fn an_offer_before_a_refresh_task_runs_answers_this_request_and_the_next()
         FixedClock::at("2026-09-26T00:10:00.000Z"),
         ServiceConfig::default(),
     );
-    let town = jongno();
+    let town = nowon();
     let mut reading = Box::pin(service.special_info(&town));
     assert!((&mut reading).now_or_never().is_none());
     store.offer_zone_state(offered_warning());

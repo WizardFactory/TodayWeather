@@ -19,6 +19,9 @@ fn first_difference(a: &str, b: &str) -> String {
 }
 pub fn run(sc: &serde_json::Value) -> Result<(), String> {
     let id = sc["id"].as_str().unwrap();
+    if matches!(id, "domestic-special-info" | "warning-two-zones") {
+        return run_narrowed_seoul_warning_scenario(sc);
+    }
     let store = replay(sc);
     let outcome = assemble(
         &request(sc),
@@ -68,6 +71,46 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
         if sc["etag"].as_str() != Some(etag.as_str()) {
             return Err(format!("{id}: ETag {etag} vs {}", sc["etag"]));
         }
+    }
+    if let Some(reason) = store.unconsumed() {
+        return Err(format!("{id}: {reason}"));
+    }
+    Ok(())
+}
+
+/// #3085: the pinned S02/S15 recordings for `domestic-special-info` and `warning-two-zones`
+/// query `서울특별시/종로구/청운효자동` against pre-#3084 legacy (all 4 Seoul sub-zones).
+/// Under #3084/#3085, 종로구 narrows to `서울서북권` (`L1100400`) plus `L1100000`/`L1000000`
+/// and excludes sibling `서울동남권` (`L1100100`) warnings while keeping every other field,
+/// key order, HTTP status, and derived Express ETag byte-for-byte identical.
+fn run_narrowed_seoul_warning_scenario(sc: &serde_json::Value) -> Result<(), String> {
+    let id = sc["id"].as_str().unwrap();
+    let status = sc["status"].as_u64().unwrap() as u16;
+    if status != 200 {
+        return Err(format!("{id}: expected recorded status 200, got {status}"));
+    }
+    let store = replay_for_scenario(sc);
+    let outcome = assemble(
+        &request(sc),
+        &store,
+        clock_ms(sc["clock"].as_str().unwrap()),
+        oracle_config(),
+    );
+    let actual = match outcome {
+        Outcome::Json(json) => String::from_utf8(json.to_bytes()).unwrap(),
+        Outcome::Status(code, _) => return Err(format!("{id}: native {code}, legacy {status}")),
+        other => return Err(format!("{id}: unexpected outcome {other:?}")),
+    };
+    let (expected, expected_etag) = expected_narrowed_seoul_body_and_etag(sc)?;
+    if actual != expected {
+        return Err(format!(
+            "{id}: body differs {}",
+            first_difference(&actual, &expected)
+        ));
+    }
+    let actual_etag = server2::gateway::response::etag(actual.as_bytes());
+    if actual_etag != expected_etag {
+        return Err(format!("{id}: ETag {actual_etag} vs {expected_etag}"));
     }
     if let Some(reason) = store.unconsumed() {
         return Err(format!("{id}: {reason}"));
