@@ -1,7 +1,8 @@
 -- GoogleSQL. Replace PROJECT.DATASET with the linked GA4 daily export dataset.
 -- Parameters: @start_date/@end_date DATE. iOS only, split by app version and ATT status (#2945).
 -- att_status is a user property set by the app on iOS after the Analytics choice: authorized, denied, restricted,
--- not_determined or unavailable. Rows cover only installations that opted in to Analytics, and builds before the
+-- not_determined or unavailable. Rows cover only installations with Analytics collection on (an opt-in, or the native
+-- apps' region default since #2660), and builds before the
 -- ATT release report '(not set)'. Impressions are the app's own `ad_lifecycle` impression events: GA4 does not export
 -- the automatic AdMob `ad_impression` to BigQuery and the default integration passes no value, so revenue, eCPM,
 -- match rate and show rate are not derivable here. Take them from the AdMob report by app version and serving

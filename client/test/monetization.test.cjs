@@ -585,4 +585,6 @@ test('monetization queries count impressions from the app ad_lifecycle event, no
     assert.doesNotMatch(daily, /@app_version/, 'compares version groups instead of one version');
     assert.match(daily, /GROUP BY event_date, platform, version_group/);
     assert.match(daily, /next_day_return_rate/);
+    assert.match(daily, /ELSE 'other' END AS version_group/, 'older or missing versions stay out of the native group');
+    assert.match(daily, /LEFT JOIN exported_days x ON x\.day = DATE_ADD\(d\.day, INTERVAL 1 DAY\)/, 'no return rate before the next table');
 });

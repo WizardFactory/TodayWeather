@@ -4,10 +4,12 @@
 -- GA4 does not export the automatic AdMob `ad_impression` to BigQuery, and the default integration passes no
 -- value, so this query reports no revenue. Take earnings from the AdMob report by platform and format
 -- (docs/operations/monetization.md). Rows cover only installations with Analytics collection on.
--- version_group: cordova = 1.x, native = 2.0 and later. Uses completed daily partitions only; rerun the last three days.
+-- version_group: cordova = 1.x, native = 2.0 and later, other = older or missing versions. Uses completed daily partitions only; rerun the last three days.
 WITH raw AS (
   SELECT event_date, PARSE_DATE('%Y%m%d', event_date) AS day, event_name, user_pseudo_id, is_active_user, platform,
-    IF(STARTS_WITH(app_info.version, '1.'), 'cordova', 'native') AS version_group,
+    CASE WHEN STARTS_WITH(app_info.version, '1.') THEN 'cordova'
+      WHEN SAFE_CAST(SPLIT(app_info.version, '.')[SAFE_OFFSET(0)] AS INT64) >= 2 THEN 'native'
+      ELSE 'other' END AS version_group,
     (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'traffic_type') AS traffic_type,
     (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'debug_mode') AS debug_mode,
     (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'action') AS action,
@@ -33,6 +35,9 @@ WITH raw AS (
     COUNTIF(event_name = 'weather_load') AS weather_loads
   FROM eligible WHERE day BETWEEN @start_date AND @end_date
   GROUP BY event_date, platform, version_group
+), exported_days AS (
+  -- Days whose daily export table exists. The table holds every stream, so one row of any kind shows it arrived.
+  SELECT DISTINCT day FROM raw
 ), active AS (
   SELECT DISTINCT day, platform, version_group, user_pseudo_id FROM eligible WHERE is_active_user
 ), returns AS (
@@ -52,9 +57,10 @@ SELECT d.event_date, d.platform, d.version_group, d.active_installations,
   SAFE_DIVIDE(d.banner_impressions, d.active_installations) AS banner_impressions_per_active_installation,
   SAFE_DIVIDE(d.native_impressions, d.active_installations) AS native_impressions_per_active_installation,
   SAFE_DIVIDE(d.interstitial_impressions, d.active_installations) AS interstitial_impressions_per_active_installation,
-  -- NULL until the next day's partition is complete.
-  IF(DATE_ADD(d.day, INTERVAL 1 DAY) < CURRENT_DATE('Asia/Seoul'),
+  -- NULL until the next day's daily table exists and that day has ended; late events can still raise it (rerun).
+  IF(x.day IS NOT NULL AND DATE_ADD(d.day, INTERVAL 1 DAY) < CURRENT_DATE('Asia/Seoul'),
     SAFE_DIVIDE(r.returned_installations, d.active_installations), NULL) AS next_day_return_rate,
   d.initial_banner_requests, d.banner_load_failures, d.weather_loads
 FROM daily d LEFT JOIN returns r USING (day, platform, version_group)
+LEFT JOIN exported_days x ON x.day = DATE_ADD(d.day, INTERVAL 1 DAY)
 ORDER BY d.event_date, d.platform, d.version_group;
