@@ -15,11 +15,13 @@ def check(info):
         raise ValueError("Release app ID is missing, malformed, a placeholder or a test ID")
     native = info.get("TWAdMobNativeUnit", "")
     interstitial = info.get("TWAdMobInterstitialUnit", "")
-    for key, unit in (("TWAdMobNativeUnit", native), ("TWAdMobInterstitialUnit", interstitial)):
+    banner = info.get("TWAdMobBannerUnit", "")
+    for key, unit in (("TWAdMobNativeUnit", native), ("TWAdMobInterstitialUnit", interstitial),
+                      ("TWAdMobBannerUnit", banner)):
         if not re.fullmatch(re.escape(app[1]) + r"/[0-9]{10}", unit):
             raise ValueError(f"{key} needs a release unit from the same publisher")
-    if native == interstitial:
-        raise ValueError("Native and interstitial require distinct units")
+    if len({native, interstitial, banner}) != 3:
+        raise ValueError("Native, interstitial and banner require distinct units")
 
 
 def main():
@@ -31,7 +33,7 @@ def main():
             check(plistlib.load(f))
     except (OSError, ValueError, TypeError, plistlib.InvalidFileException) as error:
         parser.exit(1, f"Release ad configuration failed: {error}\n")
-    print("Release ad configuration contains a production app ID and two distinct same-publisher units.")
+    print("Release ad configuration contains a production app ID and three distinct same-publisher units.")
     return 0
 
 

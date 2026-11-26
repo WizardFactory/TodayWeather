@@ -80,6 +80,7 @@ final class FirebaseBannerConfigSource: BannerConfigSource {
     func observeFormatUpdates(_ notify: @escaping @MainActor () -> Void) {
         guard registration == nil else { return }
         let formatKeys: Set<String> = [RemoteBannerConfig.nativeEnabledKey, RemoteBannerConfig.interstitialEnabledKey,
+                                       RemoteBannerConfig.appBannerEnabledKey, RemoteBannerPolicy.enabledKey,
                                        RemoteBannerConfig.interstitialChanceKey]
         registration = config.addOnConfigUpdateListener { update, error in
             guard error == nil, let update, !formatKeys.isDisjoint(with: update.updatedKeys) else { return }
@@ -98,7 +99,7 @@ final class FirebaseBannerConfigSource: BannerConfigSource {
         var values: [String: String] = [:]
         for key in [RemoteBannerPolicy.enabledKey, RemoteBannerPolicy.delayKey,
                     RemoteBannerConfig.nativeEnabledKey, RemoteBannerConfig.interstitialEnabledKey,
-                    RemoteBannerConfig.interstitialChanceKey] {
+                    RemoteBannerConfig.appBannerEnabledKey, RemoteBannerConfig.interstitialChanceKey] {
             values[key] = config.configValue(forKey: key).stringValue
         }
         return values

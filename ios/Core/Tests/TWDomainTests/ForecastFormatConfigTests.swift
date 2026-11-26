@@ -24,6 +24,7 @@ struct ForecastFormatConfigTests {
         config.load()
         #expect(source.values()["tw_native_enabled"] == "true")
         #expect(source.values()["tw_interstitial_enabled"] == "true")
+        #expect(source.values()["tw_app_banner_enabled"] == "false")
     }
 
     /// #3213: `tw_interstitial_chance` is an integer percentage from 0 to 100; a missing or invalid value uses 30.
@@ -119,10 +120,31 @@ struct ForecastFormatConfigTests {
         var changes = 0
         config.onChange = { changes += 1 }
         source.answer(step, true)
-        #expect(!config.nativeEnabled && config.interstitialEnabled && config.policy == .default)
+        // The all-ads gate applies late too (#3211); the delay stays fixed after the timeout.
+        #expect(!config.nativeEnabled && config.interstitialEnabled && config.policy == BannerPolicy(enabled: false, delaySeconds: 0))
         #expect(changes == 1 && source.formatListeners == 1)
         source.publish(["tw_native_enabled": "true", "tw_interstitial_enabled": "false"])
         #expect(config.nativeEnabled && !config.interstitialEnabled && changes == 2)
+    }
+
+    /// CODEX-3211-1: a late or published `tw_banner_enabled` false turns every format off with its format switches.
+    @Test func aLateOrPublishedAllAdsGateApplies() {
+        let clock = VirtualClock()
+        let source = FakeRemoteConfig()
+        source.held = ["fetch"]
+        source.fetched = ["tw_banner_enabled": "false", "tw_banner_delay_seconds": "30", "tw_app_banner_enabled": "true"]
+        let config = RemoteBannerConfig(source: source, clock: clock)
+        config.load()
+        clock.advance(RemoteBannerConfig.timeoutMs)
+        #expect(config.ready && config.policy == .default && !config.appBannerEnabled)
+        source.answer("fetch", true)
+        #expect(!config.policy.enabled && config.policy.delaySeconds == 0 && config.appBannerEnabled, "the delay stays fixed")
+        source.publish(["tw_banner_enabled": "true", "tw_banner_delay_seconds": "0", "tw_app_banner_enabled": "true"])
+        #expect(config.policy.enabled)
+        source.publish(["tw_banner_enabled": "false", "tw_banner_delay_seconds": "0"])
+        #expect(!config.policy.enabled && config.appBannerEnabled, "the gate turns off while the banner switch stays on")
+        source.publish(["tw_banner_enabled": "TRUE", "tw_banner_delay_seconds": "0"])
+        #expect(!config.policy.enabled, "an invalid pair keeps the gate")
     }
 
     @Test func aConsentFailureIsNotAnAdImpressionOrLoadError() {

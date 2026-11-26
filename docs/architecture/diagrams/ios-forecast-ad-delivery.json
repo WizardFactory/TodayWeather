@@ -20,6 +20,10 @@
     {
       "id": "content",
       "label": "In-scroll native card"
+    },
+    {
+      "id": "banner",
+      "label": "Anchored banner"
     }
   ],
   "mainPath": [
@@ -92,6 +96,24 @@
       "label": "Display native ad",
       "sublabel": "Ready at insertion point",
       "width": 156
+    },
+    {
+      "id": "bannergate",
+      "lane": "banner",
+      "col": 0,
+      "type": "security",
+      "label": "Check banner switches",
+      "sublabel": "UMP ready, both flags, final policy",
+      "width": 156
+    },
+    {
+      "id": "bannershow",
+      "lane": "banner",
+      "col": 1,
+      "type": "external",
+      "label": "Show adaptive banner",
+      "sublabel": "Under tab bar after delay",
+      "width": 156
     }
   ],
   "edges": [
@@ -126,6 +148,11 @@
     {
       "from": "slot",
       "to": "creative"
+    },
+    {
+      "from": "bannergate",
+      "to": "bannershow",
+      "label": "Loaded"
     }
   ],
   "cards": [
@@ -145,6 +172,15 @@
         "UMP and SDK readiness precede requests. ATT and TCF determine personalization.",
         "Independent native and interstitial switches govern loaded and pending inventory.",
         "Hourly, Daily and Air use compact cards. Saved places uses a stacked card after the last visible row."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Remote Config switches (#3211)",
+      "items": [
+        "tw_banner_enabled off stops every format. tw_app_banner_enabled (default off) and tw_native_enabled (default on) switch the banner and the card independently.",
+        "Both on shows both. Banner requests follow the native card's ATT and TCF rule; a published switch change applies in an open app.",
+        "Off or unfilled, the banner reserves no strip under the tab bar."
       ]
     }
   ]

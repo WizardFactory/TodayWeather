@@ -54,7 +54,8 @@ class FirebaseRemoteConfigSource(private val config: FirebaseRemoteConfig) : Rem
  * after that are ignored. Without Firebase ([source] null) the defaults apply at once.
  */
 class RemoteBannerConfig(private val source: RemoteConfigSource?, private val scope: CoroutineScope) {
-    data class State(val policy: BannerPolicy, val ready: Boolean, val nativeEnabled: Boolean = true, val interstitialEnabled: Boolean = true)
+    data class State(val policy: BannerPolicy, val ready: Boolean, val nativeEnabled: Boolean = true, val interstitialEnabled: Boolean = true,
+        val appBannerEnabled: Boolean = false)
 
     private val state = MutableStateFlow(State(BannerPolicy.DEFAULT, ready = false))
     private var started = false
@@ -82,7 +83,8 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
             finish("timeout")
         }
         try {
-            source.setDefaults(RemoteBannerPolicy.DEFAULTS + mapOf(NATIVE_ENABLED to true, INTERSTITIAL_ENABLED to true, INTERSTITIAL_CHANCE to DEFAULT_INTERSTITIAL_CHANCE)) { ok ->
+            source.setDefaults(RemoteBannerPolicy.DEFAULTS + mapOf(NATIVE_ENABLED to true, INTERSTITIAL_ENABLED to true,
+                APP_BANNER_ENABLED to false, INTERSTITIAL_CHANCE to DEFAULT_INTERSTITIAL_CHANCE)) { ok ->
                 if (closed) return@setDefaults
                 if (!ok) return@setDefaults fail()
                 source.setSettings(FETCH_TIMEOUT_S, MINIMUM_INTERVAL_S) { set ->
@@ -117,6 +119,8 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
         state.value = state.value.copy(
             nativeEnabled = values.getOrDefault(NATIVE_ENABLED, "true") == "true",
             interstitialEnabled = values.getOrDefault(INTERSTITIAL_ENABLED, "true") == "true",
+            // The anchored banner (#3211): only "true" turns it on, so an absent or invalid value keeps the default off.
+            appBannerEnabled = values[APP_BANNER_ENABLED] == "true",
         )
         interstitialChance = interstitialChance(values[INTERSTITIAL_CHANCE])
         val policy = RemoteBannerPolicy.parse(values)
@@ -140,6 +144,7 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
     companion object {
         const val NATIVE_ENABLED = "tw_native_enabled"
         const val INTERSTITIAL_ENABLED = "tw_interstitial_enabled"
+        const val APP_BANNER_ENABLED = "tw_app_banner_enabled"
         /** The forecast interstitial's chance per eligible return, an integer percentage (#3213). */
         const val INTERSTITIAL_CHANCE = "tw_interstitial_chance"
         const val DEFAULT_INTERSTITIAL_CHANCE = 30

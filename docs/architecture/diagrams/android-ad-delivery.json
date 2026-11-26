@@ -3,7 +3,7 @@
   "diagram_type": "workflow",
   "meta": {
     "title": "Android ad delivery",
-    "subtitle": "Release design for issue #3041 \u00b7 device-local day",
+    "subtitle": "Release design for issue #3041 · device-local day",
     "output": "docs/architecture/diagrams/android-ad-delivery.html",
     "quality_profile": "showcase",
     "visual_preset": "signal-flow"
@@ -20,6 +20,10 @@
     {
       "id": "content",
       "label": "Native placement"
+    },
+    {
+      "id": "banner",
+      "label": "Anchored banner"
     }
   ],
   "mainPath": [
@@ -92,6 +96,24 @@
       "label": "Display native ad",
       "sublabel": "Ready at insertion point",
       "width": 156
+    },
+    {
+      "id": "bannergate",
+      "lane": "banner",
+      "col": 0,
+      "type": "security",
+      "label": "Check banner switches",
+      "sublabel": "Consent, both flags, final policy",
+      "width": 156
+    },
+    {
+      "id": "bannershow",
+      "lane": "banner",
+      "col": 1,
+      "type": "external",
+      "label": "Show adaptive banner",
+      "sublabel": "Under tab bar after delay",
+      "width": 156
     }
   ],
   "edges": [
@@ -126,6 +148,11 @@
     {
       "from": "slot",
       "to": "creative"
+    },
+    {
+      "from": "bannergate",
+      "to": "bannershow",
+      "label": "Loaded"
     }
   ],
   "cards": [
@@ -145,6 +172,15 @@
         "Hourly follows the hourly air outlook. Daily follows the multi-day detail row.",
         "Favorites follows the saved list. Air follows the hourly air graph.",
         "Omit unavailable or late ads and keep search, editing and alerts clear."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Remote Config switches (#3211)",
+      "items": [
+        "tw_banner_enabled off stops every format. tw_app_banner_enabled (default off) and tw_native_enabled (default on) switch the banner and the card independently.",
+        "Both on shows both. The banner is requested only while eligible and is destroyed when a switch or consent turns it off.",
+        "Off or unfilled, the banner reserves no strip under the tab bar."
       ]
     }
   ]

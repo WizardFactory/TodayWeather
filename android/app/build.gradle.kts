@@ -30,6 +30,7 @@ fun adSetting(name: String): String = System.getenv(name) ?: privateProps.getPro
 val admobAppId = adSetting("TW_ADMOB_APP_ID_ANDROID")
 val admobNative = adSetting("TW_ADMOB_NATIVE_ANDROID")
 val admobInterstitial = adSetting("TW_ADMOB_INTERSTITIAL_ANDROID")
+val admobBanner = adSetting("TW_ADMOB_BANNER_ANDROID")
 val sampleAppId = "ca-app-pub-3940256099942544~3347511713"
 
 // Place search (AN-10): the Android-restricted key of Places API (New), TW_PLACES_API_KEY_ANDROID (private input, as
@@ -67,6 +68,8 @@ android {
             manifestPlaceholders["admobAppId"] = sampleAppId
             buildConfigField("String", "NATIVE_AD_UNIT", "\"ca-app-pub-3940256099942544/2247696110\"")
             buildConfigField("String", "INTERSTITIAL_AD_UNIT", "\"ca-app-pub-3940256099942544/1033173712\"")
+            // Google's adaptive banner test unit (#3211).
+            buildConfigField("String", "BANNER_AD_UNIT", "\"ca-app-pub-3940256099942544/9214589741\"")
             buildConfigField("boolean", "RELEASE_ADS", "false")
         }
         release {
@@ -80,6 +83,7 @@ android {
             manifestPlaceholders["admobAppId"] = admobAppId.ifBlank { sampleAppId }
             buildConfigField("String", "NATIVE_AD_UNIT", "\"$admobNative\"")
             buildConfigField("String", "INTERSTITIAL_AD_UNIT", "\"$admobInterstitial\"")
+            buildConfigField("String", "BANNER_AD_UNIT", "\"$admobBanner\"")
             buildConfigField("boolean", "RELEASE_ADS", "true")
         }
     }
@@ -168,7 +172,7 @@ tasks.withType<Test>().configureEach {
 
 // A release package refuses Google's sample IDs, as client/scripts/build-release.mjs does.
 val releaseAdsMissing = listOf("TW_ADMOB_APP_ID_ANDROID" to admobAppId, "TW_ADMOB_NATIVE_ANDROID" to admobNative,
-    "TW_ADMOB_INTERSTITIAL_ANDROID" to admobInterstitial)
+    "TW_ADMOB_INTERSTITIAL_ANDROID" to admobInterstitial, "TW_ADMOB_BANNER_ANDROID" to admobBanner)
     .filter { (_, value) -> value.isBlank() || "3940256099942544" in value }.map { it.first }
 tasks.matching { it.name == "packageRelease" || it.name == "bundleRelease" }.configureEach {
     doFirst {
