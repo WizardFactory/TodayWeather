@@ -102,7 +102,7 @@
     {
       "from": "eligibility",
       "to": "reserve",
-      "label": "Eligible, draw < 10%"
+      "label": "Eligible, draw < tw_interstitial_chance (30%)"
     },
     {
       "from": "reserve",

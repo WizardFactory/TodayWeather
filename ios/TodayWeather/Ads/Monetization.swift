@@ -189,7 +189,10 @@ final class Monetization {
         nativeAds = ForecastNativeAds(unitID: settings.nativeUnit, request: { platform.makeRequest() },
                                       track: trackAd)
         interstitial = ForecastInterstitial(unitID: settings.interstitialUnit, request: { platform.makeRequest() },
-                                            track: { name, params in _ = trackAd(name, params) })
+                                            track: { name, params in _ = trackAd(name, params) },
+                                            chance: { [weak config] in
+                                                config?.interstitialChance ?? RemoteBannerConfig.defaultInterstitialChance
+                                            })
         if pageScreen() == nil { interstitial?.markVisible(shell.selected) }
         config.onChange = { [weak self] in self?.refreshEligibility() }
         let consent = AdsConsent(platform: platform, releaseAds: settings.releaseAds, clock: clock,

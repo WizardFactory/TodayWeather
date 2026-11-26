@@ -102,7 +102,7 @@
     {
       "from": "eligibility",
       "to": "reserve",
-      "label": "Eligible, draw < 10%"
+      "label": "Eligible, draw < tw_interstitial_chance (30%)"
     },
     {
       "from": "reserve",
@@ -134,7 +134,7 @@
       "title": "Two protected first visits",
       "items": [
         "The first visible Hourly and Daily visits are recorded independently across cities.",
-        "Only a deliberate repeat switch past the source chart gets a 10% draw.",
+        "Only a deliberate repeat switch past the source chart draws, at tw_interstitial_chance (default 30%).",
         "A saved reservation survives relaunch. Confirmed failure before display releases it."
       ]
     },

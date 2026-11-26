@@ -156,7 +156,9 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) app.entryIntents.submit(intent)
         val session = opened.session
         nativeAds = NativeForecastAds(this, BuildConfig.NATIVE_AD_UNIT, app.analytics::track)
-        interstitial = ForecastInterstitial(this, BuildConfig.INTERSTITIAL_AD_UNIT, app.analytics::track)
+        interstitial = ForecastInterstitial(this, BuildConfig.INTERSTITIAL_AD_UNIT, app.analytics::track) {
+            opened.adConfig.policy.value.interstitialChance
+        }
         lifecycleScope.launch {
             combine(opened.consent.allowed, opened.adConfig.policy) { consent, config -> consent to config }
                 .collectLatest { (consent, config) ->

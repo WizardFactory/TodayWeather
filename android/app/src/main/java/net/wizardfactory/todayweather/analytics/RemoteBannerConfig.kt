@@ -54,7 +54,8 @@ class FirebaseRemoteConfigSource(private val config: FirebaseRemoteConfig) : Rem
  * after that are ignored. Without Firebase ([source] null) the defaults apply at once.
  */
 class RemoteBannerConfig(private val source: RemoteConfigSource?, private val scope: CoroutineScope) {
-    data class State(val policy: BannerPolicy, val ready: Boolean, val nativeEnabled: Boolean = true, val interstitialEnabled: Boolean = true)
+    data class State(val policy: BannerPolicy, val ready: Boolean, val nativeEnabled: Boolean = true, val interstitialEnabled: Boolean = true,
+        val interstitialChance: Int = DEFAULT_INTERSTITIAL_CHANCE)
 
     private val state = MutableStateFlow(State(BannerPolicy.DEFAULT, ready = false))
     private var started = false
@@ -75,7 +76,7 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
             finish("timeout")
         }
         try {
-            source.setDefaults(RemoteBannerPolicy.DEFAULTS + mapOf(NATIVE_ENABLED to true, INTERSTITIAL_ENABLED to true)) { ok ->
+            source.setDefaults(RemoteBannerPolicy.DEFAULTS + mapOf(NATIVE_ENABLED to true, INTERSTITIAL_ENABLED to true, INTERSTITIAL_CHANCE to DEFAULT_INTERSTITIAL_CHANCE)) { ok ->
                 if (closed) return@setDefaults
                 if (!ok) return@setDefaults fail()
                 source.setSettings(FETCH_TIMEOUT_S, MINIMUM_INTERVAL_S) { set ->
@@ -106,6 +107,7 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
         state.value = state.value.copy(
             nativeEnabled = values.getOrDefault(NATIVE_ENABLED, "true") == "true",
             interstitialEnabled = values.getOrDefault(INTERSTITIAL_ENABLED, "true") == "true",
+            interstitialChance = interstitialChance(values[INTERSTITIAL_CHANCE]),
         )
         val policy = RemoteBannerPolicy.parse(values)
         if (policy == null) {
@@ -128,9 +130,18 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
     companion object {
         const val NATIVE_ENABLED = "tw_native_enabled"
         const val INTERSTITIAL_ENABLED = "tw_interstitial_enabled"
+        /** The forecast interstitial's chance per eligible return, an integer percentage (#3213). */
+        const val INTERSTITIAL_CHANCE = "tw_interstitial_chance"
+        const val DEFAULT_INTERSTITIAL_CHANCE = 30
         const val TIMEOUT_MS = 12_000L
         const val FETCH_TIMEOUT_S = 10L
         const val MINIMUM_INTERVAL_S = 3600L
         private const val TAG = "TwAnalytics"
+
+        /** Only ASCII digits from 0 to 100 are valid; anything else, including an absent key, gives the default. */
+        fun interstitialChance(value: String?): Int {
+            if (value.isNullOrEmpty() || !value.all { it in '0'..'9' }) return DEFAULT_INTERSTITIAL_CHANCE
+            return value.toIntOrNull()?.takeIf { it <= 100 } ?: DEFAULT_INTERSTITIAL_CHANCE
+        }
     }
 }

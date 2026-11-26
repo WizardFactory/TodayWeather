@@ -9,6 +9,7 @@ import com.google.android.gms.ads.FullScreenContentCallback
 import net.wizardfactory.todayweather.ads.ForecastAdRequest
 import net.wizardfactory.todayweather.ads.ForecastInterstitial
 import net.wizardfactory.todayweather.ads.ReadyForecastAd
+import net.wizardfactory.todayweather.analytics.RemoteBannerConfig
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.ui.shell.ShellNavigation
 import org.junit.Assert.*
@@ -87,6 +88,50 @@ class ForecastInterstitialDeviceTest {
                 assertNull("cap persists across controller recreation", pendingLoad)
                 tap(Tab.HOURLY)
                 assertSame(shown, presentation)
+                assertEquals(Tab.HOURLY, nav.selected)
+            } finally {
+                ads.destroy()
+                activity.deleteSharedPreferences(store)
+            }
+        }
+    }
+
+    /** #3213: the default 30% and a changed `tw_interstitial_chance` decide the draw of the real controller. */
+    @Test fun configuredChanceDecidesTheRepeatVisit() {
+        rule.waitUntil(10_000) { rule.activity.hasWindowFocus() }
+        rule.runOnUiThread {
+            val activity = rule.activity
+            val store = "test_forecast_interstitial_chance_" + System.nanoTime()
+            var pendingLoad: ((ReadyForecastAd) -> Unit)? = null
+            var presentation: FullScreenContentCallback? = null
+            val request = ForecastAdRequest { loaded, _ -> pendingLoad = loaded }
+            val creative = ReadyForecastAd { presentation = it }
+            var roll = 0.30
+            var chance = RemoteBannerConfig.DEFAULT_INTERSTITIAL_CHANCE
+            val ads = ForecastInterstitial(activity, "offline-fixture", { _, _ -> true }, request, { roll }, store) { chance }
+            val nav = ShellNavigation(Tab.HOURLY)
+            fun tap(tab: Tab) {
+                if (!nav.deferForecast(tab, ads::handleTap)) nav.selected = tab
+                ads.recordVisible(nav.selected)
+            }
+            try {
+                ads.recordVisible(Tab.HOURLY)
+                ads.setEnabled(true)
+                pendingLoad!!(creative)
+                tap(Tab.DAILY)
+                tap(Tab.HOURLY)
+                assertNull("a draw at 30% does not show at the default", presentation)
+                chance = 0
+                roll = 0.0
+                tap(Tab.DAILY)
+                assertNull("0 never shows", presentation)
+                chance = RemoteBannerConfig.DEFAULT_INTERSTITIAL_CHANCE
+                roll = 0.2999
+                tap(Tab.HOURLY)
+                val shown = checkNotNull(presentation)
+                shown.onAdShowedFullScreenContent()
+                assertEquals(Tab.DAILY, nav.selected)
+                shown.onAdDismissedFullScreenContent()
                 assertEquals(Tab.HOURLY, nav.selected)
             } finally {
                 ads.destroy()

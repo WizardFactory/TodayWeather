@@ -1,5 +1,6 @@
 package net.wizardfactory.todayweather.ads
 
+import net.wizardfactory.todayweather.analytics.RemoteBannerConfig
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import org.junit.Assert.*
 import org.junit.Test
@@ -10,8 +11,9 @@ class ForecastVisitsTest {
     private var probability = 0.0
     private var draws = 0
     private var canSave = true
+    private var chance = RemoteBannerConfig.DEFAULT_INTERSTITIAL_CHANCE
     private fun fresh() = ForecastVisits({ stored }, { value -> if (canSave) stored = value; canSave },
-        { day }, { draws++; probability })
+        { day }, { draws++; probability }, { chance })
 
     @Test fun protectsEachFirstVisitAndSharesTheCapAcrossTabsAndRestarts() {
         for ((first, second) in listOf(Tab.DAILY to Tab.HOURLY, Tab.HOURLY to Tab.DAILY)) {
@@ -23,14 +25,39 @@ class ForecastVisitsTest {
             assertNull(visits.reserve(second))
             visits.visible(second)
             assertEquals(0, draws)
-            probability = 0.10
+            probability = 0.30
             assertNull(visits.reserve(first))
-            probability = 0.099
+            probability = 0.2999
             assertEquals(day, visits.reserve(first))
             assertFalse(fresh().available())
             assertNull(fresh().reserve(second))
             assertEquals(2, draws)
         }
+    }
+
+    /** #3213: the Remote Config percentage replaces the fixed 10%; 0 never shows, 100 shows on every eligible return. */
+    @Test fun theConfiguredChanceDecidesEachEligibleReturn() {
+        for ((percent, roll, shows) in listOf(
+            Triple(30, 0.2999, true), Triple(30, 0.30, false), Triple(0, 0.0, false),
+            Triple(100, 0.9999, true), Triple(55, 0.5499, true), Triple(55, 0.55, false),
+        )) {
+            stored = ForecastAdDay(Long.MIN_VALUE)
+            chance = percent
+            probability = roll
+            val visits = fresh()
+            visits.visible(Tab.DAILY)
+            assertEquals("$percent% with $roll", if (shows) day else null, visits.reserve(Tab.DAILY))
+            assertEquals(!shows, fresh().available())
+        }
+    }
+
+    @Test fun aChangedChanceAppliesToTheNextDrawWithoutANewInstance() {
+        val visits = fresh()
+        visits.visible(Tab.HOURLY)
+        probability = 0.5
+        assertNull(visits.reserve(Tab.HOURLY))
+        chance = 100
+        assertEquals(day, visits.reserve(Tab.HOURLY))
     }
 
     @Test fun aNewCalendarDateProtectsBothTabsAndRollbackNeverReopensAnEarlierDay() {

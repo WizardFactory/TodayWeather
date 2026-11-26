@@ -13,6 +13,7 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import java.util.Calendar
 import java.util.GregorianCalendar
 import kotlin.random.Random
+import net.wizardfactory.todayweather.analytics.RemoteBannerConfig
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 
 /** An activity's preloaded forecast ad. Tab taps never wait for an SDK load. */
@@ -24,9 +25,10 @@ class ForecastInterstitial internal constructor(
     private val request: ForecastAdRequest,
     draw: () -> Double,
     preferenceFile: String = "forecast_interstitial",
+    chance: () -> Int = { RemoteBannerConfig.DEFAULT_INTERSTITIAL_CHANCE },
 ) {
-    constructor(activity: Activity, unitId: String, track: (String, Map<String, Any?>) -> Boolean) :
-        this(activity, unitId, track, adMobRequest(activity, unitId), Random.Default::nextDouble)
+    constructor(activity: Activity, unitId: String, track: (String, Map<String, Any?>) -> Boolean, chance: () -> Int) :
+        this(activity, unitId, track, adMobRequest(activity, unitId), Random.Default::nextDouble, chance = chance)
     private val prefs = activity.getSharedPreferences(preferenceFile, Context.MODE_PRIVATE)
     private val visits = ForecastVisits(
         load = {
@@ -43,6 +45,7 @@ class ForecastInterstitial internal constructor(
             calendar.get(Calendar.YEAR) * 1000L + calendar.get(Calendar.DAY_OF_YEAR)
         },
         draw = draw,
+        chance = chance,
     )
     private var enabled = false
     private var destroyed = false
