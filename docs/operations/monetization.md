@@ -5,6 +5,8 @@ as the revenue source and Crashlytics for crash health. Remote Config controls
 the existing banner; PostHog remains deferred to [#2655](https://github.com/WizardFactory/TodayWeather/issues/2655).
 No new interstitial, purchase or widget flow is introduced.
 
+AK decided on 2026-11-26 that no new Cordova build will be released on any store, including a fallback or rollback build. Cordova-specific steps below (banner policy, experiments, the #2871 store-release step) apply only to installed 1.x versions; changes take effect only through the native apps.
+
 ## Repository behavior and assets
 
 - [Event dictionary](../../client/analytics/events.md): fixed enum/field allowlist, no raw location/identity/error labels, route-screen deduplication.

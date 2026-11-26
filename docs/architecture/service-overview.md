@@ -4,7 +4,7 @@
 
 **2026-09-28 — TodayAir retirement confirmed by AK.** TodayAir is no longer operated. This is the confirmation date; the actual shutdown date was not provided. Retained TodayAir source, build variants and provider configuration are historical artifacts, not evidence of an active service. TodayAir is excluded from push-service restoration and credential renewal.
 
-**2026-11-20 — TodayWeather operating scope confirmed by AK.** The maintained clients are the WebApp in PWA and desktop modes (`web/`, `packages/weather-core/`), native iOS (`ios/`) and native Android (`android/`). Server1, the legacy Node.js backend under `server/`, owns current backend delivery. Rust server2 under `server2/` is its planned successor. The Cordova client has left ongoing operations; its code and release instructions remain available for historical reference. The earlier TodayAir retirement also applies.
+**2026-11-20 — TodayWeather operating scope confirmed by AK.** The maintained clients are the WebApp in PWA and desktop modes (`web/`, `packages/weather-core/`), native iOS (`ios/`) and native Android (`android/`). Server1, the legacy Node.js backend under `server/`, owns current backend delivery. Rust server2 under `server2/` is its planned successor. The Cordova client has left ongoing operations; its code and release instructions remain available for historical reference. **2026-11-26:** AK decided on 2026-11-26 that no new Cordova build will be released on any store, including a fallback or rollback build. Installed Cordova versions (Android 1.1.x, iOS 1.1.x) keep running until users update to the native apps. The earlier TodayAir retirement also applies.
 
 The [Korean solar-term plan](../../plans/issue-3050.md) applies this scope to #3050: server1 supplies the ranked daily summary and the complete annual calendar to the maintained clients, with the same API contract planned for server2.
 
@@ -95,7 +95,7 @@ App coordinates use `{lat,long}`; server geography often uses `{lat,lon}`; Mongo
 The native app in repository revision `9bc9ec8f` uses the existing TodayWeather
 bundle ID and reads Cordova state from WebKit local storage and the App Group
 preferences suite. It writes native state atomically and exports compatible state
-to the App Group for a separately built Cordova fallback. It reuses the existing
+to the App Group for a separately built Cordova fallback. That fallback is not released (no new Cordova builds since the 2026-11-26 decision). It reuses the existing
 device ID for registration. See [app startup](../../ios/TodayWeather/AppScenes.swift),
 [native storage](../../ios/Core/Sources/TWStorage/AppStateStore.swift),
 [device identity](../../ios/Core/Sources/TWStorage/DeviceIdentity.swift) and
