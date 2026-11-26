@@ -5271,7 +5271,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <!-- Edge paths -->
         <path data-edge-from="bannergate" data-edge-to="bannershow" data-edge-label="Loaded" data-edge-key="0" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="204,491;250.8,491" d="M 204 491 L 250.8 491" class="a-default" data-animate="edge" style="--step:5" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <path data-edge-from="eligibility" data-edge-to="open" data-edge-label="Pass through" data-edge-key="1" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="406.8,119;568.8,119" d="M 406.8 119 L 568.8 119" class="a-default" data-animate="edge" style="--step:6" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="eligibility" data-edge-to="reserve" data-edge-label="Eligible, draw &lt; 10%" data-edge-key="2" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="328.8,145;328.8,217" d="M 328.8 145 L 328.8 217" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="eligibility" data-edge-to="reserve" data-edge-label="Eligible, draw &lt; tw_interstitial_chance (30%)" data-edge-key="2" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="328.8,145;328.8,217" d="M 328.8 145 L 328.8 217" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <path data-edge-from="open" data-edge-to="slot" data-edge-key="3" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="646.8,145;646.8,341" d="M 646.8 145 L 646.8 341" class="a-default" data-animate="edge" style="--step:8" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <path data-edge-from="reserve" data-edge-to="show" data-edge-label="Saved" data-edge-key="4" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="406.8,243;448.79999999999995,243" d="M 406.8 243 L 448.79999999999995 243" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <path data-edge-from="show" data-edge-to="open" data-edge-label="Dismissed or failed" data-edge-key="5" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="526.8,217;526.8,166;622.8,166;622.8,145" d="M 526.8 217 L 526.8 174 Q 526.8 166 534.8 166 L 614.8 166 Q 622.8 166 622.8 158 L 622.8 145" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#arrowhead)"/>
@@ -5402,9 +5402,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="453.99999999999994" y="99" width="67.6" height="14" rx="3" class="c-mask"/>
           <text x="487.79999999999995" y="109" class="t-muted" font-size="8" text-anchor="middle">Pass through</text>
         </g>
-        <g data-detail="context" data-edge-from="eligibility" data-edge-to="reserve" data-edge-label="Eligible, draw &lt; 10%" data-edge-key="2">
-          <rect x="275.8" y="171" width="106" height="14" rx="3" class="c-mask"/>
-          <text x="328.8" y="181" class="t-muted" font-size="8" text-anchor="middle">Eligible, draw &lt; 10%</text>
+        <g data-detail="context" data-edge-from="eligibility" data-edge-to="reserve" data-edge-label="Eligible, draw &lt; tw_interstitial_chance (30%)" data-edge-key="2">
+          <rect x="215.8" y="171" width="226" height="14" rx="3" class="c-mask"/>
+          <text x="328.8" y="181" class="t-muted" font-size="8" text-anchor="middle">Eligible, draw &lt; tw_interstitial_chance (30%)</text>
         </g>
 
         <g data-detail="context" data-edge-from="reserve" data-edge-to="show" data-edge-label="Saved" data-edge-key="4">
@@ -5622,7 +5622,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </div>
         <ul>
           <li>The first visible Hourly and Daily visits are recorded independently across cities.</li>
-          <li>Only a deliberate repeat switch past the source chart gets a 10% draw.</li>
+          <li>Only a deliberate repeat switch past the source chart draws, at tw_interstitial_chance (default 30%).</li>
           <li>A saved reservation survives relaunch. Confirmed failure before display releases it.</li>
         </ul>
       </div>

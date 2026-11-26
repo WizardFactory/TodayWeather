@@ -64,6 +64,13 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
 
     val policy: StateFlow<State> = state.asStateFlow()
 
+    /**
+     * The interstitial chance for the next draw (`tw_interstitial_chance`), read on the main thread. It is not part of
+     * [State], so a change never restarts ad eligibility, and a fetch activated after the timeout still applies it.
+     */
+    var interstitialChance: Int = DEFAULT_INTERSTITIAL_CHANCE
+        private set
+
     fun load() {
         if (started) return
         started = true
@@ -77,7 +84,7 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
         }
         try {
             source.setDefaults(RemoteBannerPolicy.DEFAULTS + mapOf(NATIVE_ENABLED to true, INTERSTITIAL_ENABLED to true,
-                APP_BANNER_ENABLED to false)) { ok ->
+                APP_BANNER_ENABLED to false, INTERSTITIAL_CHANCE to DEFAULT_INTERSTITIAL_CHANCE)) { ok ->
                 if (closed) return@setDefaults
                 if (!ok) return@setDefaults fail()
                 source.setSettings(FETCH_TIMEOUT_S, MINIMUM_INTERVAL_S) { set ->
@@ -89,7 +96,11 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
                         if (!loaded) return@loadActivated fail()
                         apply(source.values())
                         source.fetchAndActivate { fetched ->
-                            if (closed) return@fetchAndActivate
+                            if (closed) {
+                                // The finished policy and switches stay; only the next draws use the activated chance.
+                                if (fetched) interstitialChance = interstitialChance(source.values()[INTERSTITIAL_CHANCE])
+                                return@fetchAndActivate
+                            }
                             if (!fetched) return@fetchAndActivate fail()
                             apply(source.values())
                             finish("applied")
@@ -111,6 +122,7 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
             // The anchored banner (#3211): only "true" turns it on, so an absent or invalid value keeps the default off.
             appBannerEnabled = values[APP_BANNER_ENABLED] == "true",
         )
+        interstitialChance = interstitialChance(values[INTERSTITIAL_CHANCE])
         val policy = RemoteBannerPolicy.parse(values)
         if (policy == null) {
             Log.i(TAG, "remote_config invalid_values")
@@ -133,9 +145,18 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
         const val NATIVE_ENABLED = "tw_native_enabled"
         const val INTERSTITIAL_ENABLED = "tw_interstitial_enabled"
         const val APP_BANNER_ENABLED = "tw_app_banner_enabled"
+        /** The forecast interstitial's chance per eligible return, an integer percentage (#3213). */
+        const val INTERSTITIAL_CHANCE = "tw_interstitial_chance"
+        const val DEFAULT_INTERSTITIAL_CHANCE = 30
         const val TIMEOUT_MS = 12_000L
         const val FETCH_TIMEOUT_S = 10L
         const val MINIMUM_INTERVAL_S = 3600L
         private const val TAG = "TwAnalytics"
+
+        /** Only ASCII digits from 0 to 100 are valid; anything else, including an absent key, gives the default. */
+        fun interstitialChance(value: String?): Int {
+            if (value.isNullOrEmpty() || !value.all { it in '0'..'9' }) return DEFAULT_INTERSTITIAL_CHANCE
+            return value.toIntOrNull()?.takeIf { it <= 100 } ?: DEFAULT_INTERSTITIAL_CHANCE
+        }
     }
 }

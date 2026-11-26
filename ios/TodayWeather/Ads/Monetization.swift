@@ -256,7 +256,10 @@ final class Monetization {
         nativeAds = ForecastNativeAds(unitID: settings.nativeUnit, request: { platform.makeRequest() },
                                       track: trackAd)
         interstitial = ForecastInterstitial(unitID: settings.interstitialUnit, request: { platform.makeRequest() },
-                                            track: { name, params in _ = trackAd(name, params) })
+                                            track: { name, params in _ = trackAd(name, params) },
+                                            chance: { [weak config] in
+                                                config?.interstitialChance ?? RemoteBannerConfig.defaultInterstitialChance
+                                            })
         if pageScreen() == nil { interstitial?.markVisible(shell.selected) }
         if let unit = settings.bannerUnit {
             // AdMobBanner logs its own lifecycle lines; TwAds' show and hide go through `trackAd`.

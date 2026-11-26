@@ -32,9 +32,13 @@ public final class RemoteBannerConfig {
     public static let interstitialEnabledKey = "tw_interstitial_enabled"
     /// The anchored banner (#3211), off unless the value is exactly "true".
     public static let appBannerEnabledKey = "tw_app_banner_enabled"
+    /// The forecast interstitial's chance per eligible return, an integer percentage (#3213).
+    public static let interstitialChanceKey = "tw_interstitial_chance"
+    public nonisolated static let defaultInterstitialChance = 30
     public private(set) var nativeEnabled = true
     public private(set) var interstitialEnabled = true
     public private(set) var appBannerEnabled = false
+    public private(set) var interstitialChance = RemoteBannerConfig.defaultInterstitialChance
 
     public private(set) var policy = BannerPolicy.default
     /// The policy is final: applied, failed or timed out (`isBannerPolicyReady`).
@@ -68,6 +72,7 @@ public final class RemoteBannerConfig {
         defaults[Self.nativeEnabledKey] = "true"
         defaults[Self.interstitialEnabledKey] = "true"
         defaults[Self.appBannerEnabledKey] = "false"
+        defaults[Self.interstitialChanceKey] = String(Self.defaultInterstitialChance)
         source.setDefaults(defaults) { [weak self] ok in
             guard let self, !self.closed else { return }
             guard ok else { return self.finish("bridge_or_fetch_failed") }
@@ -112,6 +117,8 @@ public final class RemoteBannerConfig {
     private func applyFormats(_ values: [String: String]) -> Bool {
         let native = values[Self.nativeEnabledKey, default: "true"] == "true"
         let interstitial = values[Self.interstitialEnabledKey, default: "true"] == "true"
+        // The next draw reads the chance; a chance-only change does not re-run ad eligibility or preload.
+        interstitialChance = Self.interstitialChance(values[Self.interstitialChanceKey])
         let appBanner = values[Self.appBannerEnabledKey] == "true"
         // The all-ads gate follows a valid pair; an invalid one keeps the current gate. The delay is not changed here.
         let allAds = RemoteBannerPolicy.parse(values)?.enabled ?? policy.enabled
@@ -122,6 +129,13 @@ public final class RemoteBannerConfig {
         appBannerEnabled = appBanner
         policy.enabled = allAds
         return true
+    }
+
+    /// Only ASCII digits from 0 to 100 are valid; anything else, including an absent key, gives the default.
+    public nonisolated static func interstitialChance(_ value: String?) -> Int {
+        guard let value, !value.isEmpty, value.utf8.allSatisfy({ (0x30...0x39).contains($0) }),
+              let percent = Int(value), percent <= 100 else { return defaultInterstitialChance }
+        return percent
     }
 
     private func activateFormatUpdate() {

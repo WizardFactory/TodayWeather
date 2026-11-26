@@ -38,6 +38,7 @@ The native apps read the same pair plus per-format switches (#3041, #3059, #3211
 | `tw_app_banner_enabled` | `false` | `true`/`false`; anything but `true` is off | The anchored adaptive banner under the tab bar (#3211). |
 | `tw_native_enabled` | `true` | `true`/`false`; anything but `true` is off | The in-content native card. |
 | `tw_interstitial_enabled` | `true` | `true`/`false`; anything but `true` is off | The forecast interstitial. |
+| `tw_interstitial_chance` | `30` | integer 0..100 (ASCII digits); anything else uses `30` | Chance in percent that an eligible repeat Hourly/Daily transition shows the forecast interstitial (#3213); `0` never, `100` every eligible transition, still at most one display per day. Each draw reads the current value: Android from the activated values at opening and from a fetch that answers after the 12-second deadline; iOS also from published changes in an open app (Realtime API). A chance-only change does not restart ad loading. |
 
 The apps do not arbitrate between the banner and the native card: both `true` shows both. To serve the banner instead of the native card, publish `tw_app_banner_enabled=true` and `tw_native_enabled=false`; to go back, the reverse. Rollback of the banner: publish `tw_app_banner_enabled=false` (the shipped default). A release build needs the banner's ad unit (`TW_ADMOB_BANNER_ANDROID`, `TW_ADMOB_BANNER_IOS`, private inputs) for the switch to serve.
 

@@ -160,7 +160,9 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) app.entryIntents.submit(intent)
         val session = opened.session
         nativeAds = NativeForecastAds(this, BuildConfig.NATIVE_AD_UNIT, app.analytics::track)
-        interstitial = ForecastInterstitial(this, BuildConfig.INTERSTITIAL_AD_UNIT, app.analytics::track)
+        interstitial = ForecastInterstitial(this, BuildConfig.INTERSTITIAL_AD_UNIT, app.analytics::track) {
+            opened.adConfig.interstitialChance
+        }
         // The anchored banner (#3211) belongs to this activity: a configuration change loads a new one at the new width.
         banner = AdMobBanner(this, BuildConfig.BANNER_AD_UNIT, app.analytics::track)
         opened.ads.attach(banner)

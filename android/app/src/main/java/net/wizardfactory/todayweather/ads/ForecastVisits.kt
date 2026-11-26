@@ -15,6 +15,8 @@ internal class ForecastVisits(
     private val save: (ForecastAdDay) -> Boolean,
     private val today: () -> Long,
     private val draw: () -> Double,
+    /** The current `tw_interstitial_chance` percentage, read on every draw. */
+    private val chance: () -> Int,
 ) {
     fun visible(tab: Tab) {
         val day = current() ?: return
@@ -34,7 +36,7 @@ internal class ForecastVisits(
             Tab.DAILY -> day.daily
             else -> false
         }
-        if (!seen || day.spent || draw() >= REPEAT_CHANCE) return null
+        if (!seen || day.spent || draw() >= chance() / 100.0) return null
         return if (save(day.copy(spent = true))) day.date else null
     }
 
@@ -59,10 +61,6 @@ internal class ForecastVisits(
             now == stored.date -> stored
             else -> ForecastAdDay(now)
         }
-    }
-
-    private companion object {
-        const val REPEAT_CHANCE = 0.10
     }
 }
 
