@@ -36,7 +36,7 @@ class NativeSlotAnchorTest {
     private var px = 0f
 
     /** A 300 dp viewport over 500 dp of forecast, the insertion point, then 500 dp more; a 100 dp bar below. */
-    private fun page(initial: Int = 0, before: Int = 500) {
+    private fun page(initial: Int = 0, before: Int = 500, after: Int = 500) {
         compose.setContent {
             px = LocalDensity.current.density
             scroll = rememberScrollState(initial)
@@ -45,7 +45,7 @@ class NativeSlotAnchorTest {
                     Column(Modifier.fillMaxWidth().verticalScroll(scroll)) {
                         Spacer(Modifier.fillMaxWidth().height(before.dp))
                         SlotAnchor { reached = true }
-                        Spacer(Modifier.fillMaxWidth().height(500.dp))
+                        Spacer(Modifier.fillMaxWidth().height(after.dp))
                     }
                 }
                 Spacer(Modifier.fillMaxWidth().height(100.dp))
@@ -55,7 +55,7 @@ class NativeSlotAnchorTest {
     }
 
     private fun scrollTo(dp: Int) {
-        runBlocking { scroll.scrollTo((dp * px).toInt()) }
+        runBlocking { scroll.scrollTo(if (dp == Int.MAX_VALUE) scroll.maxValue else (dp * px).toInt()) }
         compose.waitForIdle()
     }
 
@@ -82,5 +82,12 @@ class NativeSlotAnchorTest {
         page()
         assertEquals(0f, compose.onNodeWithTag(NATIVE_SLOT_ANCHOR).getUnclippedBoundsInRoot().let { (it.bottom - it.top).value }, 0f)
         assertEquals((1000 * px).toInt(), scroll.maxValue + (300 * px).toInt())
+    }
+
+    @Test fun aSlotAtTheEndOfTheContentIsReachedAtTheBottomOfTheScroll() {
+        page(after = 0)
+        assertFalse(reached)
+        scrollTo(Int.MAX_VALUE)
+        assertTrue("Saved Places: nothing follows the slot, so the viewport's bottom edge is the insertion point", reached)
     }
 }

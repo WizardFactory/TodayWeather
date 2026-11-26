@@ -33,15 +33,15 @@ class NativeCardLayoutTest {
             registrations++
             LayoutInflater.from(context).inflate(R.layout.native_forecast_ad_compact, host, false) as NativeAdView
         }, releaseAd = { releases++ })
-        card.mount(first, compact = true, dark = false, inView = true)
+        card.mount(first, compact = true, dark = false)
         val registered = first.getChildAt(0)
-        card.mount(second, compact = true, dark = true, inView = true)
+        card.mount(second, compact = true, dark = true)
         first.removeAllViews() // Compose can release an old wrapper after the new one was mounted.
         assertSame(registered, second.getChildAt(0))
         assertEquals(Color.WHITE, registered.findViewById<TextView>(R.id.ad_attribution).currentTextColor)
         assertEquals(1, registrations)
         card.destroy()
-        card.mount(first, compact = true, dark = false, inView = true)
+        card.mount(first, compact = true, dark = false)
         card.destroy()
         assertEquals(0, first.childCount)
         assertEquals(0, second.childCount)
@@ -66,5 +66,23 @@ class NativeCardLayoutTest {
         val stacked = height(R.layout.native_forecast_ad)
         val compact = height(R.layout.native_forecast_ad_compact)
         assertTrue("Compact card $compact vs stacked $stacked", compact.toDouble() / stacked in 0.4..0.6)
+    }
+
+    @Test
+    fun aNewCardStartsHiddenAndARemountKeepsTheLastViewportState() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val card = NativeCard(register = { host, _ ->
+            LayoutInflater.from(context).inflate(R.layout.native_forecast_ad_compact, host, false) as NativeAdView
+        }, releaseAd = {})
+        val first = FrameLayout(context)
+        card.mount(first, compact = true, dark = false)
+        val view = first.getChildAt(0)
+        assertEquals("not measured yet: hidden from the SDK", View.INVISIBLE, view.visibility)
+        card.showInViewport(true)
+        assertEquals(View.VISIBLE, view.visibility)
+        card.mount(FrameLayout(context), compact = true, dark = false)
+        assertEquals("a tab return draws its card in the first frame", View.VISIBLE, view.visibility)
+        card.showInViewport(false)
+        assertEquals(View.INVISIBLE, view.visibility)
     }
 }
