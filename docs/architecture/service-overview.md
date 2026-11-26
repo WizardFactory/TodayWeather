@@ -26,7 +26,7 @@ The repository contains the Node.js/Express weather backend, the Ionic 1/Angular
 | `server/lib/` | Provider HTTP/XML/JSON access (Visual Crossing in `lib/VC`), KMA scraping, units and image parsing |
 | `server/models/` | Mongoose weather, geographic, push and purchase-related models |
 | `client/www/js/` | App startup and screens; `WeatherUtil` HTTP/conversion, `WeatherInfo` city state, `TwStorage` persistence |
-| `client/package.json`, `client/config.xml`, `client/scripts/` | TodayWeather build since #2605: Cordova 13 from npm scripts (`www`, `build:*`, `build:*:release`), release files fetched from S3, prepare hooks for AdMob IDs and iOS tracking settings ([client README](../../client/README.md#mobile-application)) |
+| `client/package.json`, `client/config.xml`, `client/scripts/` | TodayWeather build since #2605: Cordova 13 from npm scripts (`www`, `build:*`, `build:*:release`), release files fetched from S3, prepare hooks for AdMob IDs and iOS tracking settings ([client README](../../client/README.md#historical-cordova-mobile-application)) |
 | `client/gulpfile.js`, `tw.*`, `ta.*` | Legacy product/platform build variants (TodayAir, widgets); copy configuration, resources and native projects. App billing installers and native purchase declarations removed in #2641 |
 | `ios/TodayWeather/`, `ios/Core/` | Native TodayWeather for iPhone and iPad (iOS 17.0+). The app uses SwiftUI; the Swift package owns weather and push requests, domain logic and storage. See the [iOS README](../../ios/README.md). |
 | `tw.ios/`, `ta.ios/` | TodayWeather/TodayAir native shells, Objective-C widgets, platform web assets |
@@ -95,7 +95,7 @@ App coordinates use `{lat,long}`; server geography often uses `{lat,lon}`; Mongo
 The native app in repository revision `9bc9ec8f` uses the existing TodayWeather
 bundle ID and reads Cordova state from WebKit local storage and the App Group
 preferences suite. It writes native state atomically and exports compatible state
-to the App Group for a separately built Cordova fallback. That fallback is not released (no new Cordova builds since the 2026-11-26 decision). It reuses the existing
+to the App Group for a separately built Cordova fallback. That fallback is not to be released on any store (AK, 2026-11-26). It reuses the existing
 device ID for registration. See [app startup](../../ios/TodayWeather/AppScenes.swift),
 [native storage](../../ios/Core/Sources/TWStorage/AppStateStore.swift),
 [device identity](../../ios/Core/Sources/TWStorage/DeviceIdentity.swift) and

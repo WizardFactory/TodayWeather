@@ -5,7 +5,7 @@ as the revenue source and Crashlytics for crash health. Remote Config controls
 the existing banner; PostHog remains deferred to [#2655](https://github.com/WizardFactory/TodayWeather/issues/2655).
 No new interstitial, purchase or widget flow is introduced.
 
-AK decided on 2026-11-26 that no new Cordova build will be released on any store, including a fallback or rollback build. Cordova-specific steps below (banner policy, experiments, the #2871 store-release step) apply only to installed 1.x versions; changes take effect only through the native apps.
+AK decided on 2026-11-26 that no new Cordova build will be released on any store, including a fallback or rollback build. Cordova-specific steps below (banner policy, experiments, the #2871 store-release step) apply only to installed 1.x versions. Remote Config changes still reach those installed builds; code changes reach users only through the native apps.
 
 ## Repository behavior and assets
 
@@ -148,8 +148,9 @@ session without an Ads SDK start. It also records the unchanged configuration (i
 [store runbook](cordova-store-release.md#developer-website-and-app-adstxt). Do not
 claim restoration until each AK step below is recorded in #2871:
 
-1. Ship the fixed client in the next store release (#2605). Older builds keep both
-   defects. iOS 1.0.10 (GMA 7.49.0 per the #2871 AdMob report) stays on a deprecated SDK until users update.
+1. Ship the fixed client in the next store release (#2605). Closed without a further
+   Cordova release: AK decided on 2026-11-26 that no Cordova build is released on any store. Installed builds keep the behaviour they shipped with; users move to the
+   native apps. Older builds keep both defects. iOS 1.0.10 (GMA 7.49.0 per the #2871 AdMob report) stays on a deprecated SDK until users update.
 2. Confirm app-ads.txt authorization for both apps in AdMob.
 3. In the AdMob Policy center, request a review for each weather app's "Site Behavior:
    Navigation" restriction after the release is live

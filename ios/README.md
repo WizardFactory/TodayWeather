@@ -749,8 +749,9 @@ App Review and phased release. Record the signal, threshold, window and owner
 for crash-free users, API error rates and push-registration health before
 starting. Review the observations before progression and record the decision
 at each phase. If a threshold is crossed, pause and investigate before
-resuming. If a higher-version Cordova fallback is selected, follow the
-[hand-back procedure](#rollback-hand-back-to-a-cordova-build-in-17).
+resuming. No Cordova fallback build is released (AK, 2026-11-26); fix forward
+with a native release. The [hand-back procedure](#rollback-hand-back-to-a-cordova-build-in-17)
+stays documented for reference only.
 Record completion at 100% in [IN-19](https://github.com/WizardFactory/TodayWeather/issues/2968).
 
 ## Data migration from the Cordova app
@@ -813,6 +814,8 @@ ios/tools/upgrade/run-upgrade-test.sh <tw_* simulator udid> ios/build/upgrade/To
 No request may reach production. The native build has no server URL and the push test sends only to the recorder. The Cordova build's server URL is the recorder, and `seed-cordova.js` reports every request the page starts and sends any request for a host other than this Mac to the recorder instead (one was seen: `maps.googleapis.com/maps/api/mapsjs/gen_204`). The test fails on a request for a TodayWeather host, or for an API path anywhere but the recorder. Limits: requests of native SDKs are not intercepted. With the dummy configuration they cannot reach the production Firebase project (the native app's Firebase Installations call was answered `400 API key not valid`), and the Cordova build uses Google's test ad units. The analytics observations read SDK internals (persisted flag, consent store, event counters) of FirebaseAnalytics 13.1.1 on the iOS 26.5 simulator; a later SDK can move them, which the checks before the update would reveal.
 
 ## Rollback hand-back to a Cordova build (IN-17)
+
+> **Not used for releases.** AK decided on 2026-11-26 that no Cordova build is released on any store, so the fallback build below is not shipped. The native app still writes the hand-back; this section records how it works.
 
 If the native release has to be rolled back, a Cordova build with a higher version is shipped as an update (the fallback build): the App Store cannot return users to an older build. Its WebView storage still holds the state of the day the native app was installed, and its start (`TwStorage.init`) would show that state and copy it over the suite. The hand-back gives it the native state instead, and gives the native app what the user changes in the fallback build if the native app returns (#2966). Ported from the Android AN-17 (`android/README.md`, "Rollback hand-back to a Cordova build (AN-17)"); the reader is the existing one in `client/` (`_handBack` in `service.storage.js`), unchanged.
 

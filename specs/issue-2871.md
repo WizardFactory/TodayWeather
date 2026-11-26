@@ -41,6 +41,6 @@ the store listings.
 
 ## Compatibility and rollback
 
-These are client-only JavaScript changes that ship with the next store release.
+These are client-only JavaScript changes that ship with the next store release. (Update: AK decided on 2026-11-26 that no Cordova build is released on any store; installed builds keep the behaviour they shipped with.)
 Older installs keep their behaviour. To roll back, revert the commits and restore
 the previous S3 object version for `app-ads.txt`.
