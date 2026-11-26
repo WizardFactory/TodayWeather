@@ -46,11 +46,11 @@ The apps do not arbitrate between the banner and the native card: both `true` sh
 
 The native-card builds released before #3216 (merge `c460c76c5`) have no banner and do not read `tw_app_banner_enabled`. These are Android 2.0.0 and 2.0.1, and the iOS builds from #3061 (merge `39385687a`, which removed the early banner) up to but excluding `c460c76c5`. They still read `tw_native_enabled`, so `false` published to every user leaves them without any in-content ad. To serve the banner instead of the native card:
 
-1. Identify the banner-capable release of each app by an identifier the older builds do not share. Firebase conditions evaluate the app version and the build number, one condition per Android or iOS app. `master` at `c460c76c5` still carries Android `2.0.1`/`200010`, the same as the store release, so the banner-capable Android release needs a new version. For iOS, take the version and build from the release record, because the archive step sets them. If no identifier separates the builds, keep the native card until such a release ships.
+1. Identify the banner-capable release of each app by an identifier the older builds do not share. Firebase conditions evaluate the app version and the build number, one condition per Android or iOS app. `master` at `c460c76c5` still carries Android `2.0.1`/`200010`, the same as the store release, so the banner-capable Android release needs a new `versionCode` (Firebase's build number), and usually a new version name as well. For iOS, take the version and build from the release record, because the archive step sets them. If no identifier separates the builds, keep the native card until such a release ships.
 2. Publish `tw_app_banner_enabled=true` and `tw_native_enabled=false` as conditional values under that condition only. Keep the defaults (`false` and `true`) for everyone else.
 3. Roll back the switch on the same condition. Either remove both conditional values, or publish `tw_app_banner_enabled=false` and `tw_native_enabled=true` under it. Changing only the default, or only the banner value, leaves the conditional native-off value in force.
 
-Remove the condition once the older builds no longer receive meaningful traffic.
+Removing the condition alone reverts the banner-capable builds to the defaults, the native card, so it is a rollback too. To keep the banner after the older builds stop receiving meaningful traffic, first publish `tw_app_banner_enabled=true` and `tw_native_enabled=false` as the defaults, then remove the condition.
 
 Rollback: end the experiment and restore `true`/`0`; restart/fetch on the client.
 Emergency hide: publish `tw_banner_enabled=false`. Offline clients retain their
