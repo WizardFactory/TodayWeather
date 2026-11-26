@@ -148,12 +148,12 @@ session without an Ads SDK start. It also records the unchanged configuration (i
 [store runbook](cordova-store-release.md#developer-website-and-app-adstxt). Do not
 claim restoration until each AK step below is recorded in #2871:
 
-1. Ship the fixed client in the next store release (#2605). Closed without a further
-   Cordova release: AK decided on 2026-11-26 that no Cordova build is released on any store. Installed builds keep the behaviour they shipped with; users move to the
-   native apps. Older builds keep both defects. iOS 1.0.10 (GMA 7.49.0 per the #2871 AdMob report) stays on a deprecated SDK until users update.
+1. No further Cordova release carries these fixes: AK decided on 2026-11-26 that no Cordova build is released on any store (2026-11-26).
+   Installed builds keep the behaviour they shipped with, and users move to the native
+   apps. Older builds keep both defects. iOS 1.0.10 (GMA 7.49.0 per the #2871 AdMob report) stays on a deprecated SDK until users update.
 2. Confirm app-ads.txt authorization for both apps in AdMob.
 3. In the AdMob Policy center, request a review for each weather app's "Site Behavior:
-   Navigation" restriction after the release is live
+   Navigation" restriction for the apps as published now (native 2.0.x)
    ([AdMob help](https://support.google.com/admob/answer/10448709)). Record the
    request date and the outcome. A pending or rejected review keeps #2871 open.
 4. Report before/after cohorts with an explicit date range and timezone, app version,

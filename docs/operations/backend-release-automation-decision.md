@@ -52,4 +52,4 @@ The issue references `docs/operations/post-deploy-ami-spot-rollout-guide.md`. It
 - Operator separately approves environment/IAM/OIDC/SSH/network setup, least privilege, audit retention and any production pilot. Read-only code checks or adapter presence do not prove these permissions or enforcement.
 - Retain Hermes for review and exception handling during pilot; migrate execution only after independent evidence covers equivalent invariants and rollback. List remaining manual gates honestly in that issue's acceptance criteria.
 
-Cordova signing/store release stays outside this decision and follows [#2605](https://github.com/WizardFactory/TodayWeather/issues/2605).
+Cordova signing/store release stayed outside this decision and followed [#2605](https://github.com/WizardFactory/TodayWeather/issues/2605); AK decided on 2026-11-26 that no Cordova build is released on any store (2026-11-26).
