@@ -62,6 +62,7 @@ Release CI is [Android release verification](../../.github/workflows/android-rel
 | --- | --- |
 | PR checks on the commit | Both jobs of the PR workflow, on the verified commit |
 | Release lint | `./gradlew lintRelease` for every module |
+| Baseline profile module | `./gradlew :baselineprofile:compileNonMinifiedReleaseKotlin :baselineprofile:compileBenchmarkReleaseKotlin`: the generator and benchmark sources compile. The module has only release-type variants, so PR CI does not build it; generating the profile needs a device and stays manual ([android/README.md](../../android/README.md#baseline-profile)) |
 | Device suites, phone API 36 | `device-tests`, `parity`, `window-fit` |
 | Device suites, phone API 24 | `device-tests` |
 | Device suites, tablet API 36 | `shell-fit`, `window-fit` |

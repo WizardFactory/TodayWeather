@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.mutableIntStateOf
@@ -40,6 +42,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -99,6 +102,7 @@ import net.wizardfactory.todayweather.ui.forecast.RetryDialog
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.chart.ForecastChartImages
+import net.wizardfactory.todayweather.ui.chart.LocalForecastChartImages
 import net.wizardfactory.todayweather.ui.forecast.ForecastCharts
 import net.wizardfactory.todayweather.ui.forecast.rememberWeatherTab
 import net.wizardfactory.todayweather.ui.nation.IonicLoading
@@ -189,65 +193,72 @@ class MainActivity : ComponentActivity() {
             opened.consent.openPrivacyOptions(this, ::refreshNativeEligibility, onUnavailable)
         }
         setContent {
-            val saved by app.appState.state.collectAsState()
-            // The screens see a place shown without being saved as the last place of the list (LinkPreview).
-            val unsaved by opened.preview.unsaved.collectAsState()
-            val previewPlace = unsaved?.place
-            val state = saved?.let { LinkPreview.overlay(it, unsaved) }
-            val link by opened.links.requests.collectAsState()
-            // The start page closed in this app open: the tabs open on Hourly (`close()`).
-            var afterStart by rememberSaveable { mutableStateOf(false) }
-            state?.let { s ->
-                if (s.startShows && previewPlace == null) {
-                    LaunchedEffect(Unit) {
-                        afterStart = true
-                        app.analytics.screen("start")
+            // Test tags as resource IDs for UiAutomator: the baseline profile journey finds tabs and S01 controls in any
+            // language (#3224). Nothing is drawn differently.
+            TestTagsAsResourceIds {
+                val saved by app.appState.state.collectAsState()
+                // The screens see a place shown without being saved as the last place of the list (LinkPreview).
+                val unsaved by opened.preview.unsaved.collectAsState()
+                val previewPlace = unsaved?.place
+                val state = saved?.let { LinkPreview.overlay(it, unsaved) }
+                val link by opened.links.requests.collectAsState()
+                // The start page closed in this app open: the tabs open on Hourly (`close()`).
+                var afterStart by rememberSaveable { mutableStateOf(false) }
+                state?.let { s ->
+                    if (s.startShows && previewPlace == null) {
+                        LaunchedEffect(Unit) {
+                            afterStart = true
+                            app.analytics.screen("start")
+                        }
+                        StartScreen(opened.start, app.places, { app.towns.await() }, onExit = ::finish,
+                            openAppSettings = { AndroidLocationAccess.openAppSettings(this) },
+                            openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) })
+                        return@let
                     }
-                    StartScreen(opened.start, app.places, { app.towns.await() }, onExit = ::finish,
-                        openAppSettings = { AndroidLocationAccess.openAppSettings(this) },
-                        openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) })
-                    return@let
+                    val entries by app.weather.weather.collectAsState()
+                    val loading by app.weather.loading.collectAsState()
+                    val retry by session.retry.collectAsState()
+                    val context = LocalContext.current
+                    val host = remember(context) {
+                        WeatherTabHost(
+                            texts = forecastTexts(context),
+                            photos = opened.photoLoader,
+                            readCache = { app.weather.cached(it) },
+                            onPrevious = session::previous,
+                            onNext = session::next,
+                            onExpand = { expand -> app.appState.change { it.copy(expandShortChart = expand) } },
+                            onLocationGlyph = locationGlyph::tap,
+                            locationEnabled = locationGlyph::enabled,
+                        )
+                    }
+                    val weatherShare = remember(context) { WeatherShare(this, opened.preview::current, { app.weather.weather.value }, session::openStartPopup) }
+                    val handoffs = remember(context) {
+                        // The user agent may load the WebView the first time: the mail is built off the main thread.
+                        MenuHandoffs(openSystem = { url -> Handoff.openSystem(this, url) }, sendFeedback = {
+                            lifecycleScope.launch { Handoff.openLink(this@MainActivity, withContext(Dispatchers.Default) { Handoff.feedbackMail(this@MainActivity) }) }
+                        })
+                    }
+                    val bannerShown by opened.ads.shown.collectAsState()
+                    val images = remember(context) { ForecastChartImages(context.applicationContext) }
+                    CompositionLocalProvider(LocalForecastChartImages provides images) {
+                        AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings,
+                            handoffs = handoffs, nation = opened.nation, privacy = privacy, banner = if (bannerShown) ({ BannerSlot(banner) }) else null,
+                            nativeAd = { tab ->
+                                rememberNativeAdSlot(nativeAds, tab, dark = Theme.of(s.settings.theme) == Theme.DARK)
+                            },
+                            onVisit = interstitial::recordVisible, onRepeatVisit = interstitial::handleTap,
+                            onScreen = app.analytics::screen, startTab = if (afterStart) Tab.HOURLY else null,
+                            openAppSettings = { AndroidLocationAccess.openAppSettings(this) },
+                            openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) }, places = opened.places,
+                            alarms = opened.alarms, messages = app.foreground.messages, alertIntro = opened.alertIntro,
+                            link = link, onLinkHandled = opened.links::handled, preview = previewPlace != null,
+                            onAddPreview = {
+                                // No confirmation: the star saves at once and says so (#3180).
+                                if (opened.addPreview()) Toast.makeText(this, R.string.link_added_favorite, Toast.LENGTH_SHORT).show()
+                            },
+                            share = weatherShare::share)
+                    }
                 }
-                val entries by app.weather.weather.collectAsState()
-                val loading by app.weather.loading.collectAsState()
-                val retry by session.retry.collectAsState()
-                val context = LocalContext.current
-                val host = remember(context) {
-                    WeatherTabHost(
-                        texts = forecastTexts(context),
-                        photos = opened.photoLoader,
-                        readCache = { app.weather.cached(it) },
-                        onPrevious = session::previous,
-                        onNext = session::next,
-                        onExpand = { expand -> app.appState.change { it.copy(expandShortChart = expand) } },
-                        onLocationGlyph = locationGlyph::tap,
-                        locationEnabled = locationGlyph::enabled,
-                    )
-                }
-                val weatherShare = remember(context) { WeatherShare(this, opened.preview::current, { app.weather.weather.value }, session::openStartPopup) }
-                val handoffs = remember(context) {
-                    // The user agent may load the WebView the first time: the mail is built off the main thread.
-                    MenuHandoffs(openSystem = { url -> Handoff.openSystem(this, url) }, sendFeedback = {
-                        lifecycleScope.launch { Handoff.openLink(this@MainActivity, withContext(Dispatchers.Default) { Handoff.feedbackMail(this@MainActivity) }) }
-                    })
-                }
-                val bannerShown by opened.ads.shown.collectAsState()
-                AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings,
-                    handoffs = handoffs, nation = opened.nation, privacy = privacy, banner = if (bannerShown) ({ BannerSlot(banner) }) else null,
-                    nativeAd = { tab ->
-                        rememberNativeAdSlot(nativeAds, tab, dark = Theme.of(s.settings.theme) == Theme.DARK)
-                    },
-                    onVisit = interstitial::recordVisible, onRepeatVisit = interstitial::handleTap,
-                    onScreen = app.analytics::screen, startTab = if (afterStart) Tab.HOURLY else null,
-                    openAppSettings = { AndroidLocationAccess.openAppSettings(this) },
-                    openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) }, places = opened.places,
-                    alarms = opened.alarms, messages = app.foreground.messages, alertIntro = opened.alertIntro,
-                    link = link, onLinkHandled = opened.links::handled, preview = previewPlace != null,
-                    onAddPreview = {
-                        // No confirmation: the star saves at once and says so (#3180).
-                        if (opened.addPreview()) Toast.makeText(this, R.string.link_added_favorite, Toast.LENGTH_SHORT).show()
-                    },
-                    share = weatherShare::share)
             }
         }
     }
@@ -367,7 +378,8 @@ fun AppContent(
     val theme = Theme.of(state.settings.theme)
     val forecastCharts = remember { ForecastCharts() }
     val context = LocalContext.current.applicationContext
-    val forecastImages = remember(context) { ForecastChartImages(context) }
+    // The activity's shared decoded images (#3224), provided around AppContent so every tab and page reads through it.
+    val forecastImages = LocalForecastChartImages.current ?: remember(context) { ForecastChartImages(context) }
     val navigation = rememberShellNavigation(startTab ?: StartupPage.tab(state.settings.startupPage))
     // `?code=` of /tab/air: the pollutant S03 or S04 opened S05 on. The weather tabs keep it in the URL (`$location.path`),
     // so S05 opens on it again; the Locations tab replaces the URL (`href="#/tab/search"`) and clears it.
@@ -864,4 +876,10 @@ internal fun languages(): List<String> = LocaleListCompat.getAdjustedDefault().t
 interface AlertIntro {
     fun due(): Boolean
     fun answer(enable: Boolean)
+}
+
+/** Exposes Compose test tags as view resource IDs to UiAutomator (the baseline profile journey, #3224); draws nothing. */
+@Composable
+private fun TestTagsAsResourceIds(content: @Composable () -> Unit) {
+    Box(Modifier.semantics { testTagsAsResourceId = true }) { content() }
 }
