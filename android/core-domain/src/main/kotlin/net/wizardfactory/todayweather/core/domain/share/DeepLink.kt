@@ -87,16 +87,18 @@ object DeepLink {
 
     /** The target of [url], or null for another host or scheme, an unknown path or invalid required parameters. */
     fun parse(url: String): DeepLinkTarget? {
-        val legacy = "${EntryLink.SCHEME}://"
-        if (url.startsWith(legacy)) {
-            val rest = url.substring(legacy.length)
-            // The iOS widget's `todayweather://widget?place=` link has no meaning here.
-            if (rest.isEmpty() || rest == "widget" || rest.startsWith("widget?")) return null
-            return EntryLink.placeIndex(url)?.let(DeepLinkTarget::LegacyWidgetIndex)
-        }
         val match = URL.find(url) ?: return null
         val (scheme, authority, pathAndQuery) = match.destructured
-        if (!scheme.equals("https", ignoreCase = true)) return null
+        val isHttps = scheme.equals("https", ignoreCase = true)
+        val isCustom = scheme.equals(EntryLink.SCHEME, ignoreCase = true)
+        if (!isHttps && !isCustom) return null
+        if (isCustom) {
+            val rest = url.substring(scheme.length + 3)
+            // The iOS widget's `todayweather://widget?place=` link has no meaning here.
+            if (rest.isEmpty() || rest == "widget" || rest.startsWith("widget?")) return null
+            // `todayweather://N` (widget index) stays distinct from `todayweather://link.todayweather.ai/...` (#3219).
+            EntryLink.placeIndex(url)?.let { return DeepLinkTarget.LegacyWidgetIndex(it) }
+        }
         val hostAndPort = authority.substringAfterLast('@')
         // `new URL`: an empty port or one up to 65535; anything else after a colon is no URL.
         val port = PORT.find(hostAndPort)

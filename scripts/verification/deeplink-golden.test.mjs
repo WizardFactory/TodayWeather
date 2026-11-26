@@ -80,8 +80,10 @@ function decodeSafePath(rawPath) {
 }
 
 function referenceParseNative(rawUrl) {
-  if (rawUrl.startsWith(`${contract.legacyScheme}://`)) {
-    const rest = rawUrl.slice(`${contract.legacyScheme}://`.length);
+  const legacyPrefix = `${contract.legacyScheme}://`;
+  const isLegacyScheme = rawUrl.toLowerCase().startsWith(legacyPrefix);
+  if (isLegacyScheme) {
+    const rest = rawUrl.slice(legacyPrefix.length);
     if (!rest) return null;
     if (rest.startsWith("widget?") || rest === "widget") {
       const parsed = new URL(rawUrl);
@@ -90,11 +92,12 @@ function referenceParseNative(rawUrl) {
         placeId: parsed.searchParams.get("place"),
       };
     }
-    const idx = Number.parseInt(rest, 10);
-    if (!Number.isNaN(idx)) {
-      return { kind: "legacyWidgetIndex", index: idx };
+    if (rawUrl.startsWith(legacyPrefix)) {
+      const idx = Number.parseInt(rest, 10);
+      if (!Number.isNaN(idx)) {
+        return { kind: "legacyWidgetIndex", index: idx };
+      }
     }
-    return null;
   }
 
   let parsed;
@@ -103,7 +106,12 @@ function referenceParseNative(rawUrl) {
   } catch {
     return null;
   }
-  if (parsed.protocol !== "https:") return null;
+  if (
+    parsed.protocol !== "https:" &&
+    parsed.protocol !== `${contract.legacyScheme}:`
+  ) {
+    return null;
+  }
   if (parsed.hostname.toLowerCase() !== contract.canonicalHost) return null;
 
   const rawParts = parseRawPathAndQuery(rawUrl);

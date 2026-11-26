@@ -173,7 +173,7 @@ test.describe("shared location", () => {
       page.getByRole("link", { name: "앱에서 보기" }),
     ).toHaveAttribute(
       "href",
-      "intent://link.todayweather.ai/place/seoul?view=daily#Intent;scheme=https;package=net.wizardfactory.todayweather;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dnet.wizardfactory.todayweather%26referrer%3Dutm_source%253Dapp.todayweather.ai%2526utm_medium%253Dweb%2526utm_campaign%253Dwebapp;end",
+      "intent://link.todayweather.ai/place/seoul?view=daily#Intent;scheme=todayweather;package=net.wizardfactory.todayweather;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dnet.wizardfactory.todayweather%26referrer%3Dutm_source%253Dapp.todayweather.ai%2526utm_medium%253Dweb%2526utm_campaign%253Dwebapp;end",
     );
     await expect(
       page.locator('meta[name="apple-itunes-app"]'),
