@@ -16,6 +16,7 @@ import javax.imageio.ImageIO
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -81,10 +82,14 @@ class SplashIconTest {
         }
     }
 
-    /** Where the theme's drawable draws the imported art in a [side] square: the art itself, at a readable size. */
-    private fun placedArt(icon: Drawable, side: Int, label: String): Rect {
+    /**
+     * Where the theme's drawable draws the imported art in a [side] square: the art itself (the `splash_icon` resource,
+     * whose bytes ImportedClientAssetsTest pins to the imported PNG), at a readable size.
+     */
+    private fun placedArt(context: Context, icon: Drawable, side: Int, label: String): Rect {
         icon.setBounds(0, 0, side, side)
         val child = (icon as InsetDrawable).drawable as BitmapDrawable
+        assertSame("$label: the child is not the splash_icon resource", context.getDrawable(R.drawable.splash_icon)!!.constantState, child.constantState)
         assertEquals("$label: not the imported splash_icon", art.width, child.bitmap.width)
         assertEquals("$label: not the imported splash_icon", art.height, child.bitmap.height)
         val drawn = Rect(child.bounds)
@@ -99,7 +104,7 @@ class SplashIconTest {
             val context = themed(dpi)
             val icon = splashIcon(context)
             for (mask in masks(context, dpi)) {
-                val drawn = placedArt(icon, mask.side, mask.label)
+                val drawn = placedArt(context, icon, mask.side, mask.label)
                 val centre = mask.side / 2.0
                 val farthest = artPixels.maxOf { (x, y) ->
                     hypot(drawn.left + (x + 0.5) * drawn.width() / art.width - centre, drawn.top + (y + 0.5) * drawn.height() / art.height - centre)
