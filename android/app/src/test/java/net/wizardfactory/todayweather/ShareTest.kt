@@ -196,6 +196,7 @@ class ShareTest {
         assertTrue(links.accept(view("todayweather://link.todayweather.ai/place/seoul?view=daily")))
         assertTrue(links.accept(view("TODAYWEATHER://LINK.todayweather.ai/air/jeju?pollutant=o3")))
         assertTrue(links.accept(view("todayweather://link.todayweather.ai/warnings")))
+        assertTrue(links.accept(view("todayweather://2@link.todayweather.ai/warnings")))
         assertTrue(links.accept(view("todayweather://link.todayweather.ai/unknown")), "an unknown path on the link host is still consumed")
         assertTrue(links.accept(view("todayweather://link.todayweather.ai/place/seoul").addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)),
             "Recents replays nothing")
@@ -204,6 +205,7 @@ class ShareTest {
         assertTrue(links.accept(view("todayweather://2")), "numeric widget links still queue their place index")
         assertEquals(DeepLinkTarget.Place("seoul", WeatherView.DAILY, null), links.targets.tryReceive().getOrNull())
         assertEquals(DeepLinkTarget.Place("jeju", WeatherView.AIR, "o3"), links.targets.tryReceive().getOrNull())
+        assertEquals(DeepLinkTarget.Warnings, links.targets.tryReceive().getOrNull())
         assertEquals(DeepLinkTarget.Warnings, links.targets.tryReceive().getOrNull())
         assertNull(links.targets.tryReceive().getOrNull())
         assertEquals(2.0, links.indexes.tryReceive().getOrNull())

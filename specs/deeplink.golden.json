@@ -651,6 +651,43 @@
       "edge": null
     },
     {
+      "id": "android-scheme-warnings-fragment",
+      "description": "Android custom-scheme handoff strips URL fragment like https",
+      "url": "todayweather://link.todayweather.ai/warnings#section",
+      "legacyPlatform": "android",
+      "native": { "kind": "warnings" },
+      "edge": null
+    },
+    {
+      "id": "https-numeric-userinfo-warnings",
+      "description": "HTTPS link with numeric userinfo before canonical host still opens warnings",
+      "url": "https://2@link.todayweather.ai/warnings",
+      "native": { "kind": "warnings" },
+      "edge": null
+    },
+    {
+      "id": "android-scheme-numeric-userinfo-warnings",
+      "description": "Android custom-scheme link with numeric userinfo before canonical host opens warnings rather than widget index",
+      "url": "todayweather://2@link.todayweather.ai/warnings",
+      "legacyPlatform": "android",
+      "native": { "kind": "warnings" },
+      "edge": null
+    },
+    {
+      "id": "android-scheme-numeric-userinfo-bad-port",
+      "description": "Android custom-scheme link with numeric userinfo and invalid port on canonical host is rejected rather than falling back to widget index",
+      "url": "todayweather://2@link.todayweather.ai:99999/warnings",
+      "native": null,
+      "edge": null
+    },
+    {
+      "id": "legacy-ios-widget-uppercase-scheme-rejected",
+      "description": "Legacy iOS widget link keeps case-sensitive lowercase scheme prefix",
+      "url": "TODAYWEATHER://widget?place=seoul",
+      "native": null,
+      "edge": null
+    },
+    {
       "id": "android-scheme-wrong-host",
       "description": "Android custom-scheme handoff rejects non-canonical hosts",
       "url": "todayweather://todayweather.ai/place/seoul",
