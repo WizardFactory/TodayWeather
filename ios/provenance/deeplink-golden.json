@@ -4,10 +4,10 @@
  "files": [
   {
    "source": "specs/deeplink.golden.json",
-   "commit": "1cfb4d7fe253e546af06530c5f0fd4e09d61f14a",
-   "source_sha256": "1b19ccda0d35b39c2a9b2fba411d000571a6e9a2587452cb11a34a7684f97d90",
+   "commit": "085c607cd18791a7c25dd6f9c3604007e32c66e6",
+   "source_sha256": "b5fda80bd3252511f731e4fbec6227a3a22e6b6383182dc870d76738a0068c02",
    "output": "Core/Tests/TWDomainTests/DeepLink/deeplink.golden.json",
-   "output_sha256": "1b19ccda0d35b39c2a9b2fba411d000571a6e9a2587452cb11a34a7684f97d90"
+   "output_sha256": "b5fda80bd3252511f731e4fbec6227a3a22e6b6383182dc870d76738a0068c02"
   },
   {
    "source": "packages/weather-core/src/index.ts",
