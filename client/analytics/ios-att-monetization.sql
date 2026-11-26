@@ -6,10 +6,12 @@
 -- ATT release report '(not set)'. Impressions are the app's own `ad_lifecycle` impression events: GA4 does not export
 -- the automatic AdMob `ad_impression` to BigQuery and the default integration passes no value, so revenue, eCPM,
 -- match rate and show rate are not derivable here. Take them from the AdMob report by app version and serving
--- restriction (docs/operations/monetization.md). Uses completed daily partitions only; rerun the last three days.
+-- restriction (docs/operations/monetization.md). Rates divide by reporting installations (active installations that sent an
+-- event carrying measurement_version, of any value type). Uses completed daily partitions only; rerun the last three days.
 WITH raw AS (
   SELECT *,
     (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'traffic_type') AS traffic_type,
+    EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key = 'measurement_version') AS reporting,
     (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'debug_mode') AS debug_mode,
     (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'action') AS action,
     (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'ad_format') AS ad_format,
@@ -29,6 +31,7 @@ WITH raw AS (
 ), daily AS (
   SELECT event_date, app_version, att_status,
     COUNT(DISTINCT IF(is_active_user, user_pseudo_id, NULL)) AS active_installations,
+    COUNT(DISTINCT IF(is_active_user AND reporting, user_pseudo_id, NULL)) AS reporting_installations,
     COUNTIF(event_name = 'ad_lifecycle' AND action = 'impression' AND ad_format = 'banner') AS banner_impressions,
     COUNTIF(event_name = 'ad_lifecycle' AND action = 'impression' AND ad_format = 'native') AS native_impressions,
     COUNTIF(event_name = 'ad_lifecycle' AND action = 'impression' AND ad_format = 'interstitial') AS interstitial_impressions,
@@ -38,6 +41,6 @@ WITH raw AS (
 )
 SELECT *,
   banner_impressions + native_impressions + interstitial_impressions AS ad_impressions,
-  SAFE_DIVIDE(banner_impressions + native_impressions + interstitial_impressions, active_installations)
-    AS impressions_per_active_installation
+  SAFE_DIVIDE(banner_impressions + native_impressions + interstitial_impressions, reporting_installations)
+    AS impressions_per_reporting_installation
 FROM daily ORDER BY event_date, app_version, att_status;

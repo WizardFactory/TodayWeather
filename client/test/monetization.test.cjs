@@ -579,7 +579,10 @@ test('monetization queries count impressions from the app ad_lifecycle event, no
         }
         assert.match(sql, /event_name = 'ad_lifecycle' AND action = 'request' AND ad_format = 'banner'/, file);
         assert.match(sql, /event_name = 'ad_lifecycle' AND action = 'failed' AND ad_format = 'banner'/, file);
-        assert.match(sql, /impressions_per_active_installation/, file);
+        assert.match(sql, /impressions_per_reporting_installation/, file);
+        // Older Cordova builds and analytics-off sessions send automatic events but no measurement events.
+        assert.match(sql, /EXISTS\(SELECT 1 FROM UNNEST\(event_params\) WHERE key = 'measurement_version'\) AS reporting/, file);
+        assert.match(sql, /COUNT\(DISTINCT IF\(is_active_user AND reporting, user_pseudo_id, NULL\)\) AS reporting_installations/, file);
     }
     const daily = read('analytics/daily-monetization.sql');
     assert.doesNotMatch(daily, /@app_version/, 'compares version groups instead of one version');
