@@ -82,6 +82,8 @@ Keep each gate's output directory under ignored `reports/`; it can show private 
 
 ### 4. Build and sign
 
+First check that the private inputs match their newest S3 snapshot: `scripts/private-inputs.py verify --label native-inputs` must exit 0. A difference means a change was never backed up, or a file is wrong. Resolve it before building ([private inputs](private-inputs.md#check-before-a-release)).
+
 On the operator's machine, at the root of a checkout that has the candidate commit (any branch; the checkout itself is not built). The release is built from an export of the commit in a new directory, never from a checkout: a checkout can hold changed, untracked, ignored or index-flagged files that a build would take in, and Git can convert files on the way out. Needs `python3`, the Android SDK (`ANDROID_HOME`) and JDK 17.
 
 ```sh

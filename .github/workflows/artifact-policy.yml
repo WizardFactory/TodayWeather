@@ -35,6 +35,8 @@ jobs:
       - run: python3 scripts/verification/test_artifact_policy.py
       - run: python3 scripts/verification/smoke_artifact_hooks.py
       - run: python3 scripts/verification/test_artifact_ci.py
+      - name: Check the private inputs backup tool offline
+        run: python3 scripts/verification/test_private_inputs.py
       - name: Check the release notes tool
         run: node --test scripts/verification/release-notes.test.mjs
       - name: Check committed snapshots and history
