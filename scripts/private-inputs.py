@@ -132,7 +132,7 @@ def relative_name(name: str) -> str:
     parts = Path(name).parts
     if not parts or any(part in ("..", ".", "") for part in parts) or os.path.isabs(name):
         raise Failure(f"{name} is not under {display(CONFIG_ROOT)}")
-    if parts[0] in RESERVED:
+    if parts[0].lower() in {r.lower() for r in RESERVED}:
         raise Failure(f"{parts[0]} is a reserved snapshot name")
     return "/".join(parts)
 
@@ -149,7 +149,8 @@ def read_private(relative: str) -> bytes | None:
             fds.append(os.open(CONFIG_ROOT, nofollow | os.O_DIRECTORY))
             for part in parts[:-1]:
                 fds.append(os.open(part, nofollow | os.O_DIRECTORY, dir_fd=fds[-1]))
-            fd = os.open(parts[-1], nofollow, dir_fd=fds[-1])
+            # Non-blocking, so a FIFO fails the regular-file check instead of waiting.
+            fd = os.open(parts[-1], nofollow | getattr(os, "O_NONBLOCK", 0), dir_fd=fds[-1])
         except FileNotFoundError:
             return None
         except OSError as error:
@@ -200,13 +201,16 @@ COMPLETE (the manifest's SHA-256) is written last; a run without it is incomplet
 
 
 def publish(s3, prefix: str, name: str, path: Path, work: Path) -> None:
-    """Upload one object and read it back; a mismatch leaves the run incomplete."""
+    """Upload one object and read it back; a mismatch before COMPLETE leaves the run incomplete."""
     s3.put_new(prefix + name, path)
     copy = work / "readback"
     s3.get(prefix + name, copy)
     same = copy.read_bytes() == path.read_bytes()
     copy.unlink()
     if not same:
+        if name == "COMPLETE":
+            raise Failure("read-back of COMPLETE differs; whether the run is complete is unknown: "
+                          "run verify, and take a new snapshot if it does not match")
         raise Failure(f"read-back of {name} differs from the uploaded file; the run stays incomplete")
 
 

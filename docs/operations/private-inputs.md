@@ -41,7 +41,7 @@ When you add or change a private input, make a new snapshot before the task is r
 TW_RELEASE_ENV='<release workspace>/client/.env' python3 scripts/private-inputs.py snapshot --label native-inputs
 ```
 
-The command reads each file once, without following links, and uploads that copy. A path that is a link or crosses one is refused; name the real file. It reads every object back, then writes `manifest.json`. It prints only the snapshot's run ID. On a failure it prints the AWS error code without the AWS message, because the message can name accounts and resources. To back up other files under `~/.config/todayweather/`, name them and use another label.
+The command reads each file once, without following links, and uploads that copy. A path that is a link or crosses one is refused; name the real file. It writes the files, `RESTORE.md` and `manifest.json`, reads each back, and only then writes `COMPLETE`. It prints only the snapshot's run ID. On a failure it prints the AWS error code without the AWS message, because the message can name accounts and resources. To back up other files under `~/.config/todayweather/`, name them and use another label.
 
 ## Check before a release
 

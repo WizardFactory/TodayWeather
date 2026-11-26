@@ -165,6 +165,12 @@ class PrivateInputsTest(unittest.TestCase):
             self.assertEqual(code, 2)
             self.assertIn(f"read-back of {name} differs", err)
             self.assertNotIn(self.prefix(later) + "COMPLETE", self.s3.objects)
+        later = NOW + dt.timedelta(seconds=5)
+        self.s3.corrupt_reads.add(self.prefix(later) + "COMPLETE")
+        code, _, err = self.run_tool("snapshot", "--label", "native-inputs", now=later)
+        self.assertEqual(code, 2)
+        self.assertIn("whether the run is complete is unknown", err)
+        del self.s3.objects[self.prefix(later) + "COMPLETE"]
         # A COMPLETE that does not hold the manifest's hash does not complete the run.
         later = NOW + dt.timedelta(seconds=4)
         self.s3.objects[self.prefix(later) + "manifest.json"] = b'{"files": []}'
@@ -186,6 +192,11 @@ class PrivateInputsTest(unittest.TestCase):
             code, _, err = self.run_tool("snapshot", "--label", "misc", target)
             self.assertEqual(code, 2, target)
             self.assertIn("is a link or crosses one", err)
+        fifo = self.config / "pipe"
+        os.mkfifo(fifo)
+        code, _, err = self.run_tool("snapshot", "--label", "misc", "pipe")
+        self.assertEqual(code, 2)
+        self.assertIn("is not a regular file", err)
         # A required input that is a link inside the root is refused too (no silent rename).
         real = self.config / "android/real.properties"
         (self.config / "android/private.properties").rename(real)
@@ -206,7 +217,7 @@ class PrivateInputsTest(unittest.TestCase):
         self.assertEqual(code, 0)  # required files are always included
         self.assertEqual(len(json.loads(self.s3.objects[self.prefix() + "manifest.json"])["files"]), 4)
         (self.config / "manifest.json").write_text("{}")
-        for reserved in ("manifest.json", "manifest.json/fixture", "COMPLETE"):
+        for reserved in ("manifest.json", "manifest.json/fixture", "COMPLETE", "complete/fixture"):
             code, _, err = self.run_tool("snapshot", "--label", "misc", reserved)
             self.assertEqual(code, 2, reserved)
             self.assertIn("reserved snapshot name", err)
