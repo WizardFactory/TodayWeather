@@ -83,6 +83,10 @@ class PrivateInputsTest(unittest.TestCase):
             code = tool.main(["--env", str(self.env_file), *argv], s3_factory=factory or (lambda env: self.s3), now=now)
         return code, out.getvalue(), err.getvalue()
 
+    def put_complete(self, prefix, manifest_bytes):
+        self.s3.objects[prefix + "manifest.json"] = manifest_bytes
+        self.s3.objects[prefix + "COMPLETE"] = hashlib.sha256(manifest_bytes).hexdigest().encode() + b"\n"
+
     def prefix(self, now=NOW, label="native-inputs"):
         return f"{ROOT}{now.strftime('%Y%m%dT%H%M%SZ')}-{label}/"
 
@@ -91,7 +95,7 @@ class PrivateInputsTest(unittest.TestCase):
         self.assertEqual(code, 0)
         prefix = self.prefix()
         self.assertIn("20261127T030405Z-native-inputs", out)
-        self.assertEqual(set(self.s3.objects), {prefix + n for n in [*INPUTS, "manifest.json", "RESTORE.md"]})
+        self.assertEqual(set(self.s3.objects), {prefix + n for n in [*INPUTS, "manifest.json", "RESTORE.md", "COMPLETE"]})
         manifest = json.loads(self.s3.objects[prefix + "manifest.json"])
         self.assertEqual(manifest["schema_version"], 1)
         entry = manifest["files"][0]
@@ -109,7 +113,7 @@ class PrivateInputsTest(unittest.TestCase):
 
         self.s3.on_put = change_during_upload
         self.assertEqual(self.run_tool("snapshot", "--label", "native-inputs")[0], 0)
-        self.assertEqual(order[-2:], ["RESTORE.md", "manifest.json"])
+        self.assertEqual(order[-3:], ["RESTORE.md", "manifest.json", "COMPLETE"])
         manifest = json.loads(self.s3.objects[self.prefix() + "manifest.json"])
         for entry in manifest["files"]:
             stored = self.s3.objects[self.prefix() + entry["object_relative"]]
@@ -134,7 +138,7 @@ class PrivateInputsTest(unittest.TestCase):
     def test_verify_requires_every_file_of_the_label(self):
         manifest = {"files": [{"restore_local_at_capture": "~/.config/todayweather/android/private.properties",
                                "sha256": hashlib.sha256(b"A=1\n").hexdigest()}]}
-        self.s3.objects[self.prefix() + "manifest.json"] = json.dumps(manifest).encode()
+        self.put_complete(self.prefix(), json.dumps(manifest).encode())
         code, _, err = self.run_tool("verify", "--label", "native-inputs")
         self.assertEqual(code, 1)
         self.assertIn("ios/Private.xcconfig: not in snapshot", err)
@@ -145,7 +149,7 @@ class PrivateInputsTest(unittest.TestCase):
         self.s3.objects[f"{ROOT}20991231T000000Z-native-inputs/ios/Private.xcconfig"] = b"partial"
         code, _, err = self.run_tool("verify", "--label", "native-inputs")
         self.assertEqual(code, 2)
-        self.assertIn("no snapshot labelled 'native-inputs'", err)
+        self.assertIn("no complete snapshot labelled 'native-inputs'", err)
         self.run_tool("snapshot", "--label", "native-inputs")
         self.assertEqual(self.run_tool("verify", "--label", "native-inputs")[0], 0)
 
@@ -154,13 +158,17 @@ class PrivateInputsTest(unittest.TestCase):
         code, _, err = self.run_tool("snapshot", "--label", "native-inputs")
         self.assertEqual(code, 2)
         self.assertIn("PreconditionFailed", err)
-        for offset, name in ((1, "ios/Private.xcconfig"), (2, "RESTORE.md")):
+        for offset, name in ((1, "ios/Private.xcconfig"), (2, "RESTORE.md"), (3, "manifest.json")):
             later = NOW + dt.timedelta(seconds=offset)
             self.s3.corrupt_reads.add(self.prefix(later) + name)
             code, _, err = self.run_tool("snapshot", "--label", "native-inputs", now=later)
             self.assertEqual(code, 2)
             self.assertIn(f"read-back of {name} differs", err)
-            self.assertNotIn(self.prefix(later) + "manifest.json", self.s3.objects)
+            self.assertNotIn(self.prefix(later) + "COMPLETE", self.s3.objects)
+        # A COMPLETE that does not hold the manifest's hash does not complete the run.
+        later = NOW + dt.timedelta(seconds=4)
+        self.s3.objects[self.prefix(later) + "manifest.json"] = b'{"files": []}'
+        self.s3.objects[self.prefix(later) + "COMPLETE"] = b"0" * 64
         code, out, _ = self.run_tool("verify", "--label", "native-inputs")
         self.assertEqual(code, 0)
         self.assertIn("20261127T030405Z-native-inputs", out)
@@ -169,24 +177,39 @@ class PrivateInputsTest(unittest.TestCase):
         outside = self.home / "elsewhere.txt"
         outside.write_text("x")
         (self.config / "link.txt").symlink_to(outside)
-        for target in (str(outside), "../../elsewhere.txt", "link.txt"):
+        (self.config / "linkdir").symlink_to(self.home)
+        for target in (str(outside), "../../elsewhere.txt"):
             code, _, err = self.run_tool("snapshot", "--label", "misc", target)
             self.assertEqual(code, 2, target)
             self.assertIn("is not under", err)
-        self.assertEqual(self.s3.objects, {})
-        manifest = {"files": [{"restore_local_at_capture": "~/elsewhere.txt", "sha256": "0"}]}
-        self.s3.objects[self.prefix(label="misc") + "manifest.json"] = json.dumps(manifest).encode()
-        code, _, err = self.run_tool("verify", "--label", "misc")
+        for target in ("link.txt", "linkdir/elsewhere.txt"):
+            code, _, err = self.run_tool("snapshot", "--label", "misc", target)
+            self.assertEqual(code, 2, target)
+            self.assertIn("is a link or crosses one", err)
+        # A required input that is a link inside the root is refused too (no silent rename).
+        real = self.config / "android/real.properties"
+        (self.config / "android/private.properties").rename(real)
+        (self.config / "android/private.properties").symlink_to(real)
+        code, _, err = self.run_tool("snapshot", "--label", "native-inputs")
         self.assertEqual(code, 2)
-        self.assertIn("lists a path outside", err)
+        self.assertIn("is a link or crosses one", err)
+        self.assertEqual(self.s3.objects, {})
+        for path in ("~/elsewhere.txt", "~/.config/todayweather/../x", "~/.config/todayweather/a\u0000b"):
+            manifest = {"files": [{"restore_local_at_capture": path, "sha256": "0"}]}
+            self.put_complete(self.prefix(label="misc"), json.dumps(manifest).encode())
+            code, _, err = self.run_tool("verify", "--label", "misc")
+            self.assertEqual(code, 2, path)
+            self.assertIn("lists a path outside", err)
 
     def test_refuses_missing_files_reserved_names_and_bad_input(self):
         code, _, err = self.run_tool("snapshot", "--label", "native-inputs", "android/private.properties")
         self.assertEqual(code, 0)  # required files are always included
         self.assertEqual(len(json.loads(self.s3.objects[self.prefix() + "manifest.json"])["files"]), 4)
         (self.config / "manifest.json").write_text("{}")
-        code, _, err = self.run_tool("snapshot", "--label", "misc", "manifest.json")
-        self.assertIn("reserved snapshot name", err)
+        for reserved in ("manifest.json", "manifest.json/fixture", "COMPLETE"):
+            code, _, err = self.run_tool("snapshot", "--label", "misc", reserved)
+            self.assertEqual(code, 2, reserved)
+            self.assertIn("reserved snapshot name", err)
         (self.config / "ios/GoogleService-Info.plist").unlink()
         code, _, err = self.run_tool("snapshot", "--label", "native-inputs", now=NOW + dt.timedelta(seconds=9))
         self.assertEqual(code, 2)
@@ -199,10 +222,16 @@ class PrivateInputsTest(unittest.TestCase):
         self.assertIn("lacks TW_RELEASE_S3_PREFIX", err)
 
     def test_unreadable_manifest_and_missing_aws_cli_exit_2(self):
-        self.s3.objects[self.prefix() + "manifest.json"] = b"not json"
+        self.put_complete(self.prefix(), b"not json")
         code, _, err = self.run_tool("verify", "--label", "native-inputs")
         self.assertEqual(code, 2)
         self.assertIn("unreadable manifest.json", err)
+        self.put_complete(self.prefix(), b"\xff\xfe")
+        self.assertEqual(self.run_tool("verify", "--label", "native-inputs")[0], 2)
+        listing, _ = AwsCliTest().adapter(stdout="5")
+        code, _, err = self.run_tool("verify", "--label", "native-inputs", factory=lambda env: listing)
+        self.assertEqual(code, 2)
+        self.assertIn("unreadable output", err)
 
         def missing(*args, **kwargs):
             raise FileNotFoundError("aws")
@@ -211,6 +240,9 @@ class PrivateInputsTest(unittest.TestCase):
                                      factory=lambda env: tool.AwsS3(env, run=missing))
         self.assertEqual(code, 2)
         self.assertIn("aws CLI could not start", err)
+        self.env_file.write_bytes(b"\xff\xfe=1\n")
+        code, _, err = self.run_tool("verify", "--label", "native-inputs")
+        self.assertEqual(code, 2)
 
 
 class AwsCliTest(unittest.TestCase):
@@ -244,6 +276,8 @@ class AwsCliTest(unittest.TestCase):
         self.assertEqual(get[get.index("--key") + 2], "/tmp/out")  # outfile is positional after the key
         self.assertEqual(listing[listing.index("--delimiter") + 1], "/")
         self.assertEqual(listing[listing.index("--prefix") + 1], "mobile/release-backups/")
+        self.assertEqual(listing[listing.index("--query") + 1], "CommonPrefixes[].Prefix")
+        self.assertEqual(listing[listing.index("--output") + 1], "json")
 
     def test_errors_keep_only_the_aws_code(self):
         stderr = ("An error occurred (AccessDenied) when calling the GetObject operation: User: "

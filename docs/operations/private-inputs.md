@@ -20,9 +20,10 @@ The private release bucket is the one named by `TW_RELEASE_S3_PREFIX` in the rel
 
 - the files, at their path relative to `~/.config/todayweather/`;
 - `manifest.json`: schema 1, with each file's local path, object path, size and SHA-256;
-- `RESTORE.md`: how to download, check and put the files back.
+- `RESTORE.md`: how to download, check and put the files back;
+- `COMPLETE`: the SHA-256 of `manifest.json`, written last.
 
-Every object is written with server-side encryption and a conditional create, so a snapshot never replaces an existing object. A snapshot is complete only when its `manifest.json` exists. The tool writes the manifest last, after reading every file back. Earlier snapshots stay as they are; the newest complete snapshot of a label is the current one.
+Every object is written with server-side encryption and a conditional create, so a snapshot never replaces an existing object. The tool reads every object back before it writes `COMPLETE`. A snapshot is complete only when `COMPLETE` exists and holds the hash of its `manifest.json`. Earlier snapshots stay as they are; the newest complete snapshot of a label is the current one. Snapshots taken by hand have no `COMPLETE`, so the tool does not consider them.
 
 | Label | Contents | Made by |
 | --- | --- | --- |
@@ -40,7 +41,7 @@ When you add or change a private input, make a new snapshot before the task is r
 TW_RELEASE_ENV='<release workspace>/client/.env' python3 scripts/private-inputs.py snapshot --label native-inputs
 ```
 
-The command copies each file once and uploads that copy. It reads every object back, then writes `manifest.json`. It prints only the snapshot's run ID. On a failure it prints the AWS error code without the AWS message, because the message can name accounts and resources. To back up other files under `~/.config/todayweather/`, name them and use another label.
+The command reads each file once, without following links, and uploads that copy. A path that is a link or crosses one is refused; name the real file. It reads every object back, then writes `manifest.json`. It prints only the snapshot's run ID. On a failure it prints the AWS error code without the AWS message, because the message can name accounts and resources. To back up other files under `~/.config/todayweather/`, name them and use another label.
 
 ## Check before a release
 

@@ -26,6 +26,7 @@ import re
 import shlex
 import subprocess
 import sys
+import stat
 import tempfile
 from pathlib import Path
 
@@ -40,7 +41,7 @@ REQUIRED = {
         "ios/GoogleService-Info.plist",
     ),
 }
-RESERVED = {"manifest.json", "RESTORE.md"}
+RESERVED = {"manifest.json", "RESTORE.md", "COMPLETE"}
 LABEL = re.compile(r"^[a-z0-9][a-z0-9-]{0,40}$")
 RUN = re.compile(r"^(\d{8}T\d{6}Z)-(.+)$")
 AWS_CODE = re.compile(r"An error occurred \(([A-Za-z0-9.]+)\)")
@@ -106,8 +107,10 @@ class AwsS3:
         try:
             prefixes = json.loads(out or "null") or []
         except json.JSONDecodeError:
-            raise Failure("aws s3api list-objects-v2 returned unreadable output") from None
-        return [p[len(self.root):].rstrip("/") for p in prefixes if isinstance(p, str)]
+            prefixes = None
+        if not isinstance(prefixes, list):
+            raise Failure("aws s3api list-objects-v2 returned unreadable output")
+        return [p[len(self.root):].rstrip("/") for p in prefixes if isinstance(p, str) and p.startswith(self.root)]
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -120,26 +123,53 @@ def display(path: Path) -> str:
     return "~" + text[len(home):] if text.startswith(home + os.sep) else text
 
 
-def inside_config(path: Path) -> Path:
-    """The real path of a file under CONFIG_ROOT; links and '..' that leave it are refused."""
-    root = CONFIG_ROOT.resolve()
-    real = path.resolve()
-    if real != root and root not in real.parents:
-        raise Failure(f"{display(path)} is not under {display(CONFIG_ROOT)}")
-    return real
+def relative_name(name: str) -> str:
+    """A path under CONFIG_ROOT as 'a/b/c'; absolute paths must lie under it lexically."""
+    if "\0" in name:
+        raise Failure("a file name contains a NUL character")
+    if os.path.isabs(name):
+        name = os.path.relpath(name, CONFIG_ROOT)
+    parts = Path(name).parts
+    if not parts or any(part in ("..", ".", "") for part in parts) or os.path.isabs(name):
+        raise Failure(f"{name} is not under {display(CONFIG_ROOT)}")
+    if parts[0] in RESERVED:
+        raise Failure(f"{parts[0]} is a reserved snapshot name")
+    return "/".join(parts)
+
+
+def read_private(relative: str) -> bytes | None:
+    """Read CONFIG_ROOT/relative without following any link: each directory is opened
+    beneath the previous one with O_NOFOLLOW, so a path cannot leave the root between
+    a check and the read. None when the file does not exist."""
+    nofollow = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    parts = relative.split("/")
+    fds = []
+    try:
+        try:
+            fds.append(os.open(CONFIG_ROOT, nofollow | os.O_DIRECTORY))
+            for part in parts[:-1]:
+                fds.append(os.open(part, nofollow | os.O_DIRECTORY, dir_fd=fds[-1]))
+            fd = os.open(parts[-1], nofollow, dir_fd=fds[-1])
+        except FileNotFoundError:
+            return None
+        except OSError as error:
+            # ELOOP / ENOTDIR: a link or a non-directory in the path.
+            raise Failure(f"{display(CONFIG_ROOT / relative)} is a link or crosses one; use the real file") from None
+        fds.append(fd)
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise Failure(f"{display(CONFIG_ROOT / relative)} is not a regular file")
+        with os.fdopen(os.dup(fd), "rb") as handle:
+            return handle.read()
+    finally:
+        for fd in fds:
+            os.close(fd)
 
 
 def resolve_files(label: str, files: list[str]) -> list[str]:
-    """Object names (relative to CONFIG_ROOT) for a snapshot of the label."""
-    required = REQUIRED.get(label, ())
+    """Object names (relative to CONFIG_ROOT) for a snapshot of the label; required files first."""
     names = []
-    for name in (*required, *files):
-        path = Path(name) if os.path.isabs(name) else CONFIG_ROOT / name
-        if not path.is_file():
-            raise Failure(f"missing private input: {display(path)}")
-        relative = inside_config(path).relative_to(CONFIG_ROOT.resolve()).as_posix()
-        if relative in RESERVED:
-            raise Failure(f"{relative} is a reserved snapshot name")
+    for name in (*REQUIRED.get(label, ()), *files):
+        relative = relative_name(name)
         if relative not in names:
             names.append(relative)
     if not names:
@@ -165,7 +195,7 @@ values in Git, issues, pull requests or logs.
    (`scripts/private-inputs.py verify --label <label>` compares against the newest).
 
 Objects use server-side encryption (AES256) and conditional creation (no overwrite).
-manifest.json is written last; a run without it is incomplete.
+COMPLETE (the manifest's SHA-256) is written last; a run without it is incomplete.
 """
 
 
@@ -191,7 +221,9 @@ def snapshot(s3, env: dict[str, str], label: str, files: list[str], now: dt.date
             entries, staged = [], []
             # Read each input once: the bytes hashed are the bytes uploaded and checked.
             for index, name in enumerate(names):
-                data = (CONFIG_ROOT / name).read_bytes()
+                data = read_private(name)
+                if data is None:
+                    raise Failure(f"missing private input: {display(CONFIG_ROOT / name)}")
                 copy = work / f"input-{index}"
                 copy.write_bytes(data)
                 staged.append((name, copy))
@@ -212,61 +244,77 @@ def snapshot(s3, env: dict[str, str], label: str, files: list[str], now: dt.date
             }
             (work / "RESTORE.md").write_text(restore_text(s3.bucket, prefix, env["TW_RELEASE_AWS_PROFILE"], run_id, entries))
             (work / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-            # Payload, then RESTORE.md, each read back; manifest.json marks completion and goes last.
-            for name, path in [*staged, ("RESTORE.md", work / "RESTORE.md"), ("manifest.json", work / "manifest.json")]:
+            # Payload, RESTORE.md and manifest.json, each read back; only then COMPLETE, which
+            # holds the manifest's SHA-256. A run without a matching COMPLETE is incomplete.
+            manifest_bytes = (work / "manifest.json").read_bytes()
+            (work / "COMPLETE").write_text(sha256_bytes(manifest_bytes) + "\n")
+            for name, path in [*staged, ("RESTORE.md", work / "RESTORE.md"), ("manifest.json", work / "manifest.json"),
+                               ("COMPLETE", work / "COMPLETE")]:
                 publish(s3, prefix, name, path, work)
     finally:
         os.umask(old_umask)
     return run_id
 
 
-def read_manifest(path: Path, label: str) -> dict:
+def read_manifest(data: bytes, label: str) -> dict:
     try:
-        manifest = json.loads(path.read_text())
+        manifest = json.loads(data.decode("utf-8"))
         files = manifest["files"]
         if not isinstance(files, list) or not files:
             raise ValueError
         for entry in files:
             if not (isinstance(entry.get("restore_local_at_capture"), str) and isinstance(entry.get("sha256"), str)):
                 raise ValueError
-    except (ValueError, KeyError, TypeError, AttributeError):
+    except (ValueError, KeyError, TypeError, AttributeError, UnicodeDecodeError):
         raise Failure(f"the newest {label!r} snapshot has an unreadable manifest.json") from None
     return manifest
 
 
 def newest_manifest(s3, label: str, work: Path) -> tuple[str, dict] | None:
-    """The newest complete run of the label: one whose manifest.json exists."""
+    """The newest complete run of the label: COMPLETE exists and holds the manifest's hash."""
     runs = sorted((r for r in s3.runs() if (m := RUN.match(r)) and m.group(2) == label), reverse=True)
     for run_id in runs:
-        target = work / f"{run_id}.json"
+        marker, target = work / f"{run_id}.complete", work / f"{run_id}.json"
         try:
+            s3.get(f"{s3.root}{run_id}/COMPLETE", marker)
             s3.get(f"{s3.root}{run_id}/manifest.json", target)
         except Failure as error:
             if error.code == "NoSuchKey":
                 continue  # incomplete run
             raise
-        return run_id, read_manifest(target, label)
+        data = target.read_bytes()
+        if marker.read_bytes().strip() != sha256_bytes(data).encode():
+            continue  # the manifest is not the one the run completed with
+        return run_id, read_manifest(data, label)
     return None
+
+
+def local_name(capture_path: str, run_id: str) -> str:
+    root = display(CONFIG_ROOT).rstrip("/") + "/"
+    if not capture_path.startswith(root):
+        raise Failure(f"snapshot {run_id} lists a path outside {display(CONFIG_ROOT)}")
+    try:
+        return relative_name(capture_path[len(root):])
+    except Failure:
+        raise Failure(f"snapshot {run_id} lists a path outside {display(CONFIG_ROOT)}") from None
 
 
 def verify(s3, label: str) -> tuple[str, list[str]]:
     with tempfile.TemporaryDirectory() as work:
         found = newest_manifest(s3, label, Path(work))
     if found is None:
-        raise Failure(f"no snapshot labelled {label!r}; run: private-inputs.py snapshot --label {label}")
+        raise Failure(f"no complete snapshot labelled {label!r}; run: private-inputs.py snapshot --label {label}")
     run_id, manifest = found
     problems = []
     listed = set()
     for entry in manifest["files"]:
-        local = Path(os.path.expanduser(entry["restore_local_at_capture"]))
         name = entry["restore_local_at_capture"]
-        try:
-            listed.add(inside_config(local).relative_to(CONFIG_ROOT.resolve()).as_posix())
-        except Failure:
-            raise Failure(f"snapshot {run_id} lists a path outside {display(CONFIG_ROOT)}") from None
-        if not local.is_file():
+        relative = local_name(name, run_id)
+        listed.add(relative)
+        data = read_private(relative)
+        if data is None:
             problems.append(f"{name}: missing locally")
-        elif sha256_bytes(local.read_bytes()) != entry["sha256"]:
+        elif sha256_bytes(data) != entry["sha256"]:
             problems.append(f"{name}: differs from the snapshot")
     for required in REQUIRED.get(label, ()):
         if required not in listed:
@@ -304,8 +352,8 @@ def main(argv: list[str] | None = None, s3_factory=AwsS3, now=None) -> int:
     except Failure as error:
         print(f"private-inputs: {error}", file=sys.stderr)
         return 2
-    except OSError as error:
-        print(f"private-inputs: file access failed ({type(error).__name__})", file=sys.stderr)
+    except (OSError, ValueError, UnicodeError) as error:
+        print(f"private-inputs: unreadable input ({type(error).__name__})", file=sys.stderr)
         return 2
 
 
