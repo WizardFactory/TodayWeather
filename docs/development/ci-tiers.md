@@ -54,7 +54,7 @@ This document defines the tiers for all targets. Android and iOS are split as de
 
 ## Android
 
-PR CI runs the JVM suites of every module, the imported-asset, corpus, route-table and reference consistency checks, and the build without `client/`. It also compiles `:baselineprofile`, whose variants are release-type only, so `assembleDebug` alone would skip it (#3224); generating the profile needs a device and stays manual ([android/README.md](../../android/README.md#baseline-profile)).
+PR CI runs the JVM suites of every module, the imported-asset, corpus, route-table and reference consistency checks, and the build without `client/`. It also compiles `:baselineprofile` (one variant; both share its sources), whose variants are release-type only, so `assembleDebug` alone would skip it (#3224); generating the profile needs a device and stays manual ([android/README.md](../../android/README.md#baseline-profile)).
 
 Release CI is [Android release verification](../../.github/workflows/android-release.yml). It holds no secret, builds debug and test APKs only, and installs them on hosted emulators that stay offline while the app is installed. R8 shrinks only the release build, so neither tier runs it: the operator's release build is the first ([runbook, step 4](../operations/android-release.md#4-build-and-sign)), and the device gate the first run of the shrunk code.
 

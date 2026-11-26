@@ -176,7 +176,7 @@ jobs:
       - name: Build and unit tests
         working-directory: android
         run: |
-          ./gradlew assembleDebug test :baselineprofile:compileNonMinifiedReleaseKotlin :baselineprofile:compileBenchmarkReleaseKotlin
+          ./gradlew assembleDebug test :baselineprofile:compileNonMinifiedReleaseKotlin
           python3 tools/parity-reference/check-results.py
       - name: Upgrade test cleanup (adb test double)
         run: sh android/tools/upgrade/test-cleanup.sh
@@ -223,5 +223,5 @@ jobs:
       - name: Build and unit tests
         working-directory: android
         run: |
-          ./gradlew assembleDebug test :baselineprofile:compileNonMinifiedReleaseKotlin :baselineprofile:compileBenchmarkReleaseKotlin
+          ./gradlew assembleDebug test :baselineprofile:compileNonMinifiedReleaseKotlin
           python3 tools/parity-reference/check-results.py

@@ -17,6 +17,20 @@ private fun page(state: String) = By.res("shell-page-$state")
 
 private val POPUP_BUTTON = By.res("ionic-popup-button")
 
+/** O03: the weather of the place could not be loaded. The journeys need real content, so it fails the run. */
+private val WEATHER_RETRY = By.res("weather-retry-dialog")
+
+/**
+ * What shows once a tab has its content: the hourly chart (drawn only with forecast data), the air gauge (only with air
+ * data), the saved places list. Daily uses the forecast Hourly already loaded.
+ */
+private val CONTENT = mapOf(
+    "forecast" to By.res("chart-expander"),
+    "dailyforecast" to By.res("forecast-page"),
+    "air" to By.res("air-gauge"),
+    "search" to By.res("places-list"),
+)
+
 /**
  * Starts the app on Hourly. A new install shows the access notice (O01) over the start page (S01): close it and add the
  * first city shortcut, so the tabs open with one saved place and production weather. A saved start tab other than Hourly
@@ -39,12 +53,15 @@ internal fun MacrobenchmarkScope.visitTabs(rounds: Int = 2) {
     repeat(rounds) { TABS.forEach { openTab(it) } }
 }
 
-/** Taps a tab and waits until its page is the selected one. */
+/** Taps a tab and waits until its page is the selected one and shows its content. */
 private fun MacrobenchmarkScope.openTab(state: String) {
     closeOverlays()
     if (!device.hasObject(page(state))) {
         (device.findObject(tab(state)) ?: error("tab $state not found")).click()
         check(device.wait(Until.hasObject(page(state)), 10_000)) { "the $state page did not open" }
+    }
+    check(device.wait(Until.hasObject(CONTENT.getValue(state)), 30_000)) {
+        if (device.hasObject(WEATHER_RETRY)) "the weather did not load" else "the $state page shows no content"
     }
     device.waitForIdle()
     Thread.sleep(700)
@@ -53,9 +70,11 @@ private fun MacrobenchmarkScope.openTab(state: String) {
 
 /**
  * Closes what covers the tabs. An Ionic popup is drawn inside the activity, so the tabs stay in the hierarchy behind it:
- * its first button is tapped whenever one shows. Another activity over the app (an interstitial) hides the tabs: Back.
+ * its first button is tapped whenever one shows, except the weather retry dialog, which fails the run. Another activity
+ * over the app (an interstitial) hides the tabs: Back.
  */
 private fun MacrobenchmarkScope.closeOverlays() {
+    check(!device.hasObject(WEATHER_RETRY)) { "the weather did not load" }
     repeat(5) {
         val button = device.findObject(POPUP_BUTTON)
         when {

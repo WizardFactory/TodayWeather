@@ -383,7 +383,7 @@ export TW_SERVER_URL=...                               # private input (Private 
 ./gradlew :baselineprofile:connectedBenchmarkReleaseAndroidTest   # optional: TabSwitchBenchmark, frame timing without and with the profile
 ```
 
-The journeys (`baselineprofile/.../Journeys.kt`) close the access notice and add the first city shortcut on a new install, then visit Daily, Air, Locations and Hourly. They find controls by their Compose test tags, which the shell and the start page expose as resource IDs (`testTagsAsResourceId` on their root boxes), wait for each tab's page and close Ionic popups or an interstitial that covers the tabs; a page that does not open stops the run. Commit the regenerated files with the change that needed them. PR CI compiles the module (`:baselineprofile:compileNonMinifiedReleaseKotlin` and `compileBenchmarkReleaseKotlin`): its variants are release-type only, so `assembleDebug` would skip it.
+The journeys (`baselineprofile/.../Journeys.kt`) close the access notice and add the first city shortcut on a new install, then visit Daily, Air, Locations and Hourly. They find controls by their Compose test tags, which the shell and the start page expose as resource IDs (`testTagsAsResourceId` on their root boxes), wait for each tab's page and close Ionic popups or an interstitial that covers the tabs; a page that does not open stops the run. Commit the regenerated files with the change that needed them. PR CI compiles the module (`:baselineprofile:compileNonMinifiedReleaseKotlin`; the benchmark variant has the same sources): its variants are release-type only, so `assembleDebug` would skip it.
 
 ## Private inputs
 
