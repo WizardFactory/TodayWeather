@@ -7,48 +7,63 @@ import androidx.test.uiautomator.Until
 /** The app under test (the target project's application ID). */
 internal const val PACKAGE = "net.wizardfactory.todayweather"
 
-/** The tabs in the order a reader moves through them, by their Shell tags (`shell-tab-<state>`, exposed as resource IDs). */
+/** The tabs in the order a reader moves through them, by their Shell states (`shell-tab-<state>`, `shell-page-<state>`). */
 internal val TABS = listOf("dailyforecast", "air", "search", "forecast")
 
 private fun tab(state: String) = By.res("shell-tab-$state")
 
+/** The page of the selected tab; Shell tags only the selected one. */
+private fun page(state: String) = By.res("shell-page-$state")
+
+private val POPUP_BUTTON = By.res("ionic-popup-button")
+
 /**
- * Starts the app on its forecast. A new install shows the access notice (O01) over the start page (S01): close it and add
- * the first city shortcut, so the tabs open with one saved place and production weather.
+ * Starts the app on Hourly. A new install shows the access notice (O01) over the start page (S01): close it and add the
+ * first city shortcut, so the tabs open with one saved place and production weather. A saved start tab other than Hourly
+ * is left for Hourly, so the first tab visit is a switch.
  */
 internal fun MacrobenchmarkScope.startOnForecast() {
     pressHome()
     startActivityAndWait()
     if (!device.wait(Until.hasObject(tab("forecast")), 5_000)) {
-        device.findObject(By.res("ionic-popup-button"))?.click()
+        device.findObject(POPUP_BUTTON)?.click()
         val chip = device.wait(Until.findObject(By.res("start-chip-0")), 15_000) ?: error("neither the tabs nor the start page appeared")
         chip.click()
         check(device.wait(Until.hasObject(tab("forecast")), 30_000)) { "the forecast did not open after adding a city" }
     }
-    dismissOverlays()
-    device.waitForIdle()
+    openTab("forecast")
 }
 
-/** Visits every tab [rounds] times, waiting for each to settle; a full-screen ad over a tab is closed with Back. */
+/** Visits every tab [rounds] times; each visit must show that tab's page. */
 internal fun MacrobenchmarkScope.visitTabs(rounds: Int = 2) {
-    repeat(rounds) {
-        for (state in TABS) {
-            device.findObject(tab(state))?.click() ?: run {
-                dismissOverlays()
-                device.findObject(tab(state))?.click() ?: error("tab $state not found")
-            }
-            device.waitForIdle()
-            Thread.sleep(700)
-            dismissOverlays()
-        }
-    }
+    repeat(rounds) { TABS.forEach { openTab(it) } }
 }
 
-/** Closes what covers the tabs: an ionic popup (first OK button) or an interstitial (Back). */
-private fun MacrobenchmarkScope.dismissOverlays() {
-    repeat(3) {
-        if (device.hasObject(tab("forecast"))) return
-        device.findObject(By.res("ionic-popup-button"))?.click() ?: device.pressBack()
+/** Taps a tab and waits until its page is the selected one. */
+private fun MacrobenchmarkScope.openTab(state: String) {
+    closeOverlays()
+    if (!device.hasObject(page(state))) {
+        (device.findObject(tab(state)) ?: error("tab $state not found")).click()
+        check(device.wait(Until.hasObject(page(state)), 10_000)) { "the $state page did not open" }
+    }
+    device.waitForIdle()
+    Thread.sleep(700)
+    closeOverlays()
+}
+
+/**
+ * Closes what covers the tabs. An Ionic popup is drawn inside the activity, so the tabs stay in the hierarchy behind it:
+ * its first button is tapped whenever one shows. Another activity over the app (an interstitial) hides the tabs: Back.
+ */
+private fun MacrobenchmarkScope.closeOverlays() {
+    repeat(5) {
+        val button = device.findObject(POPUP_BUTTON)
+        when {
+            button != null -> button.click()
+            !device.hasObject(tab("forecast")) -> device.pressBack()
+            else -> return
+        }
         device.waitForIdle()
     }
+    error("an overlay did not close")
 }

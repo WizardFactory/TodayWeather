@@ -54,7 +54,7 @@ This document defines the tiers for all targets. Android and iOS are split as de
 
 ## Android
 
-PR CI is unchanged: the JVM suites of every module, the imported-asset, corpus, route-table and reference consistency checks, and the build without `client/`.
+PR CI runs the JVM suites of every module, the imported-asset, corpus, route-table and reference consistency checks, and the build without `client/`. It also compiles `:baselineprofile`, whose variants are release-type only, so `assembleDebug` alone would skip it (#3224); generating the profile needs a device and stays manual ([android/README.md](../../android/README.md#baseline-profile)).
 
 Release CI is [Android release verification](../../.github/workflows/android-release.yml). It holds no secret, builds debug and test APKs only, and installs them on hosted emulators that stay offline while the app is installed. R8 shrinks only the release build, so neither tier runs it: the operator's release build is the first ([runbook, step 4](../operations/android-release.md#4-build-and-sign)), and the device gate the first run of the shrunk code.
 
@@ -62,7 +62,6 @@ Release CI is [Android release verification](../../.github/workflows/android-rel
 | --- | --- |
 | PR checks on the commit | Both jobs of the PR workflow, on the verified commit |
 | Release lint | `./gradlew lintRelease` for every module |
-| Baseline profile module | `./gradlew :baselineprofile:compileNonMinifiedReleaseKotlin :baselineprofile:compileBenchmarkReleaseKotlin`: the generator and benchmark sources compile. The module has only release-type variants, so PR CI does not build it; generating the profile needs a device and stays manual ([android/README.md](../../android/README.md#baseline-profile)) |
 | Device suites, phone API 36 | `device-tests`, `parity`, `window-fit` |
 | Device suites, phone API 24 | `device-tests` |
 | Device suites, tablet API 36 | `shell-fit`, `window-fit` |

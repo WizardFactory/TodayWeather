@@ -30,24 +30,25 @@ Emulator `tw_perf_review` (API 36, arm64, root), `simpleperf record -e cpu-clock
 
 ## Phone: Galaxy S21+ (SM-G996N), Android 15, 60 Hz, `gfxinfo`
 
-Four batches per variant, in two alternating rounds:
+The final candidate against master. A, B and C alternate in each round, with four batches per variant over two rounds. [phone-gfxinfo.txt](tab-switch-2026-11-27/phone-gfxinfo.txt) holds the per-batch statistics and histograms. The long-frame columns sum the histogram buckets labelled 53 ms, 77 ms and 101 ms and above:
 
-| Variant | p90 mean (ms) | p99 mean (ms) | Frames ≥ 50 ms | ≥ 75 ms | ≥ 100 ms | Slow UI thread |
+| Variant | p90 mean (range), ms | p99 mean (ms) | Buckets ≥ 53 ms | ≥ 77 ms | ≥ 101 ms | Slow UI thread |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Base, verify | 97 (89–105) | 123 | 39 | 19 | 13 | 64 |
-| After, verify | 70 (65–73) | 76 | 38 | 5 | 0 | 64 |
-| Base, its library profile | 99 (93–105) | 115 | 41 | 21 | 12 | 64 |
-| After, app profile | 65 (57–73) | 79 | 34 | 5 | 0 | 64 |
+| A: base, JIT only | 91 (85–93) | 116 | 42 | 24 | 9 | 64 |
+| B: after, JIT only | 67 (61–77) | 80 | 38 | 6 | 0 | 64 |
+| C: after, app profile compiled | 65 (61–69) | 75 | 36 | 4 | 0 | 64 |
 
-Every batch rendered 36–38 frames (about two per switch). The first frame of every switch exceeds 16.7 ms in all variants, so the slow-UI-thread count stays at one per switch (64 for 64 switches).
+Every batch rendered 36–38 frames, about two per switch. The slow-UI-thread count was 16 in every batch of every variant (64 per variant), so it did not change. The first-visit runs below had 4 per cycle of four switches.
 
 First visits right after `compile --reset`, with no warm-up. Each run is one cycle of four switches; three runs per variant:
 
 | Variant | Worst frame per run (ms) |
 | --- | --- |
-| Base, verify | 125, 125, 125 |
-| After, verify | 97, 109, 109 |
-| After, app profile | 57, 81, 48 |
+| A: base, JIT only | 117, 150, 129 |
+| B: after, JIT only | 113, 89, 101 |
+| C: after, app profile compiled | 53, 53, 57 |
+
+An earlier run on the first PR head (`9246478bc`) gave the same picture: p90 97 → 70 (B) and 65 (C) ms; 101 ms buckets 13 → 0; first-visit worst frames 125 → 97–109 (B) and 48–81 (C) ms.
 
 ## Emulator `tw_perf_review`: no visible difference in `gfxinfo`
 
@@ -77,3 +78,4 @@ With real AdMob units on the emulator (test creatives fill), main-thread CPU per
 
 - One phone, one place, one weather state. The emulator's absolute numbers do not carry over to devices.
 - The measurement builds differ from store builds in their application ID, their debug signature, the `profileable` flag and the dummy ad units.
+- The committed profile was regenerated after the journeys' fixes (review round 1). The final phone run used an APK built with it.

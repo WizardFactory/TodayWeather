@@ -114,10 +114,6 @@ jobs:
       - name: Lint of the release variant
         working-directory: android
         run: ./gradlew lintRelease
-      # :baselineprofile has only release-type variants, so PR CI's assembleDebug does not compile it (#3224).
-      - name: Baseline profile module compiles
-        working-directory: android
-        run: ./gradlew :baselineprofile:compileNonMinifiedReleaseKotlin :baselineprofile:compileBenchmarkReleaseKotlin
       - uses: actions/upload-artifact@v4
         if: always()
         with:

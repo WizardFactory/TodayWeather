@@ -1,6 +1,6 @@
 // Generates the app's baseline profile and measures tab switches (#3224). Both need a connected emulator or device with
 // network (production weather through TW_SERVER_URL), so they run by hand (android/README.md, "Baseline profile");
-// PR CI only builds this module.
+// PR CI only compiles this module.
 plugins {
     alias(libs.plugins.android.test)
     alias(libs.plugins.androidx.baselineprofile)

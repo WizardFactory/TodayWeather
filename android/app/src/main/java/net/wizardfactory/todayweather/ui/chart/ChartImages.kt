@@ -13,19 +13,28 @@ import androidx.compose.ui.platform.LocalContext
  * the Cordova app does not have either (such as `Rain.png`), which the WebView does not draw.
  */
 internal class ChartImages(private val load: (String) -> ImageBitmap?) {
-    private val cache = HashMap<String, ImageBitmap?>()
-
-    operator fun get(href: String): ImageBitmap? = cache.getOrPut(href) { load(href) }
+    operator fun get(href: String): ImageBitmap? = load(href)
 }
 
 internal fun loadChartImage(context: Context, href: String): ImageBitmap? = runCatching {
     context.assets.open(href).use { BitmapFactory.decodeStream(it)?.apply { setHasMipMap(true) }?.asImageBitmap() }
 }.getOrNull()
 
-/** Reads through the activity's [ForecastChartImages] when one is provided, so a tab visit decodes nothing again (#3224). */
+/**
+ * Reads the activity's [ForecastChartImages] directly when one is provided (AppContent provides it), so a tab visit decodes
+ * nothing again and the shared cache alone bounds what is kept (#3224). Without one, the images are kept for this
+ * composition.
+ */
 @Composable
 internal fun rememberChartImages(): ChartImages {
     val shared = LocalForecastChartImages.current
     val context = LocalContext.current
-    return remember(shared, context) { if (shared != null) ChartImages(shared::get) else ChartImages { loadChartImage(context, it) } }
+    return remember(shared, context) {
+        if (shared != null) {
+            ChartImages(shared::get)
+        } else {
+            val kept = HashMap<String, ImageBitmap?>()
+            ChartImages { href -> kept.getOrPut(href) { loadChartImage(context, href) } }
+        }
+    }
 }
