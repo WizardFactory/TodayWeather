@@ -14,8 +14,18 @@
     "air.png": "d1980daab8c6c88285318283b6208cb91a4bc487bce21a6cf93242255bcb5f63",
     "dailyforecast.png": "17f75756519bd2ae32243902dea633ecddd73940f53bd8f9740bab12a74bf546",
     "forecast.png": "99614e7b86fd253c7db1866c610a9bee054919a9faa45004e76bd6fc01253ef8",
-    "manual.json": "66238d0c366e421932eb579420ae4b0f39e41db220b3ce11966f7615a96cca68",
-    "manual.pdf": "869e2517f0de79df3207fe9fa06eb9a18865a9addadf26c4c02dd2f4327ff217",
-    "search.png": "abe6473cf945382f236dcb58c7fb93f525ac2c8761c185482d941a7c3766e1be"
+    "manual.json": "a5bb4f1e5f6f9e161db698ae71a7c24a62abd4e36ce1514bec20abcb9e6dd224",
+    "manual.pdf": "1563f333c07a1573b86e4a1d84c7f65e245ad0b732a02e0ba3ac7a552cdea449",
+    "search.png": "abe6473cf945382f236dcb58c7fb93f525ac2c8761c185482d941a7c3766e1be",
+    "banner.png": "36d243834e163d30623addc2ec015f84d8416ca748f177f8020d8553bceb02f9"
+  },
+  "banner_capture": {
+    "capture_date": "2026-11-26",
+    "issue": "#3211",
+    "capture_environment": "iPhone 16 simulator (task-owned twios_3211), iOS 26.5, Xcode 27.2; app-hosted TodayWeather shell at 393 × 852 pt including the home indicator; Korean controls; tracking answer stored as denied.",
+    "test": "HostedShellTests.BannerSwitchSmokeTests.theSwitchesSelectTheFormat(\"banner\"); TEST_RUNNER_TW_BANNER_CAPTURE=1. The app's Monetization ran real UMP, the Google Mobile Ads SDK and Google's iOS adaptive banner demo unit with fixed Remote Config values (tw_app_banner_enabled true, tw_native_enabled false). No Firebase console value was changed.",
+    "files": {
+      "banner.png": "36d243834e163d30623addc2ec015f84d8416ca748f177f8020d8553bceb02f9"
+    }
   }
 }

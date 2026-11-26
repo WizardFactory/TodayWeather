@@ -100,6 +100,40 @@ class AdsDeviceTest {
         }
     }
 
+    /**
+     * #3211: with `-e adFormats banner` the anchored test banner shows under the tab bar on each tab and no native card
+     * loads; with `-e adFormats off` (`tw_banner_enabled` false) neither format appears.
+     */
+    @Test
+    fun theRemoteSwitchesSelectTheAnchoredBanner() {
+        val formats = TestRunner.args.getString("adFormats")
+        assumeTrue("needs -e ads online -e adFormats banner|off", TestRunner.args.getString("ads") == "online" && formats in setOf("banner", "off"))
+        assertEquals("debug builds request Google's adaptive banner test unit", "ca-app-pub-3940256099942544/9214589741", BuildConfig.BANNER_AD_UNIT)
+        rule.closeStartChoice()
+        ScreenFitWalk(rule).seed()
+        for (tab in listOf(Tab.HOURLY, Tab.DAILY, Tab.AIR, Tab.LOCATIONS)) {
+            select(tab)
+            if (formats == "banner") {
+                rule.waitUntil(120_000) { rule.onAllNodes(hasTestTag(ShellTags.BANNER)).fetchSemanticsNodes().isNotEmpty() }
+                val banner = rule.onNodeWithTag(ShellTags.BANNER).getBoundsInRoot()
+                val tabs = rule.onNodeWithTag(ShellTags.tab(tab)).getBoundsInRoot()
+                assertTrue("the banner sits under the tab bar", banner.top >= tabs.bottom)
+            } else {
+                Thread.sleep(10_000)
+                rule.onNodeWithTag(ShellTags.BANNER).assertDoesNotExist()
+            }
+            val content = when (tab) {
+                Tab.DAILY, Tab.HOURLY -> ForecastTags.block(2)
+                Tab.AIR -> AirTags.INFO
+                Tab.LOCATIONS -> PlacesTags.row(0)
+            }
+            rule.onNodeWithTag(content).performScrollTo()
+            Thread.sleep(3_000)
+            assertFalse("no native card while tw_native_enabled is false or ads are off", hasCard())
+            capture("${tab.name.lowercase()}-$formats")
+        }
+    }
+
     private fun hasCard() = rule.onAllNodes(hasTestTag("admob-native-card")).fetchSemanticsNodes().isNotEmpty()
 
     private fun select(tab: Tab) {

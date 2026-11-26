@@ -1,6 +1,6 @@
 {
   "title": "TodayWeather for iOS · Forecast ads",
-  "scenario": "On iPhone, open TodayWeather with saved places. These simulator captures use a local sample creative in the app’s native ad view. Actual ad artwork, text, and the AdChoices control come from the ad service.",
+  "scenario": "On iPhone, open TodayWeather with saved places. The four native-card captures use a local sample creative in the app’s native ad view; the anchored banner capture shows Google’s test banner. Actual ad artwork, text, and the AdChoices control come from the ad service. Which formats appear is set remotely by the operator.",
   "steps": [
     {
       "title": "Hourly forecast",
@@ -29,6 +29,13 @@
       "screenshot": "search.png",
       "caption": "A stacked ad card appears after the final visible saved place.",
       "expected": "Search, results and editing show only place controls and content."
+    },
+    {
+      "title": "Anchored banner",
+      "instruction": "When the operator switches the anchored banner on (and the native card off), open any tab. Nothing changes in how you read or navigate.",
+      "screenshot": "banner.png",
+      "caption": "A Google test banner sits below the tab bar; the hourly page shows no native card.",
+      "expected": "The tab bar and every page stay usable above the banner. Without a banner, no empty strip remains."
     }
   ]
 }

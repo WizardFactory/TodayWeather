@@ -9,7 +9,7 @@ Date: 2026-11-21. Governs URL grammar, domain verification, static edge routing,
 | `https://link.todayweather.ai` | Canonical deep-link and share hub | **Enabled** (iOS AASA + Android `assetlinks.json`) | Dedicated private S3 + OAC + CloudFront stack (`infra/deeplink/`). Isolates deep links from marketing, policies, and PWA shell; enables future `/s/{code}` short links or dynamic OG previews without touching other hosts. |
 | `https://todayweather.ai` | Brand landing, `/app-ads.txt`, `/mobile/*` policy pages | **Disabled** | Preserves [store policy and app-ads hosting](../docs/operations/cordova-store-release.md); prevents in-app policy links from looping back into the app. |
 | `https://app.todayweather.ai` | Static Web PWA (`web/`) | **Disabled** | Preserves intentional browser/PWA access; web share buttons emit `https://link.todayweather.ai/...`. |
-| `todayweather://` | Internal widget and legacy entry scheme | Custom scheme only (not for external sharing) | Retains iOS `todayweather://widget?place={id}` ([WidgetSharing.swift](../ios/TodayWeather/Weather/WidgetSharing.swift)) and Android `todayweather://{index}` ([ShareMessage.kt](../android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/share/ShareMessage.kt)). |
+| `todayweather://` | Internal widget, legacy entry, and Android web-fallback handoff scheme | Custom scheme only (not for external sharing) | Retains iOS `todayweather://widget?place={id}` ([WidgetSharing.swift](../ios/TodayWeather/Weather/WidgetSharing.swift)) and Android `todayweather://{index}` ([ShareMessage.kt](../android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/share/ShareMessage.kt)), plus Android web-fallback handoffs `todayweather://link.todayweather.ai/{pathAndQuery}` emitted by `app.todayweather.ai` "Open in app" (#3219). |
 
 ## 2. Canonical URL contract
 
@@ -165,7 +165,7 @@ The edge applies `sharelink` whenever it answers with a store URL: a request wit
    - Support optional `view` (`hourly`/`daily`/`air`) and `pollutant` query parameters while preserving current behavior when absent.
 3. **Mobile "Open in app" (`앱에서 보기`) action & iOS Smart App Banner:**
    - On mobile web visitors, identified by a mobile User-Agent (or iPadOS touch Macintosh), not by viewport width, display a slim top bar offering **"앱에서 보기"** ("Open in app") that targets the **current screen's canonical `link.todayweather.ai` URL** (preserving place, coordinates, view, and air pollutant rather than hard-coding `/open`):
-     - **Android:** `intent://link.todayweather.ai/{pathAndQuery}#Intent;scheme=https;package=net.wizardfactory.todayweather;S.browser_fallback_url=<encoded Google Play URL with the `webapp` campaign>;end` (launches the installed app on the current screen, or falls back directly to Google Play if uninstalled).
+     - **Android:** `intent://link.todayweather.ai/{pathAndQuery}#Intent;scheme=todayweather;package=net.wizardfactory.todayweather;S.browser_fallback_url=<encoded Google Play URL with the `webapp` campaign>;end` (launches the installed app on the current screen via Android's `todayweather` scheme filter, or falls back to Google Play if uninstalled; `scheme=https` sends users to Google Play in Chrome and Samsung Internet even when App Links are verified, #3219).
      - **iOS / iPadOS:** `https://link.todayweather.ai/{pathAndQuery}?fallback=store` (appending `&store=ios` when desktop-class iPadOS Safari reports a Macintosh User-Agent). In Safari, Universal Links open the installed app on the current screen and uninstalled devices receive `302` to the App Store. Because iOS does not expose app installation state to web pages, in-app browsers that suppress Universal Links redirect to the App Store (where installed users see "Open" with no error popup, though the place context is not carried across the Store).
    - Include `<meta name="apple-itunes-app" content="app-id=1041700694, app-argument=https://link.todayweather.ai/...">` in [web/index.html](../web/index.html) and update `app-argument` to the current route's canonical deep link for Safari's native Smart App Banner. Safari may read the meta only at page load, so route-preserving behavior of the native banner is best effort and is verified on devices in #3098; the custom bar is the guaranteed route-preserving action.
    - Hide the bar in the installed PWA (`display-mode: standalone` or `navigator.standalone`) and on narrow desktop windows, where a store fallback would only resolve back to the web app. The bar is dismissible per browser session via `sessionStorage`.
@@ -189,6 +189,8 @@ Both iOS (`ios/Core/Sources/TWDomain/Share/DeepLink.swift`) and Android (`androi
 - `nationAir`
 - `warnings`
 - `legacyWidget(placeID: String?)` (iOS `todayweather://widget?place=...`) / `legacyWidgetIndex(index: Double)` (Android `todayweather://N`)
+
+On Android only, `DeepLink.parse` and `EntryLinks.accept` ([Share.kt](../android/app/src/main/java/net/wizardfactory/todayweather/Share.kt)) also accept `todayweather://link.todayweather.ai/{pathAndQuery}` (case-insensitive scheme and host, including path-less root `todayweather://link.todayweather.ai`) under the exact same host, path, and parameter rules as `https://link.todayweather.ai/{pathAndQuery}`, queuing the parsed target alongside App Links (including `S01` bypass and `FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY` replay suppression) while keeping `todayweather://N` and ignored `todayweather://widget...` unchanged. iOS does not accept `todayweather://link.todayweather.ai/...` and returns `nil`.
 
 ### 6.2 Navigation, overlay cleanup, and unsaved places
 
@@ -243,7 +245,7 @@ Required vector categories:
 - Unknown catalog slug (syntactic parse succeeds, catalog lookup fails; edge redirects to the matching PWA route),
 - Unknown paths (`/unknown`, `/mobile/privacy.html` on `link.todayweather.ai`), path traversal (`/../etc/passwd`, `%00`),
 - Non-matching hosts (`https://todayweather.ai/mobile/privacy.html`, `https://app.todayweather.ai/weather/seoul/hourly`) → rejected by native deep-link parser,
-- Legacy custom schemes (`todayweather://widget?place=...`, `todayweather://2`, bare `todayweather://`).
+- Legacy custom schemes (`todayweather://widget?place=...`, `todayweather://2`, bare `todayweather://`) and Android web-fallback custom-scheme handoffs (`todayweather://link.todayweather.ai/...`, `legacyPlatform: "android"`, rejected by iOS and edge).
 
 ## 9. Acceptance criteria
 

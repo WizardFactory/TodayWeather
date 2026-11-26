@@ -67,4 +67,22 @@ class NativeCardLayoutTest {
         val compact = height(R.layout.native_forecast_ad_compact)
         assertTrue("Compact card $compact vs stacked $stacked", compact.toDouble() / stacked in 0.4..0.6)
     }
+
+    @Test
+    fun aNewCardStartsHiddenAndARemountKeepsTheLastViewportState() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val card = NativeCard(register = { host, _ ->
+            LayoutInflater.from(context).inflate(R.layout.native_forecast_ad_compact, host, false) as NativeAdView
+        }, releaseAd = {})
+        val first = FrameLayout(context)
+        card.mount(first, compact = true, dark = false)
+        val view = first.getChildAt(0)
+        assertEquals("not measured yet: hidden from the SDK", View.INVISIBLE, view.visibility)
+        card.showInViewport(true)
+        assertEquals(View.VISIBLE, view.visibility)
+        card.mount(FrameLayout(context), compact = true, dark = false)
+        assertEquals("a tab return draws its card in the first frame", View.VISIBLE, view.visibility)
+        card.showInViewport(false)
+        assertEquals(View.INVISIBLE, view.visibility)
+    }
 }

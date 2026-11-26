@@ -189,11 +189,21 @@ describe("web deep-link contract", () => {
     expect(detectMobilePlatform(macUa, 5)).toBe("ipados");
     expect(detectMobilePlatform(macUa, 0)).toBe("desktop");
 
-    expect(appOpenHref(placeUrl, androidUa, 5)).toBe(
-      "intent://link.todayweather.ai/place/seoul?view=daily#Intent;scheme=https;package=net.wizardfactory.todayweather;S.browser_fallback_url=" +
-        encodeURIComponent(PLAY_STORE_URL) +
-        ";end",
-    );
+    const fallback = encodeURIComponent(PLAY_STORE_URL);
+    for (const url of [
+      placeUrl,
+      "https://link.todayweather.ai/loc?lat=37.383&lon=127.119&name=%EB%B6%84%EB%8B%B9%EA%B5%AC&view=daily",
+      "https://link.todayweather.ai/air/jeju?pollutant=o3",
+      "https://link.todayweather.ai/nation/weather",
+      "https://link.todayweather.ai/nation/air",
+      "https://link.todayweather.ai/warnings",
+      "https://link.todayweather.ai/open",
+    ]) {
+      const target = url.slice("https://".length);
+      expect(appOpenHref(url, androidUa, 5), url).toBe(
+        `intent://${target}#Intent;scheme=todayweather;package=net.wizardfactory.todayweather;S.browser_fallback_url=${fallback};end`,
+      );
+    }
     expect(appOpenHref(placeUrl, iosUa, 5)).toBe(
       "https://link.todayweather.ai/place/seoul?view=daily&fallback=store",
     );

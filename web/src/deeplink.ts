@@ -283,7 +283,7 @@ export function appOpenHref(
 
   if (platform === "android") {
     const target = safeUrl.slice("https://".length);
-    return `intent://${target}#Intent;scheme=https;package=${ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(PLAY_STORE_URL)};end`;
+    return `intent://${target}#Intent;scheme=todayweather;package=${ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(PLAY_STORE_URL)};end`;
   }
 
   const sep = safeUrl.includes("?") ? "&" : "?";

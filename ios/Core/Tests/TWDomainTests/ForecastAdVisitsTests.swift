@@ -7,7 +7,8 @@ struct ForecastAdVisitsTests {
     @MainActor private final class Fixture {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         var day = 20261120
-        var roll = 0.0999
+        var roll = 0.2999
+        var percent = RemoteBannerConfig.defaultInterstitialChance
         var draws = 0
         var arrivals = 0
 
@@ -15,7 +16,7 @@ struct ForecastAdVisitsTests {
             ForecastAdVisits(directory: directory, localDay: { self.day }, draw: {
                 self.draws += 1
                 return self.roll
-            })
+            }, chance: { self.percent })
         }
 
         func reserve(_ visits: ForecastAdVisits, from: ShellTab = .forecast, to: ShellTab = .dailyforecast,
@@ -39,9 +40,9 @@ struct ForecastAdVisitsTests {
         #expect(f.reserve(visits, from: .search, to: first) == nil)
         #expect(f.reserve(visits, from: first, to: .air) == nil)
         #expect(f.draws == 0)
-        f.roll = 0.10
+        f.roll = 0.30
         #expect(f.reserve(visits, from: other, to: first) == nil)
-        f.roll = 0.0999
+        f.roll = 0.2999
         let show = try #require(f.reserve(visits, from: other, to: first))
         #expect(f.reserve(visits, from: other, to: first) == nil)
         #expect(f.draws == 2)
@@ -51,6 +52,29 @@ struct ForecastAdVisitsTests {
         #expect(f.arrivals == 1)
         #expect(!visits.available)
         #expect(!f.visits().available)
+    }
+
+    /// #3213: the Remote Config percentage replaces the fixed 10%; 0 never shows, 100 shows on every eligible return.
+    @Test(arguments: [(30, 0.2999, true), (30, 0.30, false), (0, 0.0, false), (100, 0.9999, true),
+                      (55, 0.5499, true), (55, 0.55, false)])
+    func theConfiguredChanceDecidesEachEligibleReturn(percent: Int, roll: Double, shows: Bool) {
+        let f = Fixture()
+        f.percent = percent
+        f.roll = roll
+        let visits = f.visits()
+        visits.markVisible(.dailyforecast)
+        #expect((f.reserve(visits) != nil) == shows)
+        #expect(f.draws == 1)
+    }
+
+    @Test func aChangedChanceAppliesToTheNextDrawWithoutANewInstance() {
+        let f = Fixture()
+        let visits = f.visits()
+        visits.markVisible(.dailyforecast)
+        f.roll = 0.5
+        #expect(f.reserve(visits) == nil)
+        f.percent = 100
+        #expect(f.reserve(visits) != nil)
     }
 
     @Test func confirmedFailureReturnsAllowanceButCrashAndLateCallbackCannotReleaseAnotherAttempt() throws {

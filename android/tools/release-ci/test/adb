@@ -12,7 +12,8 @@ case "$*" in
     "shell getprop ro.build.version.sdk") printf '36\r\n' ;;
     "exec-out run-as "*) tar -cf - -C "$FAKE_ADB_EMPTY" . ;;
     "shell am instrument "*)
-        case "$*" in *CoreOnDeviceTest*) tests=2 ;; *) tests=1 ;; esac
+        # The declared @Test count of each device-test class (run-device-tests.sh compares the two).
+        case "$*" in *CoreOnDeviceTest*|*ForecastInterstitialDeviceTest*) tests=2 ;; *) tests=1 ;; esac
         code=0
         [ "$FAKE_ADB_CASE" = skipped ] && code=-4
         i=0
