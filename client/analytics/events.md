@@ -13,15 +13,15 @@ in downstream queries, not just individual custom events.
 | `weather_load` | Tab `updateWeatherData` | `outcome=success|network_error|invalid_response`, `duration_ms` | Tab parse/application result; local input errors are invalid_response, HTTP rejections are network_error. Not a second request counter. |
 | `favorite_change` | `WeatherInfo.addCity/removeCity` after persistence invocation | `action=add|remove` | New saved city or removal. Current-position initialization is excluded. Does not certify async persistence completion. |
 | `location_permission` | Existing diagnostic authorization check | `outcome=granted|denied|unknown` | Authorization observation, not a count of permission dialogs. No provider/location payload. |
-| `ad_lifecycle` | AdMob emi adapter | `action=request|loaded|failed|impression|show|hide|consent_failed`, `ad_format=banner` | Diagnostic lifecycle, never revenue. SDK refresh may create more loaded/impression events than app load requests. |
+| `ad_lifecycle` | AdMob emi adapter; the native 2.x apps' ad code | `action=request|loaded|failed|impression|show|hide|consent_failed`, `ad_format=banner` (native apps also `native`, `interstitial`, and `consent` with `consent_failed` only) | Diagnostic lifecycle, never revenue. `impression` is logged from the SDK impression callback and is the impression count in the BigQuery queries. SDK refresh may create more loaded/impression events than app load requests. |
 | `ad_load_error` | AdMob emi adapter, native banner load failure | `ad_format=banner`, `error_code` integer 0..999 | The Google Mobile Ads error code only (for example no fill or network). Native messages, response IDs and ad unit IDs are dropped. Failures without a numeric code still count as `ad_lifecycle action=failed`. Every failure also writes a structured console line with the code, independent of Analytics consent. |
 | `ad_policy_exposure` | TwAds first eligible display opportunity | `delay_seconds` integer 0..120 | Once per WebView lifetime after bounded config completion; before the delay expires if eligible. Describes retained/fetched local policy. Native Firebase A/B membership is authoritative. |
-| `ad_impression` | Firebase/AdMob SDK automatic integration | Native ad platform/source/unit, currency/value where provided | App JS must not manually log this event. Confirm account linkage and value coverage on devices/export. |
+| `ad_impression` | Firebase/AdMob SDK automatic integration | Ad platform/source/unit; no value or currency with the default integration | App code must not log this event. GA4 does not export it to BigQuery; use it in DebugView to confirm AdMob linkage only. Revenue comes from the AdMob report ([measurement sources](../../docs/operations/monetization.md#measurement-sources)). |
 
 User property `att_status` (iOS, #2945): `authorized|denied|restricted|not_determined|unavailable`, the App Tracking
 Transparency status read after the consent flow. It is set through `Monetization.setAdTrackingStatus` only while
-Analytics collection is enabled, and again after a later opt-in. It carries no identifier. Automatic `ad_impression`
-rows inherit it, so [ios-att-monetization.sql](ios-att-monetization.sql) can split impressions and revenue by status.
+Analytics collection is enabled, and again after a later opt-in. It carries no identifier. Exported events, including
+`ad_lifecycle`, carry it, so [ios-att-monetization.sql](ios-att-monetization.sql) can split impressions by status.
 
 Durations are integer milliseconds in 0..600000. Unknown parameters, event names,
 enum values and invalid durations are rejected/dropped. No precise coordinates,

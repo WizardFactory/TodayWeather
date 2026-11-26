@@ -613,6 +613,8 @@ Firebase Analytics rather than retired UA/Fabric. `Monetization` drops raw
 labels/identifiers and delegates delivery to native collection/consent. Native automatic
 screen reporting is disabled to avoid duplicate Ionic `screen_view`; AdMob
 automatic revenue remains the sole `ad_impression` source after account linkage.
+GA4 does not export that event to BigQuery, so the queries count `ad_lifecycle`
+impressions and take revenue from AdMob reports (#2654).
 The common weather request emits `weather_fetch` once after its existing retry
 chain; the Tab parser records a separate `weather_load` result without address
 or coordinate labels. Neither changes API URLs or retry semantics.
