@@ -108,6 +108,7 @@ struct RequestSitesTests {
 
     @Test func sdksAreUsedWhereTheRegisterSays() {
         #expect(Self.filesMatching(Self.sdk) == [
+            "TodayWeather/Ads/AdMobBanner.swift",
             "TodayWeather/Ads/FirebaseBridges.swift",
             "TodayWeather/Ads/ForecastCreativeHost.swift",
             "TodayWeather/Ads/ForecastInterstitial.swift",

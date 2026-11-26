@@ -19,7 +19,8 @@ public protocol BannerConfigSource: AnyObject {
 
 /// The banner policy of an app open (`Monetization.loadConfig`, port of the Android `RemoteBannerConfig`): the
 /// defaults, then the activated values, then a fetch; each valid pair applies. It is ready when the fetch has applied
-/// or failed, or after 12 s. The legacy banner policy then stays fixed. Late and live format switches still apply.
+/// or failed, or after 12 s. The delay then stays fixed. Late and live format switches still apply, and so does
+/// `tw_banner_enabled`, the gate of every format (#3211), read from a valid pair.
 /// Without Firebase, the defaults apply immediately.
 @MainActor
 public final class RemoteBannerConfig {
@@ -29,8 +30,11 @@ public final class RemoteBannerConfig {
 
     public static let nativeEnabledKey = "tw_native_enabled"
     public static let interstitialEnabledKey = "tw_interstitial_enabled"
+    /// The anchored banner (#3211), off unless the value is exactly "true".
+    public static let appBannerEnabledKey = "tw_app_banner_enabled"
     public private(set) var nativeEnabled = true
     public private(set) var interstitialEnabled = true
+    public private(set) var appBannerEnabled = false
 
     public private(set) var policy = BannerPolicy.default
     /// The policy is final: applied, failed or timed out (`isBannerPolicyReady`).
@@ -63,6 +67,7 @@ public final class RemoteBannerConfig {
         var defaults = RemoteBannerPolicy.defaults
         defaults[Self.nativeEnabledKey] = "true"
         defaults[Self.interstitialEnabledKey] = "true"
+        defaults[Self.appBannerEnabledKey] = "false"
         source.setDefaults(defaults) { [weak self] ok in
             guard let self, !self.closed else { return }
             guard ok else { return self.finish("bridge_or_fetch_failed") }
@@ -107,9 +112,15 @@ public final class RemoteBannerConfig {
     private func applyFormats(_ values: [String: String]) -> Bool {
         let native = values[Self.nativeEnabledKey, default: "true"] == "true"
         let interstitial = values[Self.interstitialEnabledKey, default: "true"] == "true"
-        guard native != nativeEnabled || interstitial != interstitialEnabled else { return false }
+        let appBanner = values[Self.appBannerEnabledKey] == "true"
+        // The all-ads gate follows a valid pair; an invalid one keeps the current gate. The delay is not changed here.
+        let allAds = RemoteBannerPolicy.parse(values)?.enabled ?? policy.enabled
+        guard native != nativeEnabled || interstitial != interstitialEnabled || appBanner != appBannerEnabled
+                || allAds != policy.enabled else { return false }
         nativeEnabled = native
         interstitialEnabled = interstitial
+        appBannerEnabled = appBanner
+        policy.enabled = allAds
         return true
     }
 

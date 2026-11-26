@@ -18,10 +18,12 @@ TW_MAIL_TO =
 TW_PLACES_API_KEY_IOS =
 
 // The placeholder lets an unconfigured build launch the SDK-linked app without sending requests.
-// Private.xcconfig supplies the registered iOS app and its native and interstitial units for Release.
+// Private.xcconfig supplies the registered iOS app and its native, interstitial and anchored banner (#3211) units for
+// Release. Without the banner unit only the banner is off.
 TW_ADMOB_APP_ID_IOS = ca-app-pub-0000000000000000~0000000000
 TW_ADMOB_NATIVE_IOS =
 TW_ADMOB_INTERSTITIAL_IOS =
+TW_ADMOB_BANNER_IOS =
 
 // Release signing is scoped to the app target so Swift package resource bundles get no provisioning profile.
 CODE_SIGN_STYLE = Automatic
@@ -32,3 +34,4 @@ CODE_SIGN_STYLE = Automatic
 TW_ADMOB_APP_ID_IOS[config=Debug] = ca-app-pub-3940256099942544~1458002511
 TW_ADMOB_NATIVE_IOS[config=Debug] = ca-app-pub-3940256099942544/3986624511
 TW_ADMOB_INTERSTITIAL_IOS[config=Debug] = ca-app-pub-3940256099942544/4411468910
+TW_ADMOB_BANNER_IOS[config=Debug] = ca-app-pub-3940256099942544/2435281174

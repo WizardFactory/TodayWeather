@@ -25,7 +25,7 @@ final class ForecastInterstitial {
     private let root: () -> UIViewController?
     private let uptime: () -> TimeInterval
     private let track: Track
-    private var enabled = false
+    private(set) var enabled = false
     private var loading: UUID?
     private var lastAttempt: TimeInterval?
     private var ready: (ad: any ForecastInterstitialCreative, at: TimeInterval)?

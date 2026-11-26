@@ -79,6 +79,20 @@
         "app-debug.apk": "5c5abe4dc8efbf016dd0f921a603dc53661ba66ec5502938d2c9a46942871159",
         "app-debug-androidTest.apk": "90d9a06c71b6eb7302c6758989f052773691df68e81df41976f2d59c3d07e571"
       }
+    },
+    "screenshots/hourly-banner.png": {
+      "sha256": "b08b4b6545f8ec47444ed1f7de89837ce9eac7f2fc378f53f6ca11a1bac420eb",
+      "size": [
+        720,
+        1600
+      ],
+      "capture_date": "2026-11-26",
+      "issue": "#3211",
+      "capture": "AdsDeviceTest#theRemoteSwitchesSelectTheAnchoredBanner with -e ads online -e adFormats banner on tw_api36_capture (API 36 emulator, ko-KR). FixedRemoteConfig (androidTest) supplied tw_app_banner_enabled true and tw_native_enabled false; no Firebase console value was changed. Google's adaptive banner test unit served the banner.",
+      "apk_sha256": {
+        "app-debug.apk": "b6fea950a17a7ba5d4ad7e0b8a375e36d930fe570a8dddf8def5d9d86b32975d",
+        "app-debug-androidTest.apk": "eda66ee5f6be27b711ea91f769348177da5852b38383da3e903f344d8cd68a94"
+      }
     }
   },
   "sources": {
@@ -96,11 +110,12 @@
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirTab.kt": "31bec3845bd521d3aa80e0eb18c4f497d2c9ec5154ade9bf1ad7a1ecb70ffca5",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherTab.kt": "fbfb2fff75baed762e26a3be3ee71b236690907fbbad67d822b5a2709eeed40d"
   },
-  "manual_sha256": "04145d9c95bd2e05942735b36eb4e94e770fa8cc18c100fb4a0673e95ec3da8d",
-  "pdf_sha256": "77436031bbaf2c4a81d5a4744c94b7fea3b01cf678011a575f6c403c4834e22d",
+  "manual_sha256": "c402b401cad16eafcc948413bd808b0fd642a8ae40df964c2e2503e0015a49ea",
+  "pdf_sha256": "fb9d599dc97142ba89bb4f8c2a96b16ddd27e93c83d3813a0f05cf682531e706",
   "limitations": [
     "The illustrated native placements display Google sample ads. Creative dimensions and text can vary with content, device width and font settings.",
-    "Full-screen ads, paid impressions and revenue are outside the scope of these screenshots."
+    "Full-screen ads, paid impressions and revenue are outside the scope of these screenshots.",
+    "The anchored banner step shows Google's test banner with Korean controls; the native-card steps keep their earlier English captures."
   ],
   "capture_source_commit": "281781416e115e2f1230202abccd455fb9116916"
 }
