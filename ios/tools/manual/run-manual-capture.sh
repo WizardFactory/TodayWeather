@@ -111,8 +111,8 @@ fi
 TCC="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Library/TCC/TCC.db"
 
 NO_ADS=
-[ "$ADS" = on ] || NO_ADS="TW_ADMOB_NATIVE_IOS= TW_ADMOB_INTERSTITIAL_IOS="
-# shellcheck disable=SC2086 # NO_ADS is two build settings or nothing.
+[ "$ADS" = on ] || NO_ADS="TW_ADMOB_NATIVE_IOS= TW_ADMOB_INTERSTITIAL_IOS= TW_ADMOB_BANNER_IOS="
+# shellcheck disable=SC2086 # NO_ADS is three build settings or nothing.
 xcodebuild -project "$IOS/TodayWeather.xcodeproj" -scheme TodayWeatherUITests -destination "platform=iOS Simulator,id=$UDID" \
   -derivedDataPath "$IOS/build/DerivedData" CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual CODE_SIGNING_REQUIRED=YES \
   DEVELOPMENT_TEAM= COMPILER_INDEX_STORE_ENABLE=NO TW_WEATHER_PHOTOS_URL= TW_MAIL_TO= $NO_ADS build-for-testing \

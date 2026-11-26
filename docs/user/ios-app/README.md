@@ -33,7 +33,7 @@ The pull-to-refresh page uses a Korean hourly forecast from an offline test fixt
 
 Each weather tab shows its forecast or air information first. An available native ad appears in the scrolling content. Saved Places shows a larger card after the list and hides it during search and editing. The main manual's screenshots are taken without ads; the [four placement examples](forecast-ads/manual.pdf) · [Editable guide](forecast-ads/manual.json) · [Capture details](forecast-ads/provenance.json)
 
-The first Hourly and first Daily visit each day open immediately. After reading beyond a chart, tapping the other forecast tab on a repeat visit has a 10% chance of showing a ready full-screen ad. The two tabs share a limit of one display per local day across saved places. Dismissing the ad opens the tab you selected.
+The first Hourly and first Daily visit each day open immediately. After reading beyond a chart, tapping the other forecast tab on a repeat visit has a chance (30% unless changed by the operator) of showing a ready full-screen ad. The two tabs share a limit of one display per local day across saved places. Dismissing the ad opens the tab you selected.
 
 ## Search from the header and unsaved places
 

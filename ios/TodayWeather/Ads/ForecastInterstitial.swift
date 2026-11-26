@@ -25,15 +25,16 @@ final class ForecastInterstitial {
     private let root: () -> UIViewController?
     private let uptime: () -> TimeInterval
     private let track: Track
-    private var enabled = false
+    private(set) var enabled = false
     private var loading: UUID?
     private var lastAttempt: TimeInterval?
     private var ready: (ad: any ForecastInterstitialCreative, at: TimeInterval)?
     private var active: (id: UUID, ad: any ForecastInterstitialCreative)?
 
-    convenience init(unitID: String, request: @escaping () -> Request, track: @escaping Track) {
+    convenience init(unitID: String, request: @escaping () -> Request, track: @escaping Track,
+                     chance: @escaping () -> Int) {
         let folder = URL.applicationSupportDirectory.appendingPathComponent("ForecastInterstitial", isDirectory: true)
-        self.init(visits: ForecastAdVisits(directory: folder), load: { stillAllowed, done in
+        self.init(visits: ForecastAdVisits(directory: folder, chance: chance), load: { stillAllowed, done in
             Task { @MainActor in
                 guard stillAllowed() else { return }
                 do {

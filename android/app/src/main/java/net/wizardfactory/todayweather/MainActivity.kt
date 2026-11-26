@@ -68,6 +68,9 @@ import net.wizardfactory.todayweather.widget.WidgetRefresh
 import net.wizardfactory.todayweather.ads.AdsConsent
 import net.wizardfactory.todayweather.ads.rememberNativeAdSlot
 import net.wizardfactory.todayweather.analytics.RemoteBannerConfig
+import net.wizardfactory.todayweather.ads.AdMobBanner
+import net.wizardfactory.todayweather.ads.BannerSlot
+import net.wizardfactory.todayweather.ads.TwAds
 import net.wizardfactory.todayweather.core.data.PlacesPage
 import net.wizardfactory.todayweather.core.data.SettingsActions
 import net.wizardfactory.todayweather.core.data.StartFlow
@@ -139,6 +142,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var opened: OpenedModel
     private lateinit var nativeAds: NativeForecastAds
     private lateinit var interstitial: ForecastInterstitial
+    private lateinit var banner: AdMobBanner
     private var resumedBefore = false
 
     override fun attachBaseContext(newBase: Context) {
@@ -156,7 +160,12 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) app.entryIntents.submit(intent)
         val session = opened.session
         nativeAds = NativeForecastAds(this, BuildConfig.NATIVE_AD_UNIT, app.analytics::track)
-        interstitial = ForecastInterstitial(this, BuildConfig.INTERSTITIAL_AD_UNIT, app.analytics::track)
+        interstitial = ForecastInterstitial(this, BuildConfig.INTERSTITIAL_AD_UNIT, app.analytics::track) {
+            opened.adConfig.interstitialChance
+        }
+        // The anchored banner (#3211) belongs to this activity: a configuration change loads a new one at the new width.
+        banner = AdMobBanner(this, BuildConfig.BANNER_AD_UNIT, app.analytics::track)
+        opened.ads.attach(banner)
         lifecycleScope.launch {
             combine(opened.consent.allowed, opened.adConfig.policy) { consent, config -> consent to config }
                 .collectLatest { (consent, config) ->
@@ -222,8 +231,10 @@ class MainActivity : ComponentActivity() {
                         lifecycleScope.launch { Handoff.openLink(this@MainActivity, withContext(Dispatchers.Default) { Handoff.feedbackMail(this@MainActivity) }) }
                     })
                 }
+                val bannerShown by opened.ads.shown.collectAsState()
                 AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings,
-                    handoffs = handoffs, nation = opened.nation, privacy = privacy, nativeAd = { tab ->
+                    handoffs = handoffs, nation = opened.nation, privacy = privacy, banner = if (bannerShown) ({ BannerSlot(banner) }) else null,
+                    nativeAd = { tab ->
                         rememberNativeAdSlot(nativeAds, tab, dark = Theme.of(s.settings.theme) == Theme.DARK)
                     },
                     onVisit = interstitial::recordVisible, onRepeatVisit = interstitial::handleTap,
@@ -245,6 +256,8 @@ class MainActivity : ComponentActivity() {
         (opened.adStart + config.policy.delaySeconds * 1000L - SystemClock.elapsedRealtime()).coerceAtLeast(0L)
 
     private fun refreshNativeEligibility() {
+        // The banner has its own switch and delay (TwAds); it shares the consent and privacy-form gate.
+        opened.ads.setPermitted(!isFinishing && !isDestroyed && opened.consent.nativeAllowed)
         val config = opened.adConfig.policy.value
         nativeAds.setEnabled(!isFinishing && !isDestroyed && opened.consent.nativeAllowed &&
             config.ready && config.policy.enabled && config.nativeEnabled && adDelayRemaining(config) == 0L)
@@ -254,6 +267,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         refreshNativeEligibility()
         nativeAds.setForeground(true)
+        banner.resume()
         WidgetAccess.mainAppOpened(this)
         // Cordova's `resume`: each return to the foreground reloads the selected place if the gate allows.
         if (resumedBefore) opened.session.reload(WeatherSession.Sender.RESUME)
@@ -263,6 +277,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         nativeAds.setForeground(false)
+        banner.pause()
         app.foreground.resumed = false
         super.onPause()
     }
@@ -273,6 +288,8 @@ class MainActivity : ComponentActivity() {
         opened.consent.stop(this)
         nativeAds.destroy()
         interstitial.destroy()
+        opened.ads.detach(banner)
+        banner.destroy()
         super.onDestroy()
     }
 
@@ -782,6 +799,9 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     val adStart = SystemClock.elapsedRealtime()
     val adConfig = RemoteBannerConfig(twApp.remoteConfigSource(), viewModelScope).apply { load() }
+
+    /** The anchored banner of this app open (#3211): `tw_app_banner_enabled`, under the all-ads policy and its delay. */
+    val ads = TwAds(viewModelScope, adConfig, twApp.analytics::track, SystemClock::elapsedRealtime)
     val consent = AdsConsent(twApp.adsPlatform(), BuildConfig.RELEASE_ADS, twApp.analytics::track) {}
 
     /** The settings pages' changes; a unit change posts the push list again in the app's scope (`Push.updateUnits`). */

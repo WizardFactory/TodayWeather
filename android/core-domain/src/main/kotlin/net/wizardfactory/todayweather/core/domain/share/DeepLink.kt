@@ -83,52 +83,58 @@ object DeepLink {
     private val COORDINATE = Regex("""^-?(?:\d+\.?\d*|\.\d+)$""")
     private val LANG = Regex("^[a-z]{2,3}$")
     private val URL = Regex("""^([A-Za-z][A-Za-z0-9+.-]*)://([^/?#]*)([^#]*)""")
-    private val PORT = Regex(""":(\d*)$""")
 
     /** The target of [url], or null for another host or scheme, an unknown path or invalid required parameters. */
     fun parse(url: String): DeepLinkTarget? {
-        val legacy = "${EntryLink.SCHEME}://"
-        if (url.startsWith(legacy)) {
-            val rest = url.substring(legacy.length)
+        val match = URL.find(url) ?: return null
+        val (scheme, authority, pathAndQuery) = match.destructured
+        val isHttps = scheme.equals("https", ignoreCase = true)
+        val isCustom = scheme.equals(EntryLink.SCHEME, ignoreCase = true)
+        if (!isHttps && !isCustom) return null
+        val hostAndPort = authority.substringAfterLast('@')
+        // `new URL`: an empty port or one up to 65535; anything else after a colon is no URL.
+        val host = hostAndPort.substringBefore(':')
+        val hasColon = ':' in hostAndPort
+        val portPart = if (hasColon) hostAndPort.substringAfter(':') else ""
+        val validPort = !hasColon || portPart.isEmpty() ||
+            (portPart.all { it in '0'..'9' } && portPart.toBigInteger() <= 65535.toBigInteger())
+        if (host.equals(HOST, ignoreCase = true)) {
+            if (!validPort) return null
+            val rawPath = pathAndQuery.substringBefore('?').ifEmpty { "/" }
+            val query = Query(if ('?' in pathAndQuery) pathAndQuery.substringAfter('?') else "")
+            val path = decodePath(rawPath) ?: return null
+            val trimmed = if (path.length > 1 && path.endsWith("/")) path.dropLast(1) else path
+            fun pollutant(view: WeatherView) = if (view == WeatherView.AIR) normalizePollutant(query["pollutant"]) else null
+            return when {
+                path == "/" || trimmed == "/open" ->
+                    DeepLinkTarget.Open(query["lang"]?.let(::jsTrim)?.lowercase()?.takeIf { LANG.matches(it) })
+                // Compared by segment: the link paths are not server paths (RequestSitesTest).
+                segments(trimmed) == listOf("nation", "weather") -> DeepLinkTarget.NationWeather
+                segments(trimmed) == listOf("nation", "air") -> DeepLinkTarget.NationAir
+                segments(trimmed) == listOf("warnings") -> DeepLinkTarget.Warnings
+                trimmed.startsWith("/place/") -> trimmed.removePrefix("/place/").takeIf { SLUG.matches(it) }?.let { slug ->
+                    val view = WeatherView.of(query["view"])
+                    DeepLinkTarget.Place(slug, view, pollutant(view))
+                }
+                trimmed.startsWith("/air/") -> trimmed.removePrefix("/air/").takeIf { SLUG.matches(it) }?.let { slug ->
+                    DeepLinkTarget.Place(slug, WeatherView.AIR, normalizePollutant(query["pollutant"]))
+                }
+                trimmed == "/loc" -> {
+                    val lat = coordinate(query["lat"], 90.0) ?: return null
+                    val lon = coordinate(query["lon"], 180.0) ?: return null
+                    val view = WeatherView.of(query["view"])
+                    DeepLinkTarget.Coordinate(lat, lon, sanitizeName(query["name"]), view, pollutant(view))
+                }
+                else -> null
+            }
+        }
+        if (isCustom && url.startsWith("${EntryLink.SCHEME}://")) {
+            val rest = url.substring(EntryLink.SCHEME.length + 3)
             // The iOS widget's `todayweather://widget?place=` link has no meaning here.
             if (rest.isEmpty() || rest == "widget" || rest.startsWith("widget?")) return null
             return EntryLink.placeIndex(url)?.let(DeepLinkTarget::LegacyWidgetIndex)
         }
-        val match = URL.find(url) ?: return null
-        val (scheme, authority, pathAndQuery) = match.destructured
-        if (!scheme.equals("https", ignoreCase = true)) return null
-        val hostAndPort = authority.substringAfterLast('@')
-        // `new URL`: an empty port or one up to 65535; anything else after a colon is no URL.
-        val port = PORT.find(hostAndPort)
-        if (port != null && port.groupValues[1].isNotEmpty() && port.groupValues[1].toBigInteger() > 65535.toBigInteger()) return null
-        if (!(if (port != null) hostAndPort.removeRange(port.range) else hostAndPort).equals(HOST, ignoreCase = true)) return null
-        val rawPath = pathAndQuery.substringBefore('?').ifEmpty { "/" }
-        val query = Query(if ('?' in pathAndQuery) pathAndQuery.substringAfter('?') else "")
-        val path = decodePath(rawPath) ?: return null
-        val trimmed = if (path.length > 1 && path.endsWith("/")) path.dropLast(1) else path
-        fun pollutant(view: WeatherView) = if (view == WeatherView.AIR) normalizePollutant(query["pollutant"]) else null
-        return when {
-            path == "/" || trimmed == "/open" ->
-                DeepLinkTarget.Open(query["lang"]?.let(::jsTrim)?.lowercase()?.takeIf { LANG.matches(it) })
-            // Compared by segment: the link paths are not server paths (RequestSitesTest).
-            segments(trimmed) == listOf("nation", "weather") -> DeepLinkTarget.NationWeather
-            segments(trimmed) == listOf("nation", "air") -> DeepLinkTarget.NationAir
-            segments(trimmed) == listOf("warnings") -> DeepLinkTarget.Warnings
-            trimmed.startsWith("/place/") -> trimmed.removePrefix("/place/").takeIf { SLUG.matches(it) }?.let { slug ->
-                val view = WeatherView.of(query["view"])
-                DeepLinkTarget.Place(slug, view, pollutant(view))
-            }
-            trimmed.startsWith("/air/") -> trimmed.removePrefix("/air/").takeIf { SLUG.matches(it) }?.let { slug ->
-                DeepLinkTarget.Place(slug, WeatherView.AIR, normalizePollutant(query["pollutant"]))
-            }
-            trimmed == "/loc" -> {
-                val lat = coordinate(query["lat"], 90.0) ?: return null
-                val lon = coordinate(query["lon"], 180.0) ?: return null
-                val view = WeatherView.of(query["view"])
-                DeepLinkTarget.Coordinate(lat, lon, sanitizeName(query["name"]), view, pollutant(view))
-            }
-            else -> null
-        }
+        return null
     }
 
     /**

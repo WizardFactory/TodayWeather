@@ -51,7 +51,9 @@ function normalizePollutant(raw) {
 function parseRawPathAndQuery(rawUrl) {
   const schemeEnd = rawUrl.indexOf("://");
   if (schemeEnd < 0) return null;
-  const rest = rawUrl.slice(schemeEnd + 3);
+  const hashIdx = rawUrl.indexOf("#", schemeEnd + 3);
+  const withoutHash = hashIdx >= 0 ? rawUrl.slice(0, hashIdx) : rawUrl;
+  const rest = withoutHash.slice(schemeEnd + 3);
   const slashIdx = rest.indexOf("/");
   const qIdx = rest.indexOf("?");
   let pathEnd = rest.length;
@@ -79,32 +81,52 @@ function decodeSafePath(rawPath) {
   return decoded;
 }
 
-function referenceParseNative(rawUrl) {
-  if (rawUrl.startsWith(`${contract.legacyScheme}://`)) {
-    const rest = rawUrl.slice(`${contract.legacyScheme}://`.length);
-    if (!rest) return null;
-    if (rest.startsWith("widget?") || rest === "widget") {
-      const parsed = new URL(rawUrl);
-      return {
-        kind: "legacyWidget",
-        placeId: parsed.searchParams.get("place"),
-      };
-    }
-    const idx = Number.parseInt(rest, 10);
-    if (!Number.isNaN(idx)) {
-      return { kind: "legacyWidgetIndex", index: idx };
-    }
-    return null;
-  }
+function rawAuthorityHost(rawUrl) {
+  const match = /^[A-Za-z][A-Za-z0-9+.-]*:\/\/([^/?#]*)/.exec(rawUrl);
+  if (!match) return null;
+  const hostAndPort = match[1].slice(match[1].lastIndexOf("@") + 1);
+  const colonIdx = hostAndPort.indexOf(":");
+  const host = colonIdx >= 0 ? hostAndPort.slice(0, colonIdx) : hostAndPort;
+  return host.toLowerCase();
+}
 
-  let parsed;
+function referenceParseNative(rawUrl) {
+  const canonicalHostMatched = rawAuthorityHost(rawUrl) === contract.canonicalHost;
+  let parsed = null;
   try {
     parsed = new URL(rawUrl);
   } catch {
+    parsed = null;
+  }
+  const canonicalScheme =
+    parsed &&
+    (parsed.protocol === "https:" ||
+      parsed.protocol === `${contract.legacyScheme}:`);
+
+  if (canonicalHostMatched) {
+    if (!canonicalScheme || parsed.hostname.toLowerCase() !== contract.canonicalHost) {
+      return null;
+    }
+  } else {
+    const legacyPrefix = `${contract.legacyScheme}://`;
+    if (rawUrl.startsWith(legacyPrefix)) {
+      const rest = rawUrl.slice(legacyPrefix.length);
+      if (!rest) return null;
+      if (rest.startsWith("widget?") || rest === "widget") {
+        const widgetUrl = new URL(rawUrl);
+        return {
+          kind: "legacyWidget",
+          placeId: widgetUrl.searchParams.get("place"),
+        };
+      }
+      const idx = Number.parseInt(rest, 10);
+      if (!Number.isNaN(idx)) {
+        return { kind: "legacyWidgetIndex", index: idx };
+      }
+      return null;
+    }
     return null;
   }
-  if (parsed.protocol !== "https:") return null;
-  if (parsed.hostname.toLowerCase() !== contract.canonicalHost) return null;
 
   const rawParts = parseRawPathAndQuery(rawUrl);
   if (!rawParts) return null;

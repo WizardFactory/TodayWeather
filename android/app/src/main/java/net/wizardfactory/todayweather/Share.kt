@@ -50,8 +50,9 @@ class WeatherShare(
 
 /**
  * The links that open the app, after the migration ([EntryIntents]): `todayweather://N` (AN-16), whose place index
- * [accept] queues in [indexes], and verified `link.todayweather.ai` App Links (specs/deeplink.md), whose targets it
- * queues in [targets]. The open app's session takes them, on cold and warm starts alike.
+ * [accept] queues in [indexes], and `link.todayweather.ai` links (verified `https://` App Links and Android web
+ * fallback `todayweather://link.todayweather.ai/...` handoffs, specs/deeplink.md / #3219), whose targets it queues in
+ * [targets]. The open app's session takes them, on cold and warm starts alike.
  */
 class EntryLinks {
     val indexes = Channel<Double>(Channel.UNLIMITED)
@@ -64,15 +65,16 @@ class EntryLinks {
     fun accept(intent: Intent): Boolean {
         if (intent.action != Intent.ACTION_VIEW) return false
         val data = intent.data ?: return false
-        val link = when {
-            data.scheme == EntryLink.SCHEME -> false
-            data.scheme.equals("https", ignoreCase = true) && data.host.equals(DeepLink.HOST, ignoreCase = true) -> true
-            else -> return false
-        }
+        val custom = data.scheme.equals(EntryLink.SCHEME, ignoreCase = true)
+        val https = data.scheme.equals("https", ignoreCase = true)
+        if (!custom && !(https && data.host.equals(DeepLink.HOST, ignoreCase = true))) return false
         if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return true
         val url = intent.dataString ?: return true
-        if (link) DeepLink.parse(url)?.let { targets.trySend(it) }
-        else EntryLink.placeIndex(url)?.let { indexes.trySend(it) }
+        when (val target = DeepLink.parse(url)) {
+            is DeepLinkTarget.LegacyWidgetIndex -> indexes.trySend(target.index)
+            null -> {}
+            else -> targets.trySend(target)
+        }
         return true
     }
 

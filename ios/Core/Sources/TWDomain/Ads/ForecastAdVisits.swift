@@ -29,15 +29,19 @@ public final class ForecastAdVisits {
     private let directory: URL
     private let localDay: () -> Int
     private let draw: () -> Double
+    /// The current `tw_interstitial_chance` percentage, read on every draw.
+    private let chance: () -> Int
     private var pending: Presentation?
     /// Fail closed in memory too if the date changed during presentation and storing the display failed.
     private var lastDisplayDay = 0
 
     public init(directory: URL, localDay: @escaping () -> Int = ForecastAdVisits.today,
-                draw: @escaping () -> Double = { Double.random(in: 0..<1) }) {
+                draw: @escaping () -> Double = { Double.random(in: 0..<1) },
+                chance: @escaping () -> Int = { RemoteBannerConfig.defaultInterstitialChance }) {
         self.directory = directory
         self.localDay = localDay
         self.draw = draw
+        self.chance = chance
     }
 
     public nonisolated static func today() -> Int {
@@ -66,7 +70,7 @@ public final class ForecastAdVisits {
                         navigate: @escaping () -> Void) -> UUID? {
         guard !presenting, readPastChart, source != destination, source == .forecast || source == .dailyforecast,
               var day = try? current(), day.hasSeen(destination), !day.spent, day.date > lastDisplayDay,
-              draw() < 0.10 else { return nil }
+              draw() < Double(chance()) / 100 else { return nil }
         let id = UUID()
         day.spent = true
         day.reservation = id
