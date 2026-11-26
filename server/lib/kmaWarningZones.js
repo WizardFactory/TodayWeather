@@ -17,6 +17,7 @@ var path = require('path');
 var provinceForDistrict = require('./gwangjuJeonnam');
 
 var ZONE_TABLE_FILE = path.join(__dirname, '../utils/data/kma_warning_zones.csv');
+var SUBZONE_TABLE_FILE = path.join(__dirname, '../utils/data/kma_warning_subzones.json');
 var ROOT_ZONE = 'L1000000';
 
 // getPwnCd warnVar → situation weather code of models/modelKmaSpecialWeatherSituation.js
@@ -69,6 +70,44 @@ var ISLAND_ZONES = [
 ];
 
 var zoneTable = null;
+var subzoneTable = null;
+
+function parseSubzoneTable(text) {
+    var raw = JSON.parse(text);
+    var townshipByKey = {};
+    (raw.township_splits || []).forEach(function (rule) {
+        (rule.seconds || []).forEach(function (sec) {
+            townshipByKey[rule.province + '|' + sec] = rule;
+        });
+    });
+    return {
+        districtSplits: raw.district_splits || {},
+        townshipByKey: townshipByKey
+    };
+}
+
+function getSubzoneTable() {
+    if (!subzoneTable) {
+        subzoneTable = parseSubzoneTable(fs.readFileSync(SUBZONE_TABLE_FILE, 'utf8'));
+    }
+    return subzoneTable;
+}
+
+function resolveSubzoneIds(provinceName, second, thirdBase) {
+    var sub = getSubzoneTable();
+    var rule = sub.townshipByKey[provinceName + '|' + second];
+    if (rule) {
+        if (thirdBase && rule.by_third && Object.prototype.hasOwnProperty.call(rule.by_third, thirdBase)) {
+            return rule.by_third[thirdBase];
+        }
+        return rule.fallback || null;
+    }
+    var byDistrict = sub.districtSplits[provinceName];
+    if (byDistrict && second && Object.prototype.hasOwnProperty.call(byDistrict, second)) {
+        return byDistrict[second];
+    }
+    return null;
+}
 
 function toNumber(value) {
     var n = Number(String(value === undefined || value === null ? '' : value).trim());
@@ -144,8 +183,10 @@ function expand(table, roots) {
 }
 
 /**
- * Warning zones of a town (decision 8): the city/county zone with its sub-zones and ancestors, plus shared
- * zones such as 제주도산지. Split parents therefore over-warn; there is no 읍면동-level mapping.
+ * Warning zones of a town (#2609, refined in #3084): maps {first, second, third} to the exact
+ * KMA 2026-06-01 sub-zone(s) plus parent ancestors whenever unambiguous, and falls back to all
+ * candidate child zones (conservative over-warn, never under-warn) on empty third, unknown names,
+ * 법정동/행정동 straddling, altitude-mixed terrain, or 리-level island splits.
  * @param {{first: string, second: string, third: string}} town
  * @returns {string[]} areaCodes
  */
@@ -154,10 +195,10 @@ function zonesForTown(town) {
         return [];
     }
     var table = getZoneTable();
-    var provinceName = PROVINCE_ALIASES[town.first] || town.first;
-    var second = town.second || '';
+    var first = toText(town.first);
+    var provinceName = PROVINCE_ALIASES[first] || first;
+    var second = toText(town.second).replace(/\s+/g, '');
     if (provinceName === '전남광주통합특별시') {
-        second = toText(second).replace(/\s+/g, '');
         provinceName = provinceForDistrict(second);
         if (!provinceName) return [];
     }
@@ -167,7 +208,22 @@ function zonesForTown(town) {
     if (!province) {
         return [];
     }
-    var third = town.third || '';
+    var third = toText(town.third);
+    var thirdBase = third.split('/')[0].trim();
+
+    if (second.length === 0 && thirdBase.length === 0) {
+        return expand(table, [province]);
+    }
+
+    var subzoneIds = resolveSubzoneIds(province.name, second, thirdBase);
+    if (subzoneIds && subzoneIds.length > 0) {
+        var matchedZones = subzoneIds.map(function (id) {
+            return table.byId[id];
+        }).filter(Boolean);
+        if (matchedZones.length > 0) {
+            return expand(table, matchedZones);
+        }
+    }
 
     var island = ISLAND_ZONES.filter(function (rule) {
         return second.indexOf(rule.second) !== -1 && third.indexOf(rule.third) !== -1;
