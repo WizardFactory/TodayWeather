@@ -26,35 +26,35 @@ Every object is written with server-side encryption and a conditional create, so
 
 | Label | Contents | Made by |
 | --- | --- | --- |
-| `native-inputs` | Android `private.properties`, iOS `Private.xcconfig` and iOS `GoogleService-Info.plist` | `scripts/private-inputs.py` |
+| `native-inputs` | Android `android/private.properties` and `release/tw-google-services.json` (the Android build's `google-services.json`), iOS `ios/Private.xcconfig` and `ios/GoogleService-Info.plist` | `scripts/private-inputs.py` |
 | none (time only) | Store-build release files | Manual capture on 2026-10-01 |
 | `ios-signing` | iOS distribution certificate, key and provisioning profile | Manual capture on 2026-10-02 |
 
-The native Android build's `google-services.json` is the release workspace's Firebase file. The store-build backup holds it.
+The native Android build's `google-services.json` is the store build's Firebase file, `release/tw-google-services.json` under `~/.config/todayweather/` (the directory `TW_RELEASE_LOCAL_DIR` names). The tool always includes a label's files, even when you name others.
 
 ## Rule: back up every change in the same task
 
 When you add or change a private input, make a new snapshot before the task is reported done:
 
 ```sh
-TW_RELEASE_ENV=<release workspace>/client/.env python3 scripts/private-inputs.py snapshot --label native-inputs
+TW_RELEASE_ENV='<release workspace>/client/.env' python3 scripts/private-inputs.py snapshot --label native-inputs
 ```
 
-The command uploads the default `native-inputs` files and reads each object back. It prints only the snapshot's run ID. To back up other files under `~/.config/todayweather/`, name them and use another label.
+The command copies each file once and uploads that copy. It reads every object back, then writes `manifest.json`. It prints only the snapshot's run ID. On a failure it prints the AWS error code without the AWS message, because the message can name accounts and resources. To back up other files under `~/.config/todayweather/`, name them and use another label.
 
 ## Check before a release
 
 Before building a native release, compare the local inputs with the newest snapshot:
 
 ```sh
-TW_RELEASE_ENV=<release workspace>/client/.env python3 scripts/private-inputs.py verify --label native-inputs
+TW_RELEASE_ENV='<release workspace>/client/.env' python3 scripts/private-inputs.py verify --label native-inputs
 ```
 
 The exit codes:
 
 - `0`: every file matches.
-- `1`: a file differs or is missing. If the local change is intended, it was never backed up: make a snapshot. If it is not intended, restore the file from the snapshot.
-- `2`: there is no snapshot, or the configuration or AWS access failed.
+- `1`: a file differs, is missing, or is required by the label but not in the snapshot. If the local change is intended, it was never backed up: make a snapshot. If it is not intended, restore the file from the snapshot.
+- `2`: there is no complete snapshot, the configuration or the manifest cannot be read, or AWS access failed.
 
 The tool never prints a file's contents.
 

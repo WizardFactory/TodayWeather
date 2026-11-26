@@ -82,14 +82,19 @@ Keep each gate's output directory under ignored `reports/`; it can show private 
 
 ### 4. Build and sign
 
-First check that the private inputs match their newest S3 snapshot: `scripts/private-inputs.py verify --label native-inputs` must exit 0. A difference means a change was never backed up, or a file is wrong. Resolve it before building ([private inputs](private-inputs.md#check-before-a-release)).
+First check that the private inputs match their newest S3 snapshot: `scripts/private-inputs.py verify --label native-inputs` must exit 0. A difference means a change was never backed up, or a file is wrong. Resolve it before building ([private inputs](private-inputs.md#check-before-a-release)). Build `PRIVATE` from exactly the files that check covered:
+
+```sh
+PRIVATE="$(mktemp -d)"                          # mode 0700; remove it after the build
+install -m 600 ~/.config/todayweather/android/private.properties "$PRIVATE/private.properties"
+install -m 600 ~/.config/todayweather/release/tw-google-services.json "$PRIVATE/google-services.json"
+```
 
 On the operator's machine, at the root of a checkout that has the candidate commit (any branch; the checkout itself is not built). The release is built from an export of the commit in a new directory, never from a checkout: a checkout can hold changed, untracked, ignored or index-flagged files that a build would take in, and Git can convert files on the way out. Needs `python3`, the Android SDK (`ANDROID_HOME`) and JDK 17.
 
 ```sh
 CANDIDATE=<full SHA>                             # the SHA the release CI run verified
 BUILD=<new directory outside the checkout>       # absolute; it must not exist
-PRIVATE=<directory with google-services.json and private.properties>
 APK="$OUT/TodayWeather-<versionName>-<versionCode>.apk"
 MAPPING="$OUT/TodayWeather-<versionName>-<versionCode>-mapping.txt"
 STORE_APK=<installed-store-release.apk>
