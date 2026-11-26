@@ -17,6 +17,10 @@ glance = "1.2.0"
 work = "2.12.0"
 robolectric = "4.17"
 coreSplashscreen = "1.2.0"
+# App baseline profile (#3224): generation and tab-switch benchmark in :baselineprofile.
+benchmark = "1.5.0"
+profileinstaller = "1.4.1"
+uiautomator = "2.4.1"
 espresso = "3.7.0"
 androidxTestCore = "1.7.0"
 googleServices = "4.5.0"
@@ -64,12 +68,17 @@ androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestExtJunit" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
+androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmark" }
+androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }
+androidx-test-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
 org-json = { module = "org.json:json", version.ref = "orgJson" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 
 [plugins]
+android-test = { id = "com.android.test", version.ref = "agp" }
+androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "benchmark" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "crashlyticsGradle" }

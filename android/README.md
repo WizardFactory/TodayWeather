@@ -13,6 +13,7 @@ The Android build never reads `client/`. Images, translations and the town list 
 | `core-data` | API client, repositories and caches (Android library). |
 | `core-storage` | DataStore and the migration from the Cordova app (Android library). |
 | `app` | Compose UI and the application. Feature modules are added by later sub-issues. |
+| `baselineprofile` | Macrobenchmark journeys that generate the app's baseline profile and measure tab switches ([Baseline profile](#baseline-profile)). Needs a device; not part of the app. |
 | `tools/` | Development tools that may read `client/`; the Gradle build does not. |
 
 Versions live in [`gradle/libs.versions.toml`](gradle/libs.versions.toml). The app targets API 36 (minSdk 24) and compiles against API 37, which current Compose libraries require.
@@ -60,7 +61,7 @@ Do not edit the generated files. While iOS stays on Cordova, change translations
 
 The hourly and daily forecast charts (gate G2, AN-05) are ported from the Cordova D3 directives (`ngShortChart`, `ngShortDetailChart`, `ngMidChart`). `core-domain` (`chart/`) builds each chart as the SVG the directive draws, element by element: D3 v3 bands and `.nice()` scales, the inserted current point, labels, icons and the opening scroll offset. Sizes come from the screen size as in the Cordova forecast screen (`ChartMetrics`). `app` (`ui/chart/`) draws it with Compose: `HourlyChartView` (header, chart, pinned legend, detail rows behind the expander) and `DailyChartView`, with the theme's colors of the Cordova SCSS (`ChartColors`), the imported images and header rows on the WebView's line metrics (`CssMetrics`, see below). The charts are compared with captures of the Cordova build on the emulator at 384×832, 360×780 and 412×892 dp, at the opening position and both scroll ends; see [`tools/chart-reference`](tools/chart-reference/README.md).
 
-The shell retains the last prepared chart of each kind using forecast data, chart dimensions, translated text and chart units. Scroll and popup state belong to each visit, and a complete forecast apply resets horizontal scroll to its opening offset. Forecast chart SVGs and Daily detail rows share a 4 MiB icon cache keyed by the resolved theme asset path, including missing paths. The drawing callback uses the icons prepared for its scene. See the [S21+ measurements](../docs/evidence/android/forecast-reentry-2026-11-18.md).
+The shell retains the last prepared chart of each kind using forecast data, chart dimensions, translated text and chart units. Scroll and popup state belong to each visit, and a complete forecast apply resets horizontal scroll to its opening offset. Forecast chart SVGs, Daily detail rows and every other asset image a screen draws through `rememberChartImages` (theme images on Hourly, Daily and Air, the Places rows, the attribution and the national pages) share one decoded-image cache per activity, keyed by the resolved asset path, including missing paths. `AppContent` provides it around the shell; its budget is 1/16 of the memory class, 4–16 MiB. The drawing callback uses the icons prepared for its scene. See the [S21+ measurements](../docs/evidence/android/forecast-reentry-2026-11-18.md) and the [tab-switch measurements](../docs/evidence/android/tab-switch-2026-11-27.md).
 
 ## App shell (AN-07)
 
@@ -367,6 +368,22 @@ Every request of the native client has a path the legacy server serves under `v0
 - [`tools/server-routes/generate.mjs`](tools/server-routes/README.md) reads `server/app.js` and every router it mounts as text, without loading them, and writes [`server-routes/routes.json`](core-data/src/test/resources/server-routes/routes.json): each router's layers in registration order, with the regular expression Express matches for each path (the rules of path-to-regexp 0.1.7, which express 4.13.4 uses per `server/package-lock.json`), and the last commit and SHA-256 of each file read. It stops on a registration it cannot read. CI regenerates the table with the full history and fails on a difference, and the Android workflow runs on changes to `server/app.js`, `server/routes/**` and `server/package-lock.json`. Like the corpus, the table records commits: commit a server change first, then regenerate and commit the table.
 - `RequestPathsTest` (core-data) sends the app's requests through the production clients and transports to recording servers: `WeatherRepository` with every weather case of the corpus, `GeocodeClient` by position and by address, `NationSource`, `PushSync` over `HttpPushTransport` in every push flow, and `WeatherPhotoFeed`. It dispatches each path as sent (percent-encoded) through the table as Express 4 does (`ServerRoutes`): routers in order, case-insensitive except the gateway, mounts trimmed, methods matched, error handlers skipped. A request passes when a route of its method serves it under `v000903` and each middleware before that route is one the test reviewed, or when a register entry lists the request itself (its method and path) and the route that answers it: E1 is a `GET` of `/weather/v000903/addr/…` answered by the gateway's 404 route, so another path or method that route answers fails. The routes reached must be the twelve expected, E1 and E2 must occur, and the test prints the table of requests and routes. The gateway forwards a weather request with its own version (`backendPath` in `gateway.js`).
 - `RequestSitesTest` (core-data) keeps that list complete: network APIs only in the GET and push transports and `PhotoLoader` (E3), server paths only in the four request builders, the E4 SDKs only in their known sources, and every library of the main code reviewed as sending no request, OkHttp, or an E4 SDK. `PushContextTest` (app) checks that push requests use `/v000903`.
+
+## Baseline profile
+
+The release carries an app baseline profile (#3224): `app/src/main/generated/baselineProfiles/baseline-prof.txt` (start and tab visits) and `startup-prof.txt` (start only, for DEX layout). AGP merges them with the libraries' profiles into `assets/dexopt/baseline.prof`, and `androidx.profileinstaller` installs it on devices that do not get it from Play. Building never regenerates them.
+
+Regenerate after changes to start or the tabs, on one emulator or device with network:
+
+```sh
+cd android
+export ANDROID_SERIAL=emulator-5554                    # one device: Gradle runs the journeys on every connected device
+export TW_SERVER_URL=...                               # private input (Private inputs); the journeys use production weather
+./gradlew :app:generateBaselineProfile                 # :baselineprofile's BaselineProfileGenerator, then the rules into app/src/main
+./gradlew :baselineprofile:connectedBenchmarkReleaseAndroidTest   # optional: TabSwitchBenchmark, frame timing without and with the profile
+```
+
+The journeys (`baselineprofile/.../Journeys.kt`) close the access notice and add the first city shortcut on a new install, then visit Daily, Air, Locations and Hourly. They find controls by their Compose test tags, which the shell and the start page expose as resource IDs (`testTagsAsResourceId` on their root boxes), wait for each tab's page and close Ionic popups or an interstitial that covers the tabs; a page that does not open stops the run. Commit the regenerated files with the change that needed them. PR CI compiles the module (`:baselineprofile:compileNonMinifiedReleaseKotlin`; the benchmark variant has the same sources): its variants are release-type only, so `assembleDebug` would skip it.
 
 ## Private inputs
 

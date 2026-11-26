@@ -1,5 +1,7 @@
 package net.wizardfactory.todayweather.ui.start
 
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.semantics.semantics
 import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -127,7 +129,8 @@ fun StartScreen(
     val loading by page.loading.collectAsState()
     val popup by page.popup.collectAsState()
     BackHandler(onBack = onExit)
-    Box(Modifier.fillMaxSize().background(Color.White)) {
+    // Test tags as resource IDs for the baseline profile journeys (#3224); semantics only.
+    Box(Modifier.fillMaxSize().background(Color.White).semantics { testTagsAsResourceId = true }) {
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
             // The WebView's area, which the keyboard shortens (`adjustResize`).

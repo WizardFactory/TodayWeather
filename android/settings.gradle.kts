@@ -16,4 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "TodayWeather"
 
-include(":app", ":core-model", ":core-domain", ":core-data", ":core-storage")
+include(":app", ":core-model", ":core-domain", ":core-data", ":core-storage", ":baselineprofile")

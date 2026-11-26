@@ -1,5 +1,7 @@
 package net.wizardfactory.todayweather.ui.shell
 
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.semantics.semantics
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -227,7 +229,10 @@ fun TodayWeatherShell(
     BackHandler(enabled = menuOpen) { navigation.menuOpen = false }
     BackHandler(enabled = !menuOpen && !exitAsked) { exitAsked = true }
 
-    Box(Modifier.fillMaxSize().background(colors.page)) {
+    Box(Modifier.fillMaxSize().background(colors.page)
+        // Test tags as resource IDs for UiAutomator: the baseline profile journeys find tabs and pages in any language
+        // (#3224). Semantics only; nothing is laid out or drawn differently.
+        .semantics { testTagsAsResourceId = true }) {
         Column(Modifier.fillMaxSize()) {
             // The WebView's area. With a banner under it, the navigation bar is below the banner, not in this area.
             val web = if (banner != null) Modifier.consumeWindowInsets(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)) else Modifier

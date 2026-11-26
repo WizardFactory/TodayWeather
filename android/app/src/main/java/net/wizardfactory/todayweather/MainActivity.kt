@@ -40,6 +40,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -99,6 +100,7 @@ import net.wizardfactory.todayweather.ui.forecast.RetryDialog
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.chart.ForecastChartImages
+import net.wizardfactory.todayweather.ui.chart.LocalForecastChartImages
 import net.wizardfactory.todayweather.ui.forecast.ForecastCharts
 import net.wizardfactory.todayweather.ui.forecast.rememberWeatherTab
 import net.wizardfactory.todayweather.ui.nation.IonicLoading
@@ -367,6 +369,7 @@ fun AppContent(
     val theme = Theme.of(state.settings.theme)
     val forecastCharts = remember { ForecastCharts() }
     val context = LocalContext.current.applicationContext
+    // The activity's decoded asset images (#3224), provided around the shell so every tab, page and popup reads through them.
     val forecastImages = remember(context) { ForecastChartImages(context) }
     val navigation = rememberShellNavigation(startTab ?: StartupPage.tab(state.settings.startupPage))
     // `?code=` of /tab/air: the pollutant S03 or S04 opened S05 on. The weather tabs keep it in the URL (`$location.path`),
@@ -527,180 +530,182 @@ fun AppContent(
     }
     val texts = host.texts
     val openUnits = { open(SettingsRoutes.UNITS) }
-    TodayWeatherShell(
-        ShellState(
-            theme = theme,
-            region = AppLocale.region(),
-            startupTab = StartupPage.tab(state.settings.startupPage),
-            version = version,
-            menuValues = mapOf(
-                MenuRow.STARTUP_PAGE to texts[SettingLists.startupPageLabel(state.settings.startupPage)],
-                MenuRow.REFRESH_INTERVAL to texts[SettingLists.refreshIntervalLabel(state.settings.refreshInterval)],
-                MenuRow.THEME to texts[SettingLists.themeLabel(state.settings.theme)],
-                MenuRow.ANALYTICS to stringResource(if (analyticsChoice) R.string.analytics_on else R.string.analytics_off),
+    CompositionLocalProvider(LocalForecastChartImages provides forecastImages) {
+        TodayWeatherShell(
+            ShellState(
+                theme = theme,
+                region = AppLocale.region(),
+                startupTab = StartupPage.tab(state.settings.startupPage),
+                version = version,
+                menuValues = mapOf(
+                    MenuRow.STARTUP_PAGE to texts[SettingLists.startupPageLabel(state.settings.startupPage)],
+                    MenuRow.REFRESH_INTERVAL to texts[SettingLists.refreshIntervalLabel(state.settings.refreshInterval)],
+                    MenuRow.THEME to texts[SettingLists.themeLabel(state.settings.theme)],
+                    MenuRow.ANALYTICS to stringResource(if (analyticsChoice) R.string.analytics_on else R.string.analytics_off),
+                ),
             ),
-        ),
-        // A pull bypasses the freshness gate for the selected place.
-        onRefresh = { session.reload(WeatherSession.Sender.TAB) },
-        // SettingCtrl's `clickMenu` and `settingRadio`: the rows that leave the menu close it first (`toggleLeft`).
-        onMenuRow = { row ->
-            when (row) {
-                MenuRow.UNITS -> {
-                    navigation.menuOpen = false
-                    openUnits()
-                }
-                MenuRow.STARTUP_PAGE, MenuRow.REFRESH_INTERVAL, MenuRow.THEME -> {
-                    val name = when (row) {
-                        MenuRow.STARTUP_PAGE -> "startupPage"
-                        MenuRow.REFRESH_INTERVAL -> "refreshInterval"
-                        else -> "theme"
+            // A pull bypasses the freshness gate for the selected place.
+            onRefresh = { session.reload(WeatherSession.Sender.TAB) },
+            // SettingCtrl's `clickMenu` and `settingRadio`: the rows that leave the menu close it first (`toggleLeft`).
+            onMenuRow = { row ->
+                when (row) {
+                    MenuRow.UNITS -> {
+                        navigation.menuOpen = false
+                        openUnits()
                     }
-                    navigation.menuOpen = false
-                    settings?.opened(name)
-                    open(SettingsRoutes.list(name))
-                }
-                MenuRow.NULLSCHOOL_WIND -> handoffs.openSystem(Handoffs.NULLSCHOOL)
-                MenuRow.SEND_FEEDBACK -> {
-                    navigation.menuOpen = false
-                    handoffs.sendFeedback()
-                }
-                MenuRow.RATE -> {
-                    navigation.menuOpen = false
-                    handoffs.openSystem(Handoffs.STORE)
-                }
-                MenuRow.ABOUT -> about = true
-                MenuRow.SPECIAL_WEATHER -> openNation(NationRoutes.WARNINGS)
-                MenuRow.NATIONAL_WEATHER -> openNation(NationRoutes.NATION)
-                MenuRow.NATIONAL_AIR -> openNation(NationRoutes.NATION_AIR)
-                // The privacy rows leave the menu open.
-                MenuRow.ANALYTICS -> analyticsPopup = true
-                MenuRow.AD_PRIVACY -> privacy?.openAdPrivacy?.invoke { privacyAlert = R.string.LOC_AD_PRIVACY_UNAVAILABLE }
-                MenuRow.PRIVACY_POLICY, MenuRow.TERMS ->
-                    handoffs.openSystem(Handoffs.policyPage(if (row == MenuRow.TERMS) "terms" else "privacy", AppLanguage.catalog(AppLocale.systemTags().firstOrNull())))
-                MenuRow.VERSION -> {}
-            }
-        },
-        banner = banner,
-        onExit = onExit,
-        navigation = navigation,
-        onSelect = { tab ->
-            searchFrom = null
-            if (tab == Tab.LOCATIONS) airCode = null
-        },
-        // `doTabForecast`: with no enabled place a weather or Air tab asks how to start instead.
-        onTabTap = { tab ->
-            val none = tab != Tab.LOCATIONS && PlaceIndex.enabledCount(state.places.map { it.disable }) == 0
-            if (none) session.openStartPopup()
-            none || (forecastRead && tabContentVisible && tab != navigation.selected &&
-                (navigation.selected == Tab.HOURLY || navigation.selected == Tab.DAILY) &&
-                (tab == Tab.HOURLY || tab == Tab.DAILY) &&
-                navigation.deferForecast(tab, onRepeatVisit))
-        },
-        overlay = {
-            pages.lastOrNull()?.let { route ->
-                if (AlarmRoutes.known(route)) {
-                    AlarmsScreen(route, returns, theme, alarms!!, onBack = ::back, openAppSettings = openAppSettings)
-                } else if (NationRoutes.known(route)) {
-                    // A page restored after the process ended has not sent its request in this one.
-                    LaunchedEffect(route) { nation?.ensure(route) }
-                    NationScreen(route, nationPages[route], theme, AppLocale.region(), state.units, texts, onBack = ::back)
-                } else {
-                    SettingsScreen(route, state, theme, texts, onBack = ::back,
-                        onUnit = { name -> open(SettingsRoutes.list(name)) },
-                        onChoose = { name, value -> settings?.choose(name, value) })
-                }
-            }
-        },
-        popups = {
-            if (about) About { texts[it] }.let { a -> IonicAlert(a.title, a.lines, a.ok, onClose = { about = false }) }
-            if (intro && alertIntro != null) {
-                // `showAlertInfoEvent`: Close keeps the migrated alerts off, OK turns them on; back answers nothing (A22).
-                fun answer(enable: Boolean?) {
-                    intro = false
-                    if (enable != null) alertIntro.answer(enable)
-                }
-                IonicPopup(stringResource(R.string.LOC_WEATHER_ALERT), stringResource(R.string.LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION).split('\n', limit = 2),
-                    listOf(PopupButton(stringResource(R.string.LOC_CLOSE)) { answer(false) }, PopupButton(stringResource(R.string.LOC_OK), dark = true) { answer(true) }),
-                    onBack = { answer(null) })
-            }
-            foregroundMessages.firstOrNull()?.let { message ->
-                // `notificationEvent`: the title and body as HTML, a break between them; OK closes it.
-                val lines = ForegroundMessage.template(message.title, message.body).split("<br>")
-                    .map { AnnotatedString.fromHtml(it).text }
-                IonicPopup(stringResource(R.string.LOC_WEATHER), lines, listOf(PopupButton(stringResource(R.string.LOC_OK), dark = true) {
-                    foregroundMessages.removeAt(0)
-                }), onBack = { foregroundMessages.removeAt(0) })
-            }
-            if (analyticsPopup) {
-                // `chooseAnalytics`: back closes it without a choice.
-                fun choose(value: Boolean) {
-                    analyticsPopup = false
-                    if (privacy?.setAnalytics?.invoke(value) == false) privacyAlert = R.string.LOC_PRIVACY_SAVE_FAILED
-                }
-                AnalyticsPopup(privacy?.optIn ?: true, ::choose, onBack = { analyticsPopup = false })
-            }
-            privacyAlert?.let { message -> IonicAlert("TodayWeather", listOf(stringResource(message)), stringResource(R.string.LOC_OK), onClose = { privacyAlert = null }) }
-            if (startPopup) {
-                StartChoicePopup(autoSearch, onChoose = session::chooseAutoSearch, onOk = { started(session.startChoice(ok = true)) },
-                    onBack = { started(session.startChoice(ok = false)) })
-            }
-            placesPage?.let { page ->
-                val loadingPlaces by page.loading.collectAsState()
-                val placesPopup by page.popup.collectAsState()
-                if (loadingPlaces) IonicLoading()
-                when (val shown = placesPopup) {
-                    is StartFlow.Outcome.Alert -> IonicAlert(stringResource(R.string.LOC_ERROR), listOf(locationText(shown.message)),
-                        stringResource(R.string.LOC_OK), onClose = page::closePopup)
-                    is StartFlow.Outcome.Confirm -> LocationRetryPopup(shown.confirm, onBack = page::closePopup) { button ->
-                        page.retryButton(button, openAppSettings, openLocationSettings)
+                    MenuRow.STARTUP_PAGE, MenuRow.REFRESH_INTERVAL, MenuRow.THEME -> {
+                        val name = when (row) {
+                            MenuRow.STARTUP_PAGE -> "startupPage"
+                            MenuRow.REFRESH_INTERVAL -> "refreshInterval"
+                            else -> "theme"
+                        }
+                        navigation.menuOpen = false
+                        settings?.opened(name)
+                        open(SettingsRoutes.list(name))
                     }
-                    else -> {}
+                    MenuRow.NULLSCHOOL_WIND -> handoffs.openSystem(Handoffs.NULLSCHOOL)
+                    MenuRow.SEND_FEEDBACK -> {
+                        navigation.menuOpen = false
+                        handoffs.sendFeedback()
+                    }
+                    MenuRow.RATE -> {
+                        navigation.menuOpen = false
+                        handoffs.openSystem(Handoffs.STORE)
+                    }
+                    MenuRow.ABOUT -> about = true
+                    MenuRow.SPECIAL_WEATHER -> openNation(NationRoutes.WARNINGS)
+                    MenuRow.NATIONAL_WEATHER -> openNation(NationRoutes.NATION)
+                    MenuRow.NATIONAL_AIR -> openNation(NationRoutes.NATION_AIR)
+                    // The privacy rows leave the menu open.
+                    MenuRow.ANALYTICS -> analyticsPopup = true
+                    MenuRow.AD_PRIVACY -> privacy?.openAdPrivacy?.invoke { privacyAlert = R.string.LOC_AD_PRIVACY_UNAVAILABLE }
+                    MenuRow.PRIVACY_POLICY, MenuRow.TERMS ->
+                        handoffs.openSystem(Handoffs.policyPage(if (row == MenuRow.TERMS) "terms" else "privacy", AppLanguage.catalog(AppLocale.systemTags().firstOrNull())))
+                    MenuRow.VERSION -> {}
                 }
-            }
-            positionRetry?.let { confirm ->
-                LocationRetryPopup(confirm, onBack = session::closePositionRetry) { button ->
-                    when (button) {
-                        RetryButton.CLOSE -> session.closePositionRetry()
-                        RetryButton.SEARCH -> {
-                            session.searchInsteadOfPosition()
-                            openLocations()
-                        }
-                        RetryButton.APP_SETTINGS -> {
-                            session.closePositionRetry()
-                            openAppSettings()
-                        }
-                        RetryButton.LOCATION_SETTINGS -> {
-                            session.closePositionRetry()
-                            openLocationSettings()
-                        }
-                        RetryButton.RETRY -> session.confirmPositionRetry()
+            },
+            banner = banner,
+            onExit = onExit,
+            navigation = navigation,
+            onSelect = { tab ->
+                searchFrom = null
+                if (tab == Tab.LOCATIONS) airCode = null
+            },
+            // `doTabForecast`: with no enabled place a weather or Air tab asks how to start instead.
+            onTabTap = { tab ->
+                val none = tab != Tab.LOCATIONS && PlaceIndex.enabledCount(state.places.map { it.disable }) == 0
+                if (none) session.openStartPopup()
+                none || (forecastRead && tabContentVisible && tab != navigation.selected &&
+                    (navigation.selected == Tab.HOURLY || navigation.selected == Tab.DAILY) &&
+                    (tab == Tab.HOURLY || tab == Tab.DAILY) &&
+                    navigation.deferForecast(tab, onRepeatVisit))
+            },
+            overlay = {
+                pages.lastOrNull()?.let { route ->
+                    if (AlarmRoutes.known(route)) {
+                        AlarmsScreen(route, returns, theme, alarms!!, onBack = ::back, openAppSettings = openAppSettings)
+                    } else if (NationRoutes.known(route)) {
+                        // A page restored after the process ended has not sent its request in this one.
+                        LaunchedEffect(route) { nation?.ensure(route) }
+                        NationScreen(route, nationPages[route], theme, AppLocale.region(), state.units, texts, onBack = ::back)
+                    } else {
+                        SettingsScreen(route, state, theme, texts, onBack = ::back,
+                            onUnit = { name -> open(SettingsRoutes.list(name)) },
+                            onChoose = { name, value -> settings?.choose(name, value) })
                     }
                 }
-            }
-            if (retry) RetryDialog(onClose = session::closeRetry, onRetry = session::confirmRetry)
-        },
-    ) { tab ->
-        when (tab) {
-            Tab.HOURLY, Tab.DAILY -> rememberWeatherTab(tab, state, entries, loading, theme, bellHost, forecastCharts, forecastImages, onAirInfo = { code ->
-                // `goAirInfoPage(code)`: /tab/air?code=.
-                airCode = code
-                navigation.selected = Tab.AIR
-            }, onUnits = openUnits, applies = applies, locating = locating, onNoPlace = session::openStartPopup, nativeAd = visibleAd,
-                onForecastRead = { if (it == selected) forecastRead = true })
-            Tab.AIR -> key(airLinks) {
-                rememberAirTab(state, entries, loading, theme, bellHost, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
-                    onUnits = openUnits, locating = locating, nativeAd = visibleAd, onShown = { airShown = it })
-            }
-            else -> placesPage?.let { page ->
-                // A new visit gets a new tab: its state and its opening run again.
-                key(page) {
-                    // S02 lists the saved places: the unsaved place is not among them.
-                    val savedOnly = if (preview) state.copy(places = state.places.dropLast(1)) else state
-                    rememberPlacesTab(savedOnly, entries, theme, page, places!!, onSelect = ::openFromPlaces, onOpened = { openFromPlaces(null) },
-                        onAlarm = { i -> if (alarms != null) open(AlarmRoutes.of(i)) }, nativeAd = visibleAd,
-                        fromHeader = searchFrom != null, onBack = ::closeSearch, menuOpen = navigation.menuOpen)
+            },
+            popups = {
+                if (about) About { texts[it] }.let { a -> IonicAlert(a.title, a.lines, a.ok, onClose = { about = false }) }
+                if (intro && alertIntro != null) {
+                    // `showAlertInfoEvent`: Close keeps the migrated alerts off, OK turns them on; back answers nothing (A22).
+                    fun answer(enable: Boolean?) {
+                        intro = false
+                        if (enable != null) alertIntro.answer(enable)
+                    }
+                    IonicPopup(stringResource(R.string.LOC_WEATHER_ALERT), stringResource(R.string.LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION).split('\n', limit = 2),
+                        listOf(PopupButton(stringResource(R.string.LOC_CLOSE)) { answer(false) }, PopupButton(stringResource(R.string.LOC_OK), dark = true) { answer(true) }),
+                        onBack = { answer(null) })
                 }
-            } ?: TabContent()
+                foregroundMessages.firstOrNull()?.let { message ->
+                    // `notificationEvent`: the title and body as HTML, a break between them; OK closes it.
+                    val lines = ForegroundMessage.template(message.title, message.body).split("<br>")
+                        .map { AnnotatedString.fromHtml(it).text }
+                    IonicPopup(stringResource(R.string.LOC_WEATHER), lines, listOf(PopupButton(stringResource(R.string.LOC_OK), dark = true) {
+                        foregroundMessages.removeAt(0)
+                    }), onBack = { foregroundMessages.removeAt(0) })
+                }
+                if (analyticsPopup) {
+                    // `chooseAnalytics`: back closes it without a choice.
+                    fun choose(value: Boolean) {
+                        analyticsPopup = false
+                        if (privacy?.setAnalytics?.invoke(value) == false) privacyAlert = R.string.LOC_PRIVACY_SAVE_FAILED
+                    }
+                    AnalyticsPopup(privacy?.optIn ?: true, ::choose, onBack = { analyticsPopup = false })
+                }
+                privacyAlert?.let { message -> IonicAlert("TodayWeather", listOf(stringResource(message)), stringResource(R.string.LOC_OK), onClose = { privacyAlert = null }) }
+                if (startPopup) {
+                    StartChoicePopup(autoSearch, onChoose = session::chooseAutoSearch, onOk = { started(session.startChoice(ok = true)) },
+                        onBack = { started(session.startChoice(ok = false)) })
+                }
+                placesPage?.let { page ->
+                    val loadingPlaces by page.loading.collectAsState()
+                    val placesPopup by page.popup.collectAsState()
+                    if (loadingPlaces) IonicLoading()
+                    when (val shown = placesPopup) {
+                        is StartFlow.Outcome.Alert -> IonicAlert(stringResource(R.string.LOC_ERROR), listOf(locationText(shown.message)),
+                            stringResource(R.string.LOC_OK), onClose = page::closePopup)
+                        is StartFlow.Outcome.Confirm -> LocationRetryPopup(shown.confirm, onBack = page::closePopup) { button ->
+                            page.retryButton(button, openAppSettings, openLocationSettings)
+                        }
+                        else -> {}
+                    }
+                }
+                positionRetry?.let { confirm ->
+                    LocationRetryPopup(confirm, onBack = session::closePositionRetry) { button ->
+                        when (button) {
+                            RetryButton.CLOSE -> session.closePositionRetry()
+                            RetryButton.SEARCH -> {
+                                session.searchInsteadOfPosition()
+                                openLocations()
+                            }
+                            RetryButton.APP_SETTINGS -> {
+                                session.closePositionRetry()
+                                openAppSettings()
+                            }
+                            RetryButton.LOCATION_SETTINGS -> {
+                                session.closePositionRetry()
+                                openLocationSettings()
+                            }
+                            RetryButton.RETRY -> session.confirmPositionRetry()
+                        }
+                    }
+                }
+                if (retry) RetryDialog(onClose = session::closeRetry, onRetry = session::confirmRetry)
+            },
+        ) { tab ->
+            when (tab) {
+                Tab.HOURLY, Tab.DAILY -> rememberWeatherTab(tab, state, entries, loading, theme, bellHost, forecastCharts, forecastImages, onAirInfo = { code ->
+                    // `goAirInfoPage(code)`: /tab/air?code=.
+                    airCode = code
+                    navigation.selected = Tab.AIR
+                }, onUnits = openUnits, applies = applies, locating = locating, onNoPlace = session::openStartPopup, nativeAd = visibleAd,
+                    onForecastRead = { if (it == selected) forecastRead = true })
+                Tab.AIR -> key(airLinks) {
+                    rememberAirTab(state, entries, loading, theme, bellHost, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
+                        onUnits = openUnits, locating = locating, nativeAd = visibleAd, onShown = { airShown = it })
+                }
+                else -> placesPage?.let { page ->
+                    // A new visit gets a new tab: its state and its opening run again.
+                    key(page) {
+                        // S02 lists the saved places: the unsaved place is not among them.
+                        val savedOnly = if (preview) state.copy(places = state.places.dropLast(1)) else state
+                        rememberPlacesTab(savedOnly, entries, theme, page, places!!, onSelect = ::openFromPlaces, onOpened = { openFromPlaces(null) },
+                            onAlarm = { i -> if (alarms != null) open(AlarmRoutes.of(i)) }, nativeAd = visibleAd,
+                            fromHeader = searchFrom != null, onBack = ::closeSearch, menuOpen = navigation.menuOpen)
+                    }
+                } ?: TabContent()
+            }
         }
     }
 }
