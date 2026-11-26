@@ -1,6 +1,6 @@
 {
   "title": "TodayWeather for Android · Forecast advertising",
-  "scenario": "Version 2.0.0 preview. English controls and a saved Seoul forecast. Ads are embedded in the reading flow. The first Hourly and Daily visits each day are protected. At most one full-screen ad can appear across both tabs on eligible return visits that day.",
+  "scenario": "Version 2.0.0 preview. English controls and a saved Seoul forecast. Ads are embedded in the reading flow. The first Hourly and Daily visits each day are protected. At most one full-screen ad can appear across both tabs on eligible return visits that day. Which formats appear is set remotely by the operator: the native card, or (since #3211) an anchored banner under the tab bar.",
   "steps": [
     {
       "title": "Hourly forecast",
@@ -29,6 +29,13 @@
       "screenshot": "screenshots/air-native.png",
       "caption": "The sample ad shows its image beside the text, below the hourly AQI forecast.",
       "expected": "The compact card comes before the detailed pollutant readings."
+    },
+    {
+      "title": "Anchored banner",
+      "instruction": "When the operator switches the anchored banner on (and the native card off), open any tab. Reading and navigation stay the same.",
+      "screenshot": "screenshots/hourly-banner.png",
+      "caption": "Google's test banner sits below the tab bar and above the system navigation bar; Hourly shows no native card. This capture uses Korean controls.",
+      "expected": "Every tab keeps its content above the banner. Without a banner, no empty strip remains."
     }
   ]
 }
