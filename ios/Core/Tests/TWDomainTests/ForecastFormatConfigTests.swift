@@ -47,10 +47,13 @@ struct ForecastFormatConfigTests {
         #expect(config.interstitialChance == 30)
         var changes = 0
         config.onChange = { changes += 1 }
+        // CODEX-3: a chance-only update is read by the next draw and does not re-run ad eligibility.
         source.publish(["tw_interstitial_chance": "100"])
-        #expect(config.interstitialChance == 100 && changes == 1)
+        #expect(config.interstitialChance == 100 && changes == 0)
         source.publish(["tw_interstitial_chance": "150"])
-        #expect(config.interstitialChance == 30 && changes == 2)
+        #expect(config.interstitialChance == 30 && changes == 0)
+        source.publish(["tw_interstitial_chance": "5", "tw_native_enabled": "false"])
+        #expect(config.interstitialChance == 5 && !config.nativeEnabled && changes == 1)
 
         let stored = FakeRemoteConfig()
         stored.activated = ["tw_interstitial_chance": "0"]

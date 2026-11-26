@@ -112,12 +112,11 @@ public final class RemoteBannerConfig {
     private func applyFormats(_ values: [String: String]) -> Bool {
         let native = values[Self.nativeEnabledKey, default: "true"] == "true"
         let interstitial = values[Self.interstitialEnabledKey, default: "true"] == "true"
-        let chance = Self.interstitialChance(values[Self.interstitialChanceKey])
-        guard native != nativeEnabled || interstitial != interstitialEnabled || chance != interstitialChance
-        else { return false }
+        // The next draw reads the chance; a chance-only change does not re-run ad eligibility or preload.
+        interstitialChance = Self.interstitialChance(values[Self.interstitialChanceKey])
+        guard native != nativeEnabled || interstitial != interstitialEnabled else { return false }
         nativeEnabled = native
         interstitialEnabled = interstitial
-        interstitialChance = chance
         return true
     }
 

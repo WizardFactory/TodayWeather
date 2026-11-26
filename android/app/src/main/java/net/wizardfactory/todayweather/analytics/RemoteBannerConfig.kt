@@ -54,8 +54,7 @@ class FirebaseRemoteConfigSource(private val config: FirebaseRemoteConfig) : Rem
  * after that are ignored. Without Firebase ([source] null) the defaults apply at once.
  */
 class RemoteBannerConfig(private val source: RemoteConfigSource?, private val scope: CoroutineScope) {
-    data class State(val policy: BannerPolicy, val ready: Boolean, val nativeEnabled: Boolean = true, val interstitialEnabled: Boolean = true,
-        val interstitialChance: Int = DEFAULT_INTERSTITIAL_CHANCE)
+    data class State(val policy: BannerPolicy, val ready: Boolean, val nativeEnabled: Boolean = true, val interstitialEnabled: Boolean = true)
 
     private val state = MutableStateFlow(State(BannerPolicy.DEFAULT, ready = false))
     private var started = false
@@ -63,6 +62,13 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
     private var timeout: Job? = null
 
     val policy: StateFlow<State> = state.asStateFlow()
+
+    /**
+     * The interstitial chance for the next draw (`tw_interstitial_chance`), read on the main thread. It is not part of
+     * [State], so a change never restarts ad eligibility, and a fetch activated after the timeout still applies it.
+     */
+    var interstitialChance: Int = DEFAULT_INTERSTITIAL_CHANCE
+        private set
 
     fun load() {
         if (started) return
@@ -88,7 +94,11 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
                         if (!loaded) return@loadActivated fail()
                         apply(source.values())
                         source.fetchAndActivate { fetched ->
-                            if (closed) return@fetchAndActivate
+                            if (closed) {
+                                // The finished policy and switches stay; only the next draws use the activated chance.
+                                if (fetched) interstitialChance = interstitialChance(source.values()[INTERSTITIAL_CHANCE])
+                                return@fetchAndActivate
+                            }
                             if (!fetched) return@fetchAndActivate fail()
                             apply(source.values())
                             finish("applied")
@@ -107,8 +117,8 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
         state.value = state.value.copy(
             nativeEnabled = values.getOrDefault(NATIVE_ENABLED, "true") == "true",
             interstitialEnabled = values.getOrDefault(INTERSTITIAL_ENABLED, "true") == "true",
-            interstitialChance = interstitialChance(values[INTERSTITIAL_CHANCE]),
         )
+        interstitialChance = interstitialChance(values[INTERSTITIAL_CHANCE])
         val policy = RemoteBannerPolicy.parse(values)
         if (policy == null) {
             Log.i(TAG, "remote_config invalid_values")

@@ -8,8 +8,8 @@ Source: [#3213](https://github.com/WizardFactory/TodayWeather/issues/3213), the 
 - A value is valid only when it is a non-empty string of ASCII digits whose integer value is at most 100. Anything else, including an absent key, a sign, a decimal point, whitespace, non-ASCII digits or an overflow, gives 30.
 - An eligible repeat transition shows a ready ad when `draw < percent / 100`, with `draw` uniform in `[0, 1)`. `0` never shows, `100` always shows. The draw is still taken once per eligible action.
 - The percentage is read at each draw, so a fetched value applies to later draws without a reinstall:
-  - Android: `RemoteBannerConfig.State.interstitialChance`, applied from the activated values and then the fetch of each app opening, as the other switches. `MainActivity` hands `ForecastInterstitial` a reader of the current state.
-  - iOS: `RemoteBannerConfig.interstitialChance`, applied from the startup snapshot and from realtime updates. `FirebaseBridges` adds the key to the realtime key set and to `values()`. `Monetization` hands `ForecastInterstitial` a reader of the current config.
+  - Android: `RemoteBannerConfig.interstitialChance`, applied from the activated values and then the fetch of each app opening, including a fetch activated after the 12 s timeout (CODEX-1). It is kept outside the published `State`, so a change does not restart ad eligibility. `MainActivity` hands `ForecastInterstitial` a reader of it.
+  - iOS: `RemoteBannerConfig.interstitialChance`, applied from the startup snapshot and from realtime updates; a chance-only update does not call `onChange` (no eligibility refresh or preload, CODEX-3). `FirebaseBridges` adds the key to the realtime key set and to `values()`. `Monetization` hands `ForecastInterstitial` a reader of the current config.
 - Unchanged: eligibility (first-visit protection, read-past-chart and source/destination rules), the one-per-day cap, reservation and release, `tw_interstitial_enabled`, consent and the legacy banner policy.
 
 ## Files
