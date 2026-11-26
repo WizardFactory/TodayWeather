@@ -36,9 +36,10 @@ WITH raw AS (
   FROM eligible WHERE day BETWEEN @start_date AND @end_date
   GROUP BY event_date, platform, version_group
 ), exported_days AS (
-  -- Days whose daily export table exists, whatever app or stream its rows belong to.
-  SELECT DISTINCT PARSE_DATE('%Y%m%d', _TABLE_SUFFIX) AS day FROM `PROJECT.DATASET.events_*`
-  WHERE _TABLE_SUFFIX BETWEEN FORMAT_DATE('%Y%m%d', @start_date) AND FORMAT_DATE('%Y%m%d', DATE_ADD(@end_date, INTERVAL 1 DAY))
+  -- Days whose daily export table exists (table metadata, not rows: an empty table or one holding only other apps'
+  -- events still counts). Needs metadata read access to the dataset.
+  SELECT PARSE_DATE('%Y%m%d', SUBSTR(table_name, 8)) AS day FROM `PROJECT.DATASET.INFORMATION_SCHEMA.TABLES`
+  WHERE REGEXP_CONTAINS(table_name, r'^events_[0-9]{8}$')
 ), active AS (
   SELECT DISTINCT day, platform, version_group, user_pseudo_id FROM eligible WHERE is_active_user
 ), returns AS (

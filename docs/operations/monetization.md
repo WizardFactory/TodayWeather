@@ -128,7 +128,8 @@ differs. Active installations are distinct non-null installation pseudonyms with
 `is_active_user=true` in completed daily exports; they are not a person count.
 The next-day return rate is the share of a day's active installations active again
 the next day on the same platform; it stays NULL until the next day's export table
-exists and that day has ended. Late events can still raise it, so rerun the last
+exists (read from the dataset's `INFORMATION_SCHEMA.TABLES`, so the query needs
+metadata read access) and that day has ended. Late events can still raise it, so rerun the last
 three days. A return counts in either version group, so an update from 1.x
 to 2.x counts as a return when the installation pseudonym survives it (not
 verified on devices). Exclude known developer installations (the templates
