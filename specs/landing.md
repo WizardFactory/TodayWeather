@@ -112,7 +112,7 @@ Each `/{lang}/index.html` is a single semantic, accessible document with clear l
    - Present the most praised points from App Store and Google Play reviews: the comparison with yesterday, deciding what to wear, the clear screen and the hourly forecast. Quote excerpts verbatim, labelled with the store only, without dates or reviewer names. The [store review summary](../docs/evidence/research/landing-store-voice-2026-11-21.md) lists each excerpt and the theme counts.
    - Close with a second **Open TodayWeather** action to `https://link.todayweather.ai/open`.
 6. **Weather & Air Data Attribution (`#sources`)**:
-   - Transparent source credits matching [cordova-store-release.md](../docs/operations/cordova-store-release.md#L143-L155): KMA (Korea Meteorological Administration), AirKorea (Ministry of Environment / Korea Environment Corporation), Visual Crossing, Google Air Quality / Pollen, OpenWeather (and provisional-data / official-warning caution).
+   - Transparent source credits matching [cordova-store-release.md](../docs/operations/cordova-store-release.md#L145-L157): KMA (Korea Meteorological Administration), AirKorea (Ministry of Environment / Korea Environment Corporation), Visual Crossing, Google Air Quality / Pollen, OpenWeather (and provisional-data / official-warning caution).
 7. **Footer (`<footer>`)**:
    - Official Developer / Operator identification matching [support.html](../client/fastlane/privacy/support.html): Flying Inc. (주식회사 플라잉) · Product Team · `mailto:todayweather@wizardfactory.net`.
    - Language-matched legal & support links to `/mobile/{privacy,terms,support}{suffix}.html`.

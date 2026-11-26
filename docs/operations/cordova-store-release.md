@@ -1,5 +1,7 @@
 # Cordova store release — TodayWeather 1.1.0 (#2605)
 
+> **Historical.** AK decided on 2026-11-26 that no new Cordova build will be released on any store, including a fallback or rollback build. Keep this runbook as a record of the 1.1.x releases; do not follow it for a new release.
+
 TodayWeather uses the existing Cordova npm build scripts. This release excludes widgets and purchases, keeps AdMob, and requires physical-device notification/advertising checks. TodayAir is outside scope. Do not use the old product Gulp release tasks to prepare this version.
 
 ## Release order for the next version

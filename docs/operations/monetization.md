@@ -5,6 +5,8 @@ as the revenue source and Crashlytics for crash health. Remote Config controls
 the existing banner; PostHog remains deferred to [#2655](https://github.com/WizardFactory/TodayWeather/issues/2655).
 No new interstitial, purchase or widget flow is introduced.
 
+AK decided on 2026-11-26 that no new Cordova build will be released on any store, including a fallback or rollback build. Cordova-specific steps below (banner policy, experiments, the #2871 store-release step) apply only to installed 1.x versions. Remote Config changes still reach those installed builds; code changes reach users only through the native apps.
+
 ## Repository behavior and assets
 
 - [Event dictionary](../../client/analytics/events.md): fixed enum/field allowlist, no raw location/identity/error labels, route-screen deduplication.
@@ -175,11 +177,12 @@ session without an Ads SDK start. It also records the unchanged configuration (i
 [store runbook](cordova-store-release.md#developer-website-and-app-adstxt). Do not
 claim restoration until each AK step below is recorded in #2871:
 
-1. Ship the fixed client in the next store release (#2605). Older builds keep both
-   defects. iOS 1.0.10 (GMA 7.49.0 per the #2871 AdMob report) stays on a deprecated SDK until users update.
+1. No further Cordova release carries these fixes: AK decided on 2026-11-26 that no Cordova build is released on any store (2026-11-26).
+   Installed builds keep the behaviour they shipped with, and users move to the native
+   apps. Older builds keep both defects. iOS 1.0.10 (GMA 7.49.0 per the #2871 AdMob report) stays on a deprecated SDK until users update.
 2. Confirm app-ads.txt authorization for both apps in AdMob.
 3. In the AdMob Policy center, request a review for each weather app's "Site Behavior:
-   Navigation" restriction after the release is live
+   Navigation" restriction for the apps as published now (native 2.0.x)
    ([AdMob help](https://support.google.com/admob/answer/10448709)). Record the
    request date and the outcome. A pending or rejected review keeps #2871 open.
 4. Report before/after cohorts with an explicit date range and timezone, app version,

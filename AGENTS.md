@@ -25,7 +25,7 @@ Treat repository claims as revision-bound and AWS claims as timestamped observat
 
 ## Product scope
 
-Use the [product lifecycle](docs/architecture/service-overview.md#product-lifecycle) when scoping features, operations and verification. Cover the affected TodayWeather surfaces: WebApp (PWA and desktop modes), native iOS, native Android and the current server1 backend under `server/`. Preserve client contracts when porting features to the future Rust server2 backend. Treat TodayAir and Cordova as historical references outside ongoing operations. For Korean solar terms, follow the [#3050 delivery plan](plans/issue-3050.md).
+Use the [product lifecycle](docs/architecture/service-overview.md#product-lifecycle) when scoping features, operations and verification. Cover the affected TodayWeather surfaces: WebApp (PWA and desktop modes), native iOS, native Android and the current server1 backend under `server/`. Preserve client contracts when porting features to the future Rust server2 backend. Treat TodayAir and Cordova as historical references outside ongoing operations. AK decided on 2026-11-26 that no new Cordova build will be released on any store, including a fallback or rollback build. Installed Cordova versions stay in the field until users update; do not plan Cordova fixes, experiments or releases, and judge their effect only through native releases. For Korean solar terms, follow the [#3050 delivery plan](plans/issue-3050.md).
 
 ## Repository map and edit locations
 

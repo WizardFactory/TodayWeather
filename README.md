@@ -55,6 +55,8 @@ $ npm run emulate:ios           # debug build on the iOS Simulator
 
 ### release mobile application
 
+> **Historical.** AK decided on 2026-11-26 that no Cordova build is released on any store, including a fallback or rollback build. The commands below record how the 1.x releases were built.
+
 Check the version in `config.xml` (`version`, `android-versionCode`, `ios-CFBundleVersion`); it must exceed the store versions.
 
 ```bash

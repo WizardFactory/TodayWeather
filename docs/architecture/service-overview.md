@@ -4,7 +4,7 @@
 
 **2026-09-28 — TodayAir retirement confirmed by AK.** TodayAir is no longer operated. This is the confirmation date; the actual shutdown date was not provided. Retained TodayAir source, build variants and provider configuration are historical artifacts, not evidence of an active service. TodayAir is excluded from push-service restoration and credential renewal.
 
-**2026-11-20 — TodayWeather operating scope confirmed by AK.** The maintained clients are the WebApp in PWA and desktop modes (`web/`, `packages/weather-core/`), native iOS (`ios/`) and native Android (`android/`). Server1, the legacy Node.js backend under `server/`, owns current backend delivery. Rust server2 under `server2/` is its planned successor. The Cordova client has left ongoing operations; its code and release instructions remain available for historical reference. The earlier TodayAir retirement also applies.
+**2026-11-20 — TodayWeather operating scope confirmed by AK.** The maintained clients are the WebApp in PWA and desktop modes (`web/`, `packages/weather-core/`), native iOS (`ios/`) and native Android (`android/`). Server1, the legacy Node.js backend under `server/`, owns current backend delivery. Rust server2 under `server2/` is its planned successor. The Cordova client has left ongoing operations; its code and release instructions remain available for historical reference. **2026-11-26:** AK decided on 2026-11-26 that no new Cordova build will be released on any store, including a fallback or rollback build. Installed Cordova versions (Android 1.1.x, iOS 1.1.x) keep running until users update to the native apps. The earlier TodayAir retirement also applies.
 
 The [Korean solar-term plan](../../plans/issue-3050.md) applies this scope to #3050: server1 supplies the ranked daily summary and the complete annual calendar to the maintained clients, with the same API contract planned for server2.
 
@@ -26,7 +26,7 @@ The repository contains the Node.js/Express weather backend, the Ionic 1/Angular
 | `server/lib/` | Provider HTTP/XML/JSON access (Visual Crossing in `lib/VC`), KMA scraping, units and image parsing |
 | `server/models/` | Mongoose weather, geographic, push and purchase-related models |
 | `client/www/js/` | App startup and screens; `WeatherUtil` HTTP/conversion, `WeatherInfo` city state, `TwStorage` persistence |
-| `client/package.json`, `client/config.xml`, `client/scripts/` | TodayWeather build since #2605: Cordova 13 from npm scripts (`www`, `build:*`, `build:*:release`), release files fetched from S3, prepare hooks for AdMob IDs and iOS tracking settings ([client README](../../client/README.md#mobile-application)) |
+| `client/package.json`, `client/config.xml`, `client/scripts/` | TodayWeather build since #2605: Cordova 13 from npm scripts (`www`, `build:*`, `build:*:release`), release files fetched from S3, prepare hooks for AdMob IDs and iOS tracking settings ([client README](../../client/README.md#historical-cordova-mobile-application)) |
 | `client/gulpfile.js`, `tw.*`, `ta.*` | Legacy product/platform build variants (TodayAir, widgets); copy configuration, resources and native projects. App billing installers and native purchase declarations removed in #2641 |
 | `ios/TodayWeather/`, `ios/Core/` | Native TodayWeather for iPhone and iPad (iOS 17.0+). The app uses SwiftUI; the Swift package owns weather and push requests, domain logic and storage. See the [iOS README](../../ios/README.md). |
 | `tw.ios/`, `ta.ios/` | TodayWeather/TodayAir native shells, Objective-C widgets, platform web assets |
@@ -95,7 +95,7 @@ App coordinates use `{lat,long}`; server geography often uses `{lat,lon}`; Mongo
 The native app in repository revision `9bc9ec8f` uses the existing TodayWeather
 bundle ID and reads Cordova state from WebKit local storage and the App Group
 preferences suite. It writes native state atomically and exports compatible state
-to the App Group for a separately built Cordova fallback. It reuses the existing
+to the App Group for a separately built Cordova fallback. That fallback is not to be released on any store (AK, 2026-11-26). It reuses the existing
 device ID for registration. See [app startup](../../ios/TodayWeather/AppScenes.swift),
 [native storage](../../ios/Core/Sources/TWStorage/AppStateStore.swift),
 [device identity](../../ios/Core/Sources/TWStorage/DeviceIdentity.swift) and

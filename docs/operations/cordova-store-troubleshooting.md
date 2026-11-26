@@ -1,6 +1,8 @@
 # Cordova store release troubleshooting
 
-Use this guide when a release step fails. Start normal deployments with the [release runbook](cordova-store-release.md#release-order-for-the-next-version). Cases below derive from the TodayWeather 1.1.0 recovery on 2026-10-01–02; verify the current account, artifact and service behavior before applying a remedy. Current automation coverage is documented in the [runbook](cordova-store-release.md#automation-coverage-and-remaining-work).
+> **Historical.** AK decided on 2026-11-26 that no Cordova build is released on any store, including a fallback or rollback build. This guide records the 1.1.0 recovery; do not use it for a new release.
+
+This guide was used when a release step failed; releases started from the [release runbook](cordova-store-release.md#release-order-for-the-next-version). Cases below derive from the TodayWeather 1.1.0 recovery on 2026-10-01–02; verify the current account, artifact and service behavior before applying a remedy. Current automation coverage is documented in the [runbook](cordova-store-release.md#automation-coverage-and-remaining-work).
 
 ## Before retrying
 
