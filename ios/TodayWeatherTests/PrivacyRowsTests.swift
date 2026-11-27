@@ -16,9 +16,12 @@ struct PrivacyRowsTests {
     final class Sdk: AnalyticsSdk {
         var calls: [String] = []
         var events: [String] = []
+        /// The `traffic_type` of each event, in order.
+        var trafficTypes: [String] = []
         func setCollectionEnabled(_ enabled: Bool) { calls.append("collection \(enabled)") }
         func setConsent(analytics: Bool) { calls.append("consent \(analytics)") }
         func logEvent(_ name: String, _ parameters: [(String, AnalyticsParameter)]) {
+            trafficTypes += parameters.compactMap { if case .text(let t) = $0.1, $0.0 == "traffic_type" { t } else { nil } }
             events.append(([name] + parameters.compactMap { if case .text(let t) = $0.1, $0.0 == "screen_name" { t } else { nil } })
                 .joined(separator: " "))
         }

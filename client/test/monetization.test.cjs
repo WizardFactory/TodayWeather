@@ -591,3 +591,32 @@ test('monetization queries count impressions from the app ad_lifecycle event, no
     assert.match(daily, /ELSE 'other' END AS version_group/, 'older or missing versions stay out of the native group');
     assert.match(daily, /LEFT JOIN exported_days x ON x\.day = DATE_ADD\(d\.day, INTERVAL 1 DAY\)/, 'no return rate before the next table');
 });
+
+test('reporting queries exclude development, internal and pre-release installations with one release list (#3228)', () => {
+    const lists = [];
+    for (const file of ['analytics/daily-monetization.sql', 'analytics/ios-att-monetization.sql', 'analytics/retention.sql']) {
+        const sql = read(file);
+        assert.match(sql, /traffic_type IN \('development', 'internal'\) OR r\.debug_mode = 1/, file);
+        assert.match(sql, /u\.released_at IS NULL OR TIMESTAMP_MICROS\(r\.event_timestamp\) < u\.released_at/, file);
+        assert.match(sql, /user_pseudo_id NOT IN \(SELECT user_pseudo_id FROM excluded WHERE user_pseudo_id IS NOT NULL\)/, file);
+        const list = sql.match(/untagged_versions AS \(([\s\S]*?)\n\)/);
+        assert.ok(list, `${file} lists the untagged versions`);
+        lists.push(list[1]);
+    }
+    assert.equal(new Set(lists).size, 1, 'the three queries carry the same release list');
+    const rows = [...lists[0].matchAll(/'(ANDROID|IOS)'(?: AS platform)?, '([0-9.]+)'(?: AS version)?, (TIMESTAMP '[^']+'|CAST\(NULL AS TIMESTAMP\))/g)]
+        .map(m => `${m[1]} ${m[2]} ${m[3]}`);
+    assert.deepEqual(rows, [
+        "ANDROID 2.0.0 TIMESTAMP '2026-11-20 17:00:00+09'",
+        "ANDROID 2.0.1 TIMESTAMP '2026-11-24 13:39:00+09'",
+        "IOS 2.0.1 TIMESTAMP '2026-11-21 00:00:00+09'",
+        "IOS 2.0.2 TIMESTAMP '2026-11-24 10:48:00+09'",
+        'IOS 2.0.3 CAST(NULL AS TIMESTAMP)',
+        'IOS 2.0.4 CAST(NULL AS TIMESTAMP)',
+    ]);
+    const doc = fs.readFileSync(path.join(__dirname, '../../docs/operations/monetization.md'), 'utf8');
+    for (const row of rows) {
+        const [platform, version] = row.split(' ');
+        assert.match(doc, new RegExp(`\\| ${platform === 'IOS' ? 'iOS' : 'Android'} \\| ${version.replace(/\./g, '\\.')} \\|`), `${row} has a source row`);
+    }
+});

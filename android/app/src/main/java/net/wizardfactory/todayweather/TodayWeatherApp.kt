@@ -28,6 +28,7 @@ import net.wizardfactory.todayweather.ads.GoogleAdsPlatform
 import net.wizardfactory.todayweather.analytics.Analytics
 import net.wizardfactory.todayweather.analytics.AnalyticsSdk
 import net.wizardfactory.todayweather.analytics.ConsentStore
+import net.wizardfactory.todayweather.analytics.TrafficType
 import net.wizardfactory.todayweather.analytics.FirebaseAnalyticsSdk
 import net.wizardfactory.todayweather.analytics.FirebaseRemoteConfigSource
 import net.wizardfactory.todayweather.analytics.RemoteConfigSource
@@ -75,10 +76,11 @@ open class TodayWeatherApp : Application() {
 
     /**
      * Usage analytics (#2894), on by default outside the opt-in regions (AK 2026-11-24), started by EarlyStartProvider
-     * before Firebase. Test-unit builds report `development` traffic, release builds `production`, as the Cordova builds did.
+     * before Firebase. Test-unit builds report `development` traffic; release builds `production` when Google Play
+     * installed them and `internal` otherwise (#3228, [TrafficType]).
      */
     val analytics: Analytics by lazy {
-        Analytics(analyticsSdk(), ConsentStore(this), if (BuildConfig.RELEASE_ADS) "production" else "development", ::deviceRegion)
+        Analytics(analyticsSdk(), ConsentStore(this), TrafficType.of(BuildConfig.RELEASE_ADS) { TrafficType.installer(this) }, ::deviceRegion)
     }
 
     /**

@@ -164,10 +164,49 @@ exists (read from the dataset's `INFORMATION_SCHEMA.TABLES`, so the query needs
 metadata read access) and that day has ended. Late events can still raise it, so rerun the last
 three days. A return counts in either version group, so an update from 1.x
 to 2.x counts as a return when the installation pseudonym survives it (not
-verified on devices). Exclude known developer installations (the templates
-exclude installation pseudonyms carrying `traffic_type=development` or integer
-`debug_mode=1`, including their native automatic events). Consent loss,
+verified on devices). Exclude known developer and team installations: the
+templates drop every event, native automatic events included, of an installation
+pseudonym that carried `traffic_type=development` or `internal`, integer
+`debug_mode=1`, or an event of an untagged version before its release
+([team installations](#team-installations-3228)). Consent loss,
 identity reset/reinstall and filtered samples limit comparison with AdMob.
+
+### Team installations (#3228)
+
+The native apps tag their own installs: `development` for builds with Google's
+test units, `internal` for a Release build installed from TestFlight or Xcode
+(iOS, StoreKit 2 `AppTransaction` environment `sandbox` or `xcode`) or by any
+installer other than Google Play (Android, `getInstallSourceInfo`), and
+`production` otherwise. Before the iOS read resolves, and after it fails, an iOS
+build carrying a provisioning profile (development, ad hoc or enterprise signing)
+sends `internal` and any other build `production`; a failed Android read keeps
+`production`. An installation that sends `internal` at any time drops out
+entirely, earlier events included. Play's
+internal, closed and open testing tracks install through Play, so their testers
+count as `production`. Installations whose pseudonym changed (reinstall, data
+reset) are separate installations.
+
+Builds made before #3228 carry no `internal` tag. The queries' `untagged_versions`
+list therefore excludes an installation that sent an event of a listed version
+before that version's public store release (event timestamp, KST). A version
+without a release time is excluded entirely. Native versions that are not listed
+are assumed to carry the tag. The list holds every native version in the GA4
+export on 2026-11-27 (Android 2.0.0 and 2.0.1, iOS 2.0.1 and 2.0.2) and the
+known iOS builds that were not released then. When a listed version ships, set its
+time in all three queries; add any further build made from a commit before #3228.
+The pre-release exclusion only sees events within the query's date range, so a
+range starting after a release keeps a team device that ran only that store
+build. TestFlight or sideloaded builds of these versions after their release are
+not distinguishable from store installs.
+
+| Platform | Version | Public release (KST) | Source |
+| --- | --- | --- | --- |
+| Android | 2.0.0 | 2026-11-20 17:00 | Play Console production release history (read 2026-11-24) |
+| Android | 2.0.1 | 2026-11-24 13:39 | Play Console publishing overview ([GTM log](../../gtm/log.md)) |
+| iOS | 2.0.1 | 2026-11-21 (day only, from 00:00) | Apple lookup API release date ([GTM log](../../gtm/log.md)) |
+| iOS | 2.0.2 | 2026-11-24 10:48 (phased release start) | App Store Connect API ([GTM log](../../gtm/log.md)) |
+| iOS | 2.0.3 | not released on 2026-11-27 | Submitted for review on 2026-11-24 ([store release runbook](cordova-store-release.md)) |
+| iOS | 2.0.4 | not released on 2026-11-27 | TestFlight build on a team iPhone (release records, 2026-11-26) |
 
 eCPM and ARPDAU come from AdMob earnings, not from BigQuery: ARPDAU = AdMob
 estimated earnings / Firebase active users for the same date range and platform.
