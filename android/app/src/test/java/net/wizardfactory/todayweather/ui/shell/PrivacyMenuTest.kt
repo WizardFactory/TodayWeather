@@ -23,6 +23,7 @@ import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -242,6 +243,37 @@ class PrivacyMenuTest {
         inPopup("확인").performClick()
         rule.waitForIdle()
         assertFalse(popupShown())
+    }
+
+    /** #3238 AC2: popup closes while async setAnalytics runs off-main, then shows LOC_PRIVACY_SAVE_FAILED on false. */
+    @Test
+    fun anAsyncFailedSaveClosesThePopupAndShowsTheAlertWhenItSettles() {
+        val pending = CompletableDeferred<Boolean>()
+        val memory = Memory(AppState(places = listOf(seoul), placeIndex = 0, units = UnitSettings.defaults("KR")))
+        val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { _, _ -> seoulBody }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
+        val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
+        val privacy = PrivacyActions(choice, { value -> chosen += value; pending.await() }, optIn = false) {}
+        rule.setContent {
+            val state by memory.state.collectAsState()
+            val entries by repository.weather.collectAsState()
+            val loading by repository.loading.collectAsState()
+            val retry by session.retry.collectAsState()
+            val context = LocalContext.current
+            val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
+            AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, privacy = privacy)
+        }
+        rule.waitForIdle()
+        openMenu()
+        tapRow(MenuRow.ANALYTICS)
+        inPopup("켜기").performClick()
+        rule.waitForIdle()
+        assertFalse(popupShown(), "popup closes immediately while save runs off-main")
+        assertEquals(listOf(true), chosen)
+
+        pending.complete(false)
+        rule.waitForIdle()
+        rule.onNodeWithText("개인정보 설정을 완전히 적용하지 못했습니다. 다시 시도해 주세요.").assertExists()
+        inPopup("TodayWeather").assertExists()
     }
 
     @Test

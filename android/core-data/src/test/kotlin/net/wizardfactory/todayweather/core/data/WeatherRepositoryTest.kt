@@ -2,7 +2,11 @@ package net.wizardfactory.todayweather.core.data
 
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -193,6 +197,85 @@ class WeatherRepositoryTest {
         response.complete(seoulBody)
         assertIs<LoadResult.Loaded>(appLoad.await())
         assertEquals(1, calls)
+    }
+
+    /** #3238 AC1: reserveWidgetAttempt runs outside WeatherRepository's monitor so canLoad does not block on it. */
+    @Test
+    fun canLoadReturnsWhileReserveWidgetAttemptIsBlocked() {
+        val repo = WeatherRepository("https://server.test.invalid", null, { _, _ -> seoulBody }, { now })
+        val enteredReserve = CountDownLatch(1)
+        val releaseReserve = CountDownLatch(1)
+        val widgetResult = AtomicReference<LoadResult>()
+        val widgetThread = thread(name = "widget-reserve-test") {
+            widgetResult.set(runBlocking {
+                repo.loadFromWidget(seoul, units, listOf("ko")) {
+                    enteredReserve.countDown()
+                    releaseReserve.await(5, TimeUnit.SECONDS)
+                    false
+                }
+            })
+        }
+        try {
+            assertTrue(enteredReserve.await(5, TimeUnit.SECONDS), "widget load must enter reserveWidgetAttempt")
+            val canLoadDone = CountDownLatch(1)
+            val canLoadResult = AtomicReference<Boolean>()
+            val mainProbe = thread(name = "main-canload-probe") {
+                canLoadResult.set(repo.canLoad(seoul))
+                canLoadDone.countDown()
+            }
+            assertTrue(canLoadDone.await(500, TimeUnit.MILLISECONDS), "canLoad must return while reserveWidgetAttempt blocks")
+            assertEquals(true, canLoadResult.get())
+            mainProbe.join(1_000)
+        } finally {
+            releaseReserve.countDown()
+            widgetThread.join(5_000)
+        }
+        assertEquals(LoadResult.Skipped, widgetResult.get())
+    }
+
+    /** #3238 AC1: a foreground request starting while widget reservation runs causes the widget load to return Skipped. */
+    @Test
+    fun widgetSkipsWhenForegroundRequestStartsDuringReservation() {
+        val httpCalls = AtomicInteger(0)
+        val fgEnteredHttp = CountDownLatch(1)
+        val releaseFgHttp = CountDownLatch(1)
+        val repo = WeatherRepository("https://server.test.invalid", null, { _, _ ->
+            httpCalls.incrementAndGet()
+            fgEnteredHttp.countDown()
+            assertTrue(releaseFgHttp.await(5, TimeUnit.SECONDS))
+            seoulBody
+        }, { now })
+        val enteredReserve = CountDownLatch(1)
+        val releaseReserve = CountDownLatch(1)
+        val widgetResult = AtomicReference<LoadResult>()
+        val fgResult = AtomicReference<LoadResult>()
+        val widgetThread = thread(name = "widget-race-test") {
+            widgetResult.set(runBlocking {
+                repo.loadFromWidget(seoul.copy(currentPosition = true), units, listOf("ko")) {
+                    enteredReserve.countDown()
+                    releaseReserve.await(5, TimeUnit.SECONDS)
+                    true
+                }
+            })
+        }
+        var fgThread: Thread? = null
+        try {
+            assertTrue(enteredReserve.await(5, TimeUnit.SECONDS), "widget load must enter reserveWidgetAttempt")
+            fgThread = thread(name = "fg-race-test") {
+                fgResult.set(runBlocking { repo.load(seoul, units, listOf("ko"), force = true) })
+            }
+            assertTrue(fgEnteredHttp.await(500, TimeUnit.MILLISECONDS), "foreground load must start without waiting for reserveWidgetAttempt")
+            releaseReserve.countDown()
+            widgetThread.join(5_000)
+            assertEquals(LoadResult.Skipped, widgetResult.get(), "widget must re-check in-flight state and skip")
+            assertEquals(1, httpCalls.get(), "widget must not send an extra HTTP request")
+        } finally {
+            releaseReserve.countDown()
+            releaseFgHttp.countDown()
+            widgetThread.join(5_000)
+            fgThread?.join(5_000)
+        }
+        assertIs<LoadResult.Loaded>(fgResult.get())
     }
 
     @Test

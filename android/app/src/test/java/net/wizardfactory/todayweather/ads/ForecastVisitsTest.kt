@@ -1,5 +1,6 @@
 package net.wizardfactory.todayweather.ads
 
+import android.content.SharedPreferences
 import net.wizardfactory.todayweather.analytics.RemoteBannerConfig
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import org.junit.Assert.*
@@ -122,5 +123,82 @@ class ForecastVisitsTest {
         assertNull(visits.reserve(Tab.AIR))
         assertNull(visits.reserve(Tab.LOCATIONS))
         assertEquals(0, draws)
+    }
+
+    /** #3238 AC5: visible() uses apply(), while reserve(), displayed(), and failedBeforeDisplay() still commit(). */
+    @Test fun visibleUsesApplyWhileReservationDisplayAndReleaseUseCommit() {
+        val prefs = RecordingPrefs()
+        val visits = forecastVisits(prefs, { day }, { probability }, { chance })
+
+        visits.visible(Tab.HOURLY)
+        assertEquals(0, prefs.commits)
+        assertEquals(1, prefs.applies)
+        assertTrue(prefs.getBoolean("hourly", false))
+
+        // Repeat visible on same tab performs no extra write.
+        visits.visible(Tab.HOURLY)
+        assertEquals(0, prefs.commits)
+        assertEquals(1, prefs.applies)
+
+        // reserve() must commit synchronously.
+        val reserved = visits.reserve(Tab.HOURLY)
+        assertEquals(day, reserved)
+        assertEquals(1, prefs.commits)
+        assertEquals(1, prefs.applies)
+        assertTrue(prefs.getBoolean("spent", false))
+
+        // failedBeforeDisplay() must commit synchronously.
+        visits.failedBeforeDisplay(day)
+        assertEquals(2, prefs.commits)
+        assertEquals(1, prefs.applies)
+        assertFalse(prefs.getBoolean("spent", true))
+
+        // Re-reserve and cross midnight before display: displayed() must commit synchronously.
+        assertEquals(day, visits.reserve(Tab.HOURLY))
+        assertEquals(3, prefs.commits)
+        day++
+        visits.displayed(day - 1)
+        assertEquals(4, prefs.commits)
+        assertEquals(1, prefs.applies)
+        assertTrue(prefs.getBoolean("spent", false))
+    }
+
+    private class RecordingPrefs : SharedPreferences {
+        private val data = LinkedHashMap<String, Any?>()
+        var commits = 0
+        var applies = 0
+
+        override fun getAll(): MutableMap<String, *> = HashMap(data)
+        override fun getString(key: String?, defValue: String?): String? = data[key] as? String ?: defValue
+        @Suppress("UNCHECKED_CAST")
+        override fun getStringSet(key: String?, defValues: MutableSet<String>?): MutableSet<String>? = data[key] as? MutableSet<String> ?: defValues
+        override fun getInt(key: String?, defValue: Int): Int = data[key] as? Int ?: defValue
+        override fun getLong(key: String?, defValue: Long): Long = data[key] as? Long ?: defValue
+        override fun getFloat(key: String?, defValue: Float): Float = data[key] as? Float ?: defValue
+        override fun getBoolean(key: String?, defValue: Boolean): Boolean = data[key] as? Boolean ?: defValue
+        override fun contains(key: String?): Boolean = key in data
+        override fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) {}
+        override fun unregisterOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) {}
+
+        override fun edit(): SharedPreferences.Editor = object : SharedPreferences.Editor {
+            private val staged = LinkedHashMap<String, Any?>()
+            override fun putString(key: String?, value: String?) = apply { if (key != null) staged[key] = value }
+            override fun putStringSet(key: String?, values: MutableSet<String>?) = apply { if (key != null) staged[key] = values }
+            override fun putInt(key: String?, value: Int) = apply { if (key != null) staged[key] = value }
+            override fun putLong(key: String?, value: Long) = apply { if (key != null) staged[key] = value }
+            override fun putFloat(key: String?, value: Float) = apply { if (key != null) staged[key] = value }
+            override fun putBoolean(key: String?, value: Boolean) = apply { if (key != null) staged[key] = value }
+            override fun remove(key: String?) = apply { if (key != null) staged[key] = null }
+            override fun clear() = apply { staged.clear() }
+            override fun commit(): Boolean {
+                data.putAll(staged)
+                commits++
+                return true
+            }
+            override fun apply() {
+                data.putAll(staged)
+                applies++
+            }
+        }
     }
 }

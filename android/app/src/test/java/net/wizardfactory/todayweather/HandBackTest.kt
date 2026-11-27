@@ -1,8 +1,14 @@
 package net.wizardfactory.todayweather
 
 import android.content.Context
+import android.os.Looper
 import androidx.datastore.core.DataStore
 import androidx.test.core.app.ApplicationProvider
+import java.util.Collections
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -111,28 +117,107 @@ class HandBackTest {
         // The menu's withdrawal when nothing was chosen yet leaves collection off as it was, and still changes the choice.
         val store = ConsentStore(context)
         val writer = HandBackWriter(suite) { store.storedChoice() }
-        writer.watchConsent(context.getSharedPreferences(ConsentStore.CHOICE_FILE, Context.MODE_PRIVATE)) { it() }
-        writer.write(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1))
-        assertFalse(suite.contains(CordovaHandBack.CONSENT))
-        store.write(false)
-        assertEquals("false", suite.getString(CordovaHandBack.CONSENT, null))
-        assertEquals(2, marker()!!.generation)
-        store.write(true)
-        assertEquals("true", suite.getString(CordovaHandBack.CONSENT, null))
-        assertEquals(3, marker()!!.generation)
-        assertEquals(listOf(null, "서울"), cities())
+        val executor = Executors.newSingleThreadExecutor()
+        try {
+            writer.watchConsent(context.getSharedPreferences(ConsentStore.CHOICE_FILE, Context.MODE_PRIVATE)) { executor.execute(it) }
+            writer.write(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1))
+            assertFalse(suite.contains(CordovaHandBack.CONSENT))
+            store.write(false)
+            drain(executor)
+            assertEquals("false", suite.getString(CordovaHandBack.CONSENT, null))
+            assertEquals(2, marker()!!.generation)
+            store.write(true)
+            drain(executor)
+            assertEquals("true", suite.getString(CordovaHandBack.CONSENT, null))
+            assertEquals(3, marker()!!.generation)
+            assertEquals(listOf(null, "서울"), cities())
+        } finally {
+            executor.shutdownNow()
+        }
     }
 
     /** The app's writer hands back each written choice through the real preference files. */
     @Test
     fun theAppsWriterHandsBackTheWrittenChoice() {
         val writer = HandBackWriter.of(context)
-        writer.watchConsent(context.getSharedPreferences(ConsentStore.CHOICE_FILE, Context.MODE_PRIVATE)) { it() }
-        writer.write(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1))
-        ConsentStore(context).write(true)
+        val executor = Executors.newSingleThreadExecutor()
+        try {
+            writer.watchConsent(context.getSharedPreferences(ConsentStore.CHOICE_FILE, Context.MODE_PRIVATE)) { executor.execute(it) }
+            writer.write(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1))
+            ConsentStore(context).write(true)
+            drain(executor)
+            assertEquals("true", suite.getString(CordovaHandBack.CONSENT, null))
+            ConsentStore(context).write(false)
+            drain(executor)
+            assertEquals("false", suite.getString(CordovaHandBack.CONSENT, null))
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    /** #3238 AC3: TodayWeatherApp's consent listener must not run rewrite() inline on the main looper. */
+    @Test
+    fun theAppsConsentListenerRunsOffTheMainLooper() {
+        val app = context as TodayWeatherApp
+        app.handBack.write(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1))
+        val lockHeld = CountDownLatch(1)
+        val writeReturned = CountDownLatch(1)
+        var mainCompletedWithoutBlocking = false
+        val holder = thread(name = "handback-lock-holder") {
+            synchronized(app.handBack) {
+                lockHeld.countDown()
+                mainCompletedWithoutBlocking = writeReturned.await(500, TimeUnit.MILLISECONDS)
+            }
+        }
+        try {
+            assertTrue(lockHeld.await(5, TimeUnit.SECONDS))
+            assertTrue(ConsentStore(app).write(true))
+            writeReturned.countDown()
+        } finally {
+            holder.join(5_000)
+        }
+        assertTrue("consent listener must not run rewrite() inline on the main looper", mainCompletedWithoutBlocking)
+        val deadline = System.currentTimeMillis() + 5_000
+        while (suite.getString(CordovaHandBack.CONSENT, null) != "true" && System.currentTimeMillis() < deadline) {
+            Thread.sleep(20)
+        }
         assertEquals("true", suite.getString(CordovaHandBack.CONSENT, null))
-        ConsentStore(context).write(false)
-        assertEquals("false", suite.getString(CordovaHandBack.CONSENT, null))
+    }
+
+    /** #3238 AC3: scheduled consent hand-back writes run off the main looper and preserve FIFO order. */
+    @Test
+    fun consentHandBackWritesRunOffMainAndPreserveOrder() {
+        val mainThread = Looper.getMainLooper().thread
+        val store = ConsentStore(context)
+        val writer = HandBackWriter(suite) { store.storedChoice() }
+        val executor = Executors.newSingleThreadExecutor { task -> Thread(task, "test-handback-order") }
+        val threads = Collections.synchronizedList(mutableListOf<Thread>())
+        val recordedOrder = Collections.synchronizedList(mutableListOf<String?>())
+        try {
+            writer.write(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1))
+            writer.watchConsent(context.getSharedPreferences(ConsentStore.CHOICE_FILE, Context.MODE_PRIVATE)) { work ->
+                executor.execute {
+                    threads += Thread.currentThread()
+                    work()
+                    recordedOrder += suite.getString(CordovaHandBack.CONSENT, null)
+                }
+            }
+            for (choice in listOf(false, true, false, true)) {
+                store.write(choice)
+                drain(executor)
+            }
+            assertEquals(4, threads.size)
+            assertTrue("every hand-back commit must run off the main looper", threads.none { it === mainThread })
+            assertEquals(listOf("false", "true", "false", "true"), recordedOrder)
+            assertEquals("true", suite.getString(CordovaHandBack.CONSENT, null))
+            assertEquals(5, marker()!!.generation)
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    private fun drain(executor: java.util.concurrent.ExecutorService) {
+        executor.submit {}.get(5, TimeUnit.SECONDS)
     }
 
     @Test

@@ -177,9 +177,12 @@ class WeatherRepository(
         }
         val key = key(place)
         val location = locationKey(place)
+        if (reserveWidgetAttempt != null) {
+            val busy = synchronized(this) { key in inFlightLocations || location in inFlightLocations.values }
+            if (busy || !reserveWidgetAttempt()) return LoadResult.Skipped
+        }
         val request = synchronized(this) {
-            if (reserveWidgetAttempt != null &&
-                (key in inFlightLocations || location in inFlightLocations.values || !reserveWidgetAttempt())) return LoadResult.Skipped
+            if (reserveWidgetAttempt != null && (key in inFlightLocations || location in inFlightLocations.values)) return LoadResult.Skipped
             inFlightLocations[key] = location
             running.update { it + key }
             (++requests).also { latestRequest[key] = it }

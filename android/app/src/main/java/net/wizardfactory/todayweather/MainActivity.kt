@@ -58,6 +58,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -187,7 +188,9 @@ class MainActivity : ComponentActivity() {
             app.appState.state.first { it != null && !it.startShows }
             opened.consent.start(this@MainActivity)
         }
-        val privacy = PrivacyActions(app.analytics.choice, app.analytics::setCollectionEnabled, app.analytics.optInRegion) { onUnavailable ->
+        val privacy = PrivacyActions(app.analytics.choice, { value ->
+            app.appScope.async(app.analyticsWriter) { app.analytics.setCollectionEnabled(value) }.await()
+        }, app.analytics.optInRegion) { onUnavailable ->
             opened.consent.openPrivacyOptions(this, ::refreshNativeEligibility, onUnavailable)
         }
         setContent {
@@ -412,6 +415,7 @@ fun AppContent(
     // 이용 통계's popup and the privacy alerts (`showAlert('TodayWeather', …)`), by their message.
     var analyticsPopup by rememberSaveable { mutableStateOf(false) }
     var privacyAlert by rememberSaveable { mutableStateOf<Int?>(null) }
+    val privacyScope = rememberCoroutineScope()
     val analyticsChoice by (privacy?.choice ?: remember { MutableStateFlow(false) }).collectAsState()
     val applies by session.applies.collectAsState()
     val locating by session.locating.collectAsState()
@@ -639,7 +643,11 @@ fun AppContent(
                     // `chooseAnalytics`: back closes it without a choice.
                     fun choose(value: Boolean) {
                         analyticsPopup = false
-                        if (privacy?.setAnalytics?.invoke(value) == false) privacyAlert = R.string.LOC_PRIVACY_SAVE_FAILED
+                        privacy?.let { actions ->
+                            privacyScope.launch {
+                                if (!actions.setAnalytics(value)) privacyAlert = R.string.LOC_PRIVACY_SAVE_FAILED
+                            }
+                        }
                     }
                     AnalyticsPopup(privacy?.optIn ?: true, ::choose, onBack = { analyticsPopup = false })
                 }

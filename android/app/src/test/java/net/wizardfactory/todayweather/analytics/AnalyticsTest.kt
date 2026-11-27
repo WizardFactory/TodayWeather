@@ -3,9 +3,14 @@ package net.wizardfactory.todayweather.analytics
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import net.wizardfactory.todayweather.AnalyticsGuard
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -406,6 +411,118 @@ class AnalyticsTest {
         assertTrue(a.track("ad_lifecycle", mapOf("action" to "show", "ad_format" to "banner")))
     }
 
+    /** #3238 AC4: a cold start with stored "collecting" state writes collectionEnabled once (true), not false-then-true. */
+    @Test
+    fun coldStartWithStoredCollectingStateWritesCollectionOnceWithoutIntermediateFalse() {
+        for ((region, storedChoice) in listOf("DE" to "true", "KR" to null)) {
+            choices.edit().apply {
+                if (storedChoice != null) putString(ConsentStore.KEY, storedChoice) else remove(ConsentStore.KEY)
+            }.commit()
+            collection.edit().putBoolean(ConsentStore.ENABLED, true).commit()
+            collection.recordedBooleans.clear()
+
+            val sdk = Sdk()
+            val a = analytics(sdk, region)
+            assertTrue(a.choice.value, "collecting in $region")
+            assertEquals(collectionOn, sdk.calls, "SDK sequence in $region")
+            assertEquals(listOf(true), collection.recordedBooleans, "must not write intermediate false before true ($region)")
+        }
+    }
+
+    /** #3238 AC4: AnalyticsGuard.beforeFirebase commits synchronously unless both SDK keys are already present and false. */
+    @Test
+    fun beforeFirebaseSkipsCommitOnlyWhenBothKeysArePresentAndFalse() {
+        val prefs = context.getSharedPreferences("com.google.android.gms.measurement.prefs", Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+        AnalyticsGuard.beforeFirebase(context)
+        assertTrue(prefs.contains("measurement_enabled_from_api"))
+        assertTrue(prefs.contains("measurement_enabled"))
+        assertFalse(prefs.getBoolean("measurement_enabled_from_api", true))
+        assertFalse(prefs.getBoolean("measurement_enabled", true))
+
+        // Calling again when both keys are present and false should be a no-op (no commit).
+        val counting = CountingContext(context, "com.google.android.gms.measurement.prefs")
+        AnalyticsGuard.beforeFirebase(counting)
+        assertEquals(0, counting.commits, "both keys present and false: skip commit")
+
+        // When one key is true, must commit both false.
+        prefs.edit().putBoolean("measurement_enabled", true).commit()
+        counting.commits = 0
+        AnalyticsGuard.beforeFirebase(counting)
+        assertEquals(1, counting.commits, "one key true: must commit")
+        assertFalse(prefs.getBoolean("measurement_enabled", true))
+
+        // When one key is missing, must commit both false.
+        prefs.edit().remove("measurement_enabled_from_api").commit()
+        counting.commits = 0
+        AnalyticsGuard.beforeFirebase(counting)
+        assertEquals(1, counting.commits, "missing key: must commit")
+        assertTrue(prefs.contains("measurement_enabled_from_api"))
+        assertFalse(prefs.getBoolean("measurement_enabled_from_api", true))
+    }
+
+    /** #3238 AC2: setCollectionEnabled on a background thread must not hold the monitor used by screen() or track() across commits. */
+    @Test
+    fun setCollectionEnabledOnBackgroundDoesNotBlockConcurrentScreenOrTrack() {
+        for (blockOnChoices in listOf(true, false)) {
+            choices.edit().clear().commit()
+            collection.edit().clear().commit()
+            val sdk = Sdk()
+            val a = analytics(sdk, "DE")
+            val enteredCommit = CountDownLatch(1)
+            val releaseCommit = CountDownLatch(1)
+            val targetPrefs = if (blockOnChoices) choices else collection
+            targetPrefs.onCommit = {
+                enteredCommit.countDown()
+                releaseCommit.await(5, TimeUnit.SECONDS)
+            }
+            val saveResult = AtomicReference<Boolean>()
+            val bg = thread(name = "analytics-commit-test") {
+                saveResult.set(a.setCollectionEnabled(true))
+            }
+            try {
+                assertTrue(enteredCommit.await(5, TimeUnit.SECONDS), "must enter commit (choices=$blockOnChoices)")
+                val probeDone = CountDownLatch(1)
+                val probe = thread(name = "main-screen-probe") {
+                    a.screen("tab.forecast")
+                    a.track("weather_fetch", fetch)
+                    probeDone.countDown()
+                }
+                assertTrue(
+                    probeDone.await(500, TimeUnit.MILLISECONDS),
+                    "screen() and track() must not block while setCollectionEnabled commits (choices=$blockOnChoices)",
+                )
+                probe.join(1_000)
+            } finally {
+                targetPrefs.onCommit = null
+                releaseCommit.countDown()
+                bg.join(5_000)
+            }
+            assertEquals(true, saveResult.get())
+            assertTrue(a.choice.value)
+        }
+    }
+
+    private class CountingContext(base: Context, private val fileName: String) : android.content.ContextWrapper(base) {
+        var commits = 0
+        override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences {
+            val real = super.getSharedPreferences(name, mode)
+            if (name != fileName) return real
+            return object : SharedPreferences by real {
+                override fun edit(): SharedPreferences.Editor {
+                    val staged = real.edit()
+                    return object : SharedPreferences.Editor by staged {
+                        override fun putBoolean(key: String?, value: Boolean) = also { staged.putBoolean(key, value) }
+                        override fun commit(): Boolean {
+                            commits++
+                            return staged.commit()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /** Preferences whose writes fail while [fail] is set: nothing changes, as when the file cannot be written. */
     private class FailingPrefs(private val real: SharedPreferences) : SharedPreferences by real {
         var fail = false
@@ -413,6 +530,8 @@ class AnalyticsTest {
         /** Only writes of a value fail ([failValue] only, when set); a removal succeeds. */
         var failPuts = false
         var failValue: String? = null
+        val recordedBooleans = mutableListOf<Boolean>()
+        var onCommit: (() -> Unit)? = null
 
         override fun edit(): SharedPreferences.Editor = when {
             fail -> Failing(real.edit())
@@ -422,9 +541,27 @@ class AnalyticsTest {
                 override fun putString(key: String?, value: String?) =
                     also { if (failValue == null || value == failValue) put = true else staged.putString(key, value) }
                 override fun remove(key: String?) = also { staged.remove(key) }
-                override fun commit() = !put && staged.commit()
+                override fun commit(): Boolean {
+                    onCommit?.invoke()
+                    return !put && staged.commit()
+                }
             }
-            else -> real.edit()
+            else -> object : SharedPreferences.Editor by real.edit() {
+                private val staged = real.edit()
+                private val booleans = mutableListOf<Boolean>()
+                override fun putString(key: String?, value: String?) = also { staged.putString(key, value) }
+                override fun putBoolean(key: String?, value: Boolean) = also {
+                    if (key == ConsentStore.ENABLED) booleans += value
+                    staged.putBoolean(key, value)
+                }
+                override fun remove(key: String?) = also { staged.remove(key) }
+                override fun clear() = also { staged.clear() }
+                override fun commit(): Boolean {
+                    onCommit?.invoke()
+                    recordedBooleans += booleans
+                    return staged.commit()
+                }
+            }
         }
 
         /** An editor that stages changes and never writes them. */

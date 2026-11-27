@@ -112,6 +112,12 @@ class Analytics(
     /** The device region at the start (`TodayWeatherApp.deviceRegion`); null or empty when unknown. */
     private val region: () -> String?,
 ) {
+    /** Serializes [start] and [setCollectionEnabled] so consent transitions never interleave. */
+    private val transitionLock = Any()
+
+    /** Guards in-memory state and SDK calls; never held across SharedPreferences commits. */
+    private val stateLock = Any()
+
     private val choiceFlow = MutableStateFlow(false)
     private var enabled = false
     private var started = false
@@ -131,15 +137,19 @@ class Analytics(
      * region's default. A failure while applying the default leaves everything off and stores nothing, so the next
      * start applies it again.
      */
-    @Synchronized
     fun start() {
-        if (started) return
-        started = true
-        val stored = store.startChoice()
-        val region = runCatching { region() }.getOrNull()
-        optInRegion = !AnalyticsDefault.onByDefault(region)
-        choiceFlow.value = AnalyticsDefault.collects(stored, region)
-        applyCollection(choiceFlow.value, storeOnFailure = stored != null)
+        synchronized(transitionLock) {
+            if (started) return
+            started = true
+            val stored = store.startChoice()
+            val region = runCatching { region() }.getOrNull()
+            optInRegion = !AnalyticsDefault.onByDefault(region)
+            val collects = AnalyticsDefault.collects(stored, region)
+            synchronized(stateLock) {
+                choiceFlow.value = collects
+            }
+            applyCollection(collects, storeOnFailure = stored != null)
+        }
     }
 
     /**
@@ -147,30 +157,45 @@ class Analytics(
      * and denies every consent type before any file is written), the choice is written, then applied. False when it
      * could not be fully applied (`LOC_PRIVACY_SAVE_FAILED`); the choice is then off.
      */
-    @Synchronized
-    fun setCollectionEnabled(value: Boolean): Boolean {
-        enabled = false
-        pendingScreen = null
-        if (!value) stopSdk()
+    fun setCollectionEnabled(value: Boolean): Boolean = synchronized(transitionLock) {
+        synchronized(stateLock) {
+            enabled = false
+            pendingScreen = null
+            if (!value) {
+                choiceFlow.value = false
+                stopSdk()
+            }
+        }
         val saved = store.write(value)
-        choiceFlow.value = saved && value
+        val collects = saved && value
+        synchronized(stateLock) {
+            choiceFlow.value = collects
+            if (!collects) pendingScreen = null
+        }
         // A grant that was not written keeps the stored choice, also when the SDK then fails (CODEX-3178-23).
-        return applyCollection(choiceFlow.value, storeOnFailure = saved || !value) && saved
+        applyCollection(collects, storeOnFailure = saved || !value) && saved
     }
 
     /** An event of the schema with its own fields only; false when it is dropped or not sent. */
-    @Synchronized
-    fun track(name: String, params: Map<String, Any?>): Boolean {
+    fun track(name: String, params: Map<String, Any?>): Boolean = synchronized(stateLock) {
         val safe = AnalyticsSchema.validate(name, params) ?: return false
-        return emit(name, safe)
+        emit(name, safe)
     }
 
     /**
      * A route shown (`$stateChangeSuccess`): only while collecting, only the fixed names, not the same one twice in a row.
      * The latest one before collection is enabled is sent once it is.
      */
-    @Synchronized
-    fun screen(name: String) {
+    fun screen(name: String) = synchronized(stateLock) {
+        screenLocked(name)
+    }
+
+    /** An app open: a new Cordova page, whose first screen counts again. */
+    fun onOpened() = synchronized(stateLock) {
+        lastScreen = null
+    }
+
+    private fun screenLocked(name: String) {
         if (!choiceFlow.value) {
             pendingScreen = null
             return
@@ -181,12 +206,6 @@ class Analytics(
             lastScreen = name
             pendingScreen = null
         }
-    }
-
-    /** An app open: a new Cordova page, whose first screen counts again. */
-    @Synchronized
-    fun onOpened() {
-        lastScreen = null
     }
 
     private fun emit(name: String, params: Map<String, Any>): Boolean {
@@ -201,27 +220,36 @@ class Analytics(
     }
 
     /**
-     * Collection off and the consent mode first, then the collection state; when collecting, the state is recorded before
-     * the SDK collects. Any failure turns the SDK off and denies every consent type before it writes anything, and, for a
-     * stored or chosen value ([storeOnFailure]), then writes a withdrawal.
+     * Collection off and the consent mode first, then the collection state; when collecting, the state is recorded once
+     * before the SDK collects (no intermediate false write). Any failure turns the SDK off and denies every consent type
+     * before it writes anything, and, for a stored or chosen value ([storeOnFailure]), then writes a withdrawal.
      */
     private fun applyCollection(value: Boolean, storeOnFailure: Boolean = true): Boolean {
-        enabled = false
-        lastScreen = null
         try {
-            sdk.setCollectionEnabled(false)
-            sdk.setConsent(value)
-            store.recordCollection(false)
-            if (!value) return true
+            synchronized(stateLock) {
+                enabled = false
+                lastScreen = null
+                sdk.setCollectionEnabled(false)
+                sdk.setConsent(value)
+            }
+            if (!value) {
+                store.recordCollection(false)
+                return true
+            }
             check(store.recordCollection(true)) { "collection state not written" }
-            sdk.setCollectionEnabled(true)
-            enabled = true
-            pendingScreen?.let(::screen)
+            synchronized(stateLock) {
+                sdk.setCollectionEnabled(true)
+                enabled = true
+                pendingScreen?.let(::screenLocked)
+            }
             return true
         } catch (e: Exception) {
-            stopSdk()
-            choiceFlow.value = false
-            pendingScreen = null
+            synchronized(stateLock) {
+                enabled = false
+                stopSdk()
+                choiceFlow.value = false
+                pendingScreen = null
+            }
             Log.w(TAG, "collection write_failed")
             store.recordCollection(false)
             if (storeOnFailure) store.write(false)

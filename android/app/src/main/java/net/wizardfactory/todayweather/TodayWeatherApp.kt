@@ -17,6 +17,8 @@ import android.content.res.Resources
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import java.io.File
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
@@ -54,6 +56,14 @@ import net.wizardfactory.todayweather.search.PlaceSearch
  */
 open class TodayWeatherApp : Application() {
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /** Serializes usage analytics choice writes off the main thread so commits never block UI or reorder. */
+    internal val analyticsWriter = Dispatchers.IO.limitedParallelism(1)
+
+    /** Single background thread for consent hand-back commits, preserving write order off the main looper. */
+    private val handBackExecutor: ExecutorService by lazy {
+        Executors.newSingleThreadExecutor { task -> Thread(task, "tw-handback").apply { isDaemon = true } }
+    }
 
     open fun serverUrl(): String = BuildConfig.SERVER_URL
     open fun weatherPhotosUrl(): String = BuildConfig.WEATHER_PHOTOS_URL
@@ -186,7 +196,8 @@ open class TodayWeatherApp : Application() {
         super.onCreate()
         migration.start()
         NotificationChannels.ensure(this)
-        // At once, on the writer's thread: the start keeps a grant only while the suite says so (HandBackConsent).
-        handBack.watchConsent(getSharedPreferences(ConsentStore.CHOICE_FILE, MODE_PRIVATE)) { it() }
+        // SharedPreferences notifies listeners on the main thread; run the hand-back commit on one
+        // background thread so writes stay off Main and keep their order (HandBackConsent).
+        handBack.watchConsent(getSharedPreferences(ConsentStore.CHOICE_FILE, MODE_PRIVATE)) { handBackExecutor.execute(it) }
     }
 }
