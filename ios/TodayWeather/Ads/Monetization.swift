@@ -16,6 +16,8 @@ import UIKit
 ///   Config and UMP gate native cards, forecast interstitials and the anchored banner under the tab bar (#3211,
 ///   `tw_app_banner_enabled`). `tw_banner_enabled` gates every format. A build without valid AdMob identifiers
 ///   (`AdsSettings`) requests no ads; one without a banner unit requests no banner.
+/// - Events carry `traffic_type`: `development` for test units, else `internal` for builds with a provisioning profile
+///   (Xcode, ad hoc) or TestFlight's receipt, and `production` for App Store installs (#3228, `InstallSource`).
 /// - Crashlytics collects crash reports with a configured Firebase app, independent of the analytics choice, as in
 ///   the Cordova build.
 @MainActor
@@ -24,10 +26,16 @@ final class Monetization {
     static let shared: Monetization = {
         let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "monetization")
         let settings = AdsSettings.current
+        let install = InstallSource.read()
+        let trafficType = AdsSettings.trafficType(settings, install: install)
+        log.notice("""
+            traffic_type \(trafficType, privacy: .public) (provisioning profile \(install.provisioned, privacy: .public), \
+            sandbox receipt \(install.sandboxReceipt, privacy: .public))
+            """)
         // The choice is handed back to a fallback Cordova build at every write (IN-17). Without a stored choice the
         // device's region setting decides (not the app's language; `AnalyticsRegion`).
         return Monetization(analytics: UsageAnalytics(sdk: FirebaseAnalyticsSdk(), records: HandBackConsentRecords.app,
-                                                      trafficType: AdsSettings.trafficType(settings),
+                                                      trafficType: trafficType,
                                                       region: Locale.current.region?.identifier,
                                                       log: { log.notice("\($0, privacy: .public)") }),
                             settings: settings)

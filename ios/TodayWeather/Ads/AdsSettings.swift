@@ -56,8 +56,11 @@ struct AdsSettings: Equatable {
         #endif
     }
 
-    /// `traffic_type` of the analytics events: `development` unless the build has real ad units and is no debug build.
-    static func trafficType(_ settings: AdsSettings?) -> String {
-        settings?.releaseAds == true ? "production" : "development"
+    /// `traffic_type` of the analytics events (#3228): `development` unless the build has real ad units and is no debug
+    /// build; then `internal` for a build with a provisioning profile or TestFlight's receipt (`InstallSource`), and
+    /// `production` for an App Store install.
+    static func trafficType(_ settings: AdsSettings?, install: InstallSource = .store) -> String {
+        guard settings?.releaseAds == true else { return "development" }
+        return install.provisioned || install.sandboxReceipt ? "internal" : "production"
     }
 }

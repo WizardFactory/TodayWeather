@@ -162,6 +162,7 @@ The notes carry the release CI run, the `check-apk.sh` identity lines and the re
 3. Check the update from Play: a phone with the current store release (2.0.0 for 2.0.1) and real state, whose account is an internal tester, receives the candidate from the internal track; its state is kept and the device gate's checks 1–6 hold.
 4. Promote the same file, with the same version code, to open testing. To see that the open track serves it, use an account that is not an internal tester. Closed testing is skipped (AK, 2026-11-24, from 2.0.1 on): it still holds the Cordova 1.1.0 build (100090) from before the native app. Leave that track as it is. This replaces the internal, closed and open order that #2898 names.
 5. After each change, edit the pre-release notes: `Store status`, `Attempts`, the time and what was read back.
+6. When the version's first build reaches a test track, add the version to the analytics queries' `release_dates` list with `NULL` ([team installations](monetization.md#team-installations-3228)), in a pull request.
 
 Upload, review and track handling, with their failure cases, are in the [Cordova store release](cordova-store-release.md) and its [troubleshooting](cordova-store-troubleshooting.md): the Play application, its tracks and its review are the same. Its upload lane accepts an AAB for the internal track only; this APK is uploaded in the Play Console.
 
@@ -176,6 +177,8 @@ node scripts/release-notes.mjs --check "$OUT/notes-final.md" --tag "$TAG" --comm
   git push origin "$TAG" &&
   gh release create "$TAG" --verify-tag --latest=false --title "$TAG" --notes-file "$OUT/notes-final.md"
 ```
+
+After production serves the version, set its production release time (KST, from the Play Console's release history) and the source in the analytics queries' `release_dates` list and in the [team installations](monetization.md#team-installations-3228) table, in a pull request. Until then the queries treat every installation that ran the version as a team installation.
 
 `notes-final.md` is the candidate's notes with `Tag:` set to the final tag (`--check` fails while it still says the candidate's), the candidate's tag as the tested build, and the rollout record. The final tag points at the candidate's commit and names the candidate's APK; nothing is rebuilt.
 

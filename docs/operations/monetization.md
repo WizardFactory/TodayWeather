@@ -164,10 +164,89 @@ exists (read from the dataset's `INFORMATION_SCHEMA.TABLES`, so the query needs
 metadata read access) and that day has ended. Late events can still raise it, so rerun the last
 three days. A return counts in either version group, so an update from 1.x
 to 2.x counts as a return when the installation pseudonym survives it (not
-verified on devices). Exclude known developer installations (the templates
-exclude installation pseudonyms carrying `traffic_type=development` or integer
-`debug_mode=1`, including their native automatic events). Consent loss,
+verified on devices). Exclude known developer and team installations: the
+templates drop every event, native automatic events included, of an installation
+pseudonym that carried `traffic_type=development` or `internal` or integer
+`debug_mode=1`, or that ran a native version before its release
+([team installations](#team-installations-3228)). Consent loss,
 identity reset/reinstall and filtered samples limit comparison with AdMob.
+
+### Team installations (#3228)
+
+The queries drop all events of a team installation, on every date, by two signals
+(AK, 2026-11-27):
+
+- **`traffic_type=internal`.** It is sent by Release builds with real ad units
+  (debug builds and test units send `development`). On Android, the app is tagged
+  `internal` only for the team's sideload paths, by the installer that
+  `PackageManager.getInstallSourceInfo()` reports: none (`adb install -r` on the
+  API 36 emulator recorded none), `com.android.shell`, or a package installer
+  (`com.android.packageinstaller`, `com.google.android.packageinstaller`; an APK
+  opened from Downloads on the emulator recorded the latter). Google Play and
+  every other installer give `production`, because real users arrive through them
+  too: a phone moved with Samsung Smart Switch (believed to report
+  `com.sec.android.easyMover`; not verified on a device), Galaxy Store or another
+  store. An `internal` tag would drop them on every date. A failed read gives
+  `production`. On iOS,
+  the app is tagged `internal` when its bundle carries `embedded.mobileprovision`
+  (Xcode, ad hoc, enterprise; Apple strips it from store downloads), or when the
+  App Store receipt is TestFlight's `sandboxReceipt`. The receipt name comes from
+  `Bundle.appStoreReceiptURL`, deprecated from iOS 18. StoreKit 2's
+  `AppTransaction` was tried first and gave no answer on a TestFlight install on
+  the team iPhone XR (`storekitd`: no context to handle authentication). Both
+  checks run synchronously at launch. An installation that sent `internal`
+  (or `development`, or `debug_mode=1`) in any daily table since the export began
+  is dropped entirely, on every date.
+- **Release-date rule.** The queries' `release_dates` list holds each native
+  version's production release. An installation that ran a listed version before
+  that release is a team installation. The queries' `excluded` step reads both
+  signals in every daily table since the export began (2026-10-01), not only the
+  reported range, and no streaming tables (`events_intraday_*`). This covers Play testing tracks, whose installs come from Play
+  and are tagged `production`: the [release runbook](android-release.md#7-store-declarations-and-test-tracks)
+  promotes the same APK from internal testing to open testing to production. It
+  also covers TestFlight builds of unreleased versions. A version with no
+  release time (`NULL`) is unreleased, and every installation that ran it counts.
+
+Known limitations, accepted:
+
+- Real users on Play's open testing track, and any external TestFlight testers,
+  who ran a version before its production release are excluded too. The open
+  test window is short (AK, 2026-11-27).
+- A team phone running a store build from Play or the App Store sends
+  `production`, and after the release it cannot be told from a real user. So does
+  a team device that installed a released build through another installer
+  outside the Android allowlist.
+- Older native builds (Android 2.0.0 and 2.0.1, iOS 2.0.1 to 2.0.3, TestFlight
+  2.0.4 (1) and (2)) send no `internal`. Before their release the release-date
+  rule covers them; after it, sideloaded or TestFlight copies of those versions
+  count as users.
+
+**Release dates.** Add a native version to the list when its first build is
+distributed, with `NULL`. Set its time when production serves it, with the
+source in the table below. These are release steps in the
+[Android runbook](android-release.md#8-production-rollout) and the
+[iOS release section](../../ios/README.md#analytics-release-list). The list is
+repeated in the three queries, because BigQuery runs each template on its own.
+`client/test/monetization.test.cjs` fails when the copies differ, a version is
+listed twice, or this table does not name the same versions and days. A version
+missing from the list is not checked.
+
+The time compared is `event_timestamp`, and also `event_date` against the
+release day. GA4's schema page defines `event_timestamp` as the time Google
+Analytics received the event. A sample of this export (native events of
+November, checked 2026-11-27) behaved like device times: timestamps differed per
+event within an installation, and the server offset was a few seconds at most.
+An event dated the release day that was logged before the release time and
+received after it counts as after the release.
+
+| Platform | Version | Production release (KST) | Source |
+| --- | --- | --- | --- |
+| Android | 2.0.0 | 2026-11-20 17:00 | Play Console production release history (read 2026-11-24) |
+| Android | 2.0.1 | 2026-11-24 13:39 | Play Console publishing overview ([GTM log](../../gtm/log.md)) |
+| iOS | 2.0.1 | 2026-11-21 (day only, from 00:00) | Apple lookup API release date ([GTM log](../../gtm/log.md)) |
+| iOS | 2.0.2 | 2026-11-24 (day only, from 00:00) | App Store install of 2.0.2 in the GA4 export at 00:08 KST on 2026-11-24, the version's first day there; the GTM log's 10:48 KST is the phased-release start, not availability |
+| iOS | 2.0.3 | 2026-11-25 00:05:47 | Apple lookup API `currentVersionReleaseDate` 2026-11-24T15:05:47Z (read 2026-11-27) |
+| iOS | 2.0.4 | not released | TestFlight builds only; builds (2) and later hold unmerged #3228 code and must not ship |
 
 eCPM and ARPDAU come from AdMob earnings, not from BigQuery: ARPDAU = AdMob
 estimated earnings / Firebase active users for the same date range and platform.
