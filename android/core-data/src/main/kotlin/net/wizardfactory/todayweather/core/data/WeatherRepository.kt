@@ -208,6 +208,7 @@ class WeatherRepository(
         if (!latest(key, request)) return LoadResult.Superseded
         val converted = parsed.mapCatching { withContext(compute) { WeatherConverter.convert(it) } }
             .onFailure { if (it is CancellationException) throw it }
+        if (!latest(key, request)) return LoadResult.Superseded
         val city = converted.getOrNull() ?: return LoadResult.Failed(converted.exceptionOrNull() ?: body.exceptionOrNull(), network = body.isFailure,
             unconvertible = parsed.isSuccess)
         // One answer at a time is stored, and only while it is the latest of its place, so a slower write of an

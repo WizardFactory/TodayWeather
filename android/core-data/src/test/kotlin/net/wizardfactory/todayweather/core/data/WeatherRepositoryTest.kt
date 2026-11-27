@@ -459,6 +459,74 @@ class WeatherRepositoryTest {
         }
     }
 
+    /** #3233 CODEX-1: a superseded off-main strictJson failure returns Superseded and leaves memory and cache intact. */
+    @Test
+    fun aSupersededStrictJsonFailureOnComputeIsSuperseded() = runTest {
+        assertSupersededComputeFailure(olderBody = "{not-json", advancePastStrictJson = false)
+    }
+
+    /** #3233 CODEX-1: a superseded off-main WeatherConverter.convert null result returns Superseded and leaves memory and cache intact. */
+    @Test
+    fun aSupersededConvertNullOnComputeIsSuperseded() = runTest {
+        assertSupersededComputeFailure(olderBody = "{}", advancePastStrictJson = true)
+    }
+
+    /** #3233 CODEX-1: a superseded off-main WeatherConverter.convert exception returns Superseded and leaves memory and cache intact. */
+    @Test
+    fun aSupersededConvertExceptionOnComputeIsSuperseded() = runTest {
+        assertSupersededComputeFailure(olderBody = "null", advancePastStrictJson = true)
+    }
+
+    private suspend fun TestScope.assertSupersededComputeFailure(olderBody: String, advancePastStrictJson: Boolean) {
+        val cache = Files.createTempDirectory("weather-compute-fail-supersede").toFile()
+        try {
+            val io = StandardTestDispatcher(testScheduler)
+            val compute = Manual()
+            val newer = Json.parseToJsonElement(seoulBody).jsonObject
+                .let { JsonObject(it + ("current" to JsonObject(it["current"]!!.jsonObject + ("t1h" to JsonPrimitive(-5))))) }
+                .toString()
+            var call = 0
+            val repo = WeatherRepository("https://server.test.invalid", cache, { _, _ -> if (++call == 1) olderBody else newer },
+                { now }, io, compute)
+
+            val older = async { repo.load(seoul, units, listOf("ko"), force = true) }
+            runCurrent()
+            assertTrue(older.isActive && compute.pending(), "older strictJson queued on compute")
+            if (advancePastStrictJson) {
+                compute.runFirst()
+                runCurrent()
+                assertTrue(older.isActive && compute.pending(), "older convert queued on compute")
+            }
+
+            // Newer request arrives and completes both parse and convert on compute before older's pending compute task runs.
+            val later = async { repo.load(seoul, units, listOf("ko"), force = true) }
+            runCurrent()
+            assertTrue(later.isActive && compute.pending(), "newer strictJson queued on compute")
+            compute.runLast()
+            runCurrent()
+            assertTrue(later.isActive && compute.pending(), "newer convert queued on compute")
+            compute.runLast()
+            runCurrent()
+            assertIs<LoadResult.Loaded>(later.await())
+            assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
+
+            // Older's queued compute failure runs after supersession and must return Superseded, leaving memory and cache intact.
+            assertTrue(compute.pending(), "older compute task still queued")
+            compute.runFirst()
+            runCurrent()
+            assertFalse(compute.pending())
+            assertEquals(LoadResult.Superseded, older.await())
+            assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
+
+            val restarted = WeatherRepository("https://server.test.invalid", cache, { _, _ -> error("no request") },
+                { now }, io, io)
+            assertEquals("-5", currentOf(restarted.cached(seoul))["t1h"]!!.jsonPrimitive.content,
+                "disk cache keeps the newer answer")
+        } finally {
+            cache.deleteRecursively()
+        }
+    }
+
     /** A02 (kept): `updateCity` replaces a field only when the response has a truthy value for it. */
     @Test
     fun fieldsAResponseLeavesOutKeepTheirValues() = runTest {
