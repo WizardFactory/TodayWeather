@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- The photo feed loads again when a network comes back (the Cordova online event). -->
@@ -153,5 +154,20 @@
                 <data android:path="/warnings/" />
             </intent-filter>
         </activity>
+        <!--
+          Unused Google Places Autocomplete / place-details widget activities (#3235): the app uses only
+          PlacesClient and FindAutocompletePredictionsRequest (PlaceSearch.kt), so removing them lets R8
+          and resource shrinking drop the unused widget UI. Re-check the merged release manifest after
+          Places SDK upgrades and remove these entries if the widget UI is ever adopted.
+        -->
+        <activity
+            android:name="com.google.android.libraries.places.widget.BasicPlaceAutocompleteActivity"
+            tools:node="remove" />
+        <activity
+            android:name="com.google.android.libraries.places.widget.PlaceAutocompleteActivity"
+            tools:node="remove" />
+        <activity
+            android:name="com.google.android.libraries.places.widget.internal.placedetails.photoviewer.PlacesLightboxActivity"
+            tools:node="remove" />
     </application>
 </manifest>
