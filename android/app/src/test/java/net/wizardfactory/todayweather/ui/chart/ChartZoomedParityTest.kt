@@ -40,6 +40,7 @@ import net.wizardfactory.todayweather.ui.forecast.Zoomed
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -155,18 +156,37 @@ class ChartZoomedParityTest {
         assertTrue("expected fontScale 1.3 height (${ref13.height}) > 1.0 height ($normalHeight)", ref13.height > normalHeight)
     }
 
+    @Test
+    fun exactPixelParityRejectsSinglePixelChange() {
+        val file = File(references, "daily-1.3.png")
+        assertTrue("missing pre-change reference: ${file.path}", file.isFile)
+        val expected = ImageIO.read(file).toPixels()
+        val mutated = expected.argb.copyOf()
+        mutated[0] = mutated[0] xor 0x00000001
+        val actual = Pixels(expected.width, expected.height, mutated)
+        try {
+            assertExactPixelParity("daily-1.3-mutant", expected, actual)
+            fail("expected exact pixel parity check to reject a 1-pixel change")
+        } catch (error: AssertionError) {
+            assertTrue("unexpected assertion failure: ${error.message}", error.message?.contains("exact pixel mismatches") == true)
+        }
+    }
+
     private fun assertMatchesReference(name: String, actual: Pixels) {
         val file = File(references, "$name.png")
         assertTrue("missing pre-change reference: ${file.path}", file.isFile)
         val expected = ImageIO.read(file).toPixels()
+        assertExactPixelParity(name, expected, actual)
+    }
+
+    private fun assertExactPixelParity(name: String, expected: Pixels, actual: Pixels) {
         assertEquals("$name width", expected.width, actual.width)
         assertEquals("$name height", expected.height, actual.height)
         val diff = ImageDiff.of(actual, expected)
         var exactMismatches = 0
         for (i in actual.argb.indices) if (actual.argb[i] != expected.argb[i]) exactMismatches++
         println("zoomed-parity $name ${actual.width}x${actual.height} exactMismatches=$exactMismatches sha256=${actual.sha256()} $diff")
-        assertEquals("$name strong diff", 0.0, diff.strong, 0.0)
-        assertTrue("$name mean diff too large: $diff (exactMismatches=$exactMismatches)", diff.mean <= 0.05)
+        assertEquals("$name exact pixel mismatches", 0, exactMismatches)
     }
 
     private fun Bitmap.toPixels() = Pixels(width, height, IntArray(width * height).also { getPixels(it, 0, width, 0, 0, width, height) })

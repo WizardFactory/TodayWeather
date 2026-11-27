@@ -60,6 +60,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -215,21 +216,42 @@ class PreparedChartCacheTest {
         cache.daily(dailyA, ChartColors.of(Theme.DARK, true), dFont, LayoutDirection.Rtl, resolverB, imagesB)
         assertEquals(9, cache.dailyPrepares)
 
-        // Air: hit, key invalidations (width, height, standard, hour, colors, density, fontScale, layoutDirection, resolver), 1-entry bound.
+        // Air: hit, key invalidations (slots, maxValue, height, width, standard, hour, colors, density, fontScale, layoutDirection, resolver), 1-entry bound.
         val a0 = cache.air(series, airScope.standard, "시", 384.0, 100.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA)
         assertSame(a0, cache.air(AirSeries(series.data.toList(), series.maxValue), airScope.standard, "시", 384.0, 100.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA))
         assertEquals(1, cache.airPrepares)
-        cache.air(series, airScope.standard, "시", 360.0, 100.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA)
-        cache.air(series, airScope.standard, "h", 360.0, 100.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA)
-        cache.air(series, AirQuality.standard("airnow"), "h", 360.0, 100.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA)
-        cache.air(series, AirQuality.standard("airnow"), "h", 360.0, 100.0, AirColors.of(Theme.DARK), d1, LayoutDirection.Ltr, resolverA)
-        cache.air(series, AirQuality.standard("airnow"), "h", 360.0, 100.0, AirColors.of(Theme.DARK), d2, LayoutDirection.Ltr, resolverA)
-        cache.air(series, AirQuality.standard("airnow"), "h", 360.0, 100.0, AirColors.of(Theme.DARK), dFont, LayoutDirection.Ltr, resolverA)
-        cache.air(series, AirQuality.standard("airnow"), "h", 360.0, 100.0, AirColors.of(Theme.DARK), dFont, LayoutDirection.Rtl, resolverA)
-        cache.air(series, AirQuality.standard("airnow"), "h", 360.0, 100.0, AirColors.of(Theme.DARK), dFont, LayoutDirection.Rtl, resolverB)
-        // Bounded to 1 air entry: switching back to 384.0 rebuilds.
-        cache.air(series, airScope.standard, "시", 384.0, 100.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA)
-        assertEquals(10, cache.airPrepares)
+
+        val mutatedSlots = series.data.toMutableList().apply {
+            val nonNullIndex = indexOfFirst { it != null }
+            assertTrue("expected at least one non-null air slot", nonNullIndex >= 0)
+            this[nonNullIndex] = null
+        }
+        val seriesWithChangedSlots = AirSeries(mutatedSlots, series.maxValue)
+        val aSlots = cache.air(seriesWithChangedSlots, airScope.standard, "시", 384.0, 100.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA)
+        assertNotSame("changing air slots must invalidate cache", a0, aSlots)
+        assertEquals(2, cache.airPrepares)
+
+        val seriesWithChangedMaxValue = AirSeries(seriesWithChangedSlots.data, (seriesWithChangedSlots.maxValue ?: 0.0) + 50.0)
+        val aMaxValue = cache.air(seriesWithChangedMaxValue, airScope.standard, "시", 384.0, 100.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA)
+        assertNotSame("changing air maxValue must invalidate cache", aSlots, aMaxValue)
+        assertEquals(3, cache.airPrepares)
+
+        val aHeight = cache.air(seriesWithChangedMaxValue, airScope.standard, "시", 384.0, 120.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA)
+        assertNotSame("changing air height must invalidate cache", aMaxValue, aHeight)
+        assertEquals(4, cache.airPrepares)
+
+        cache.air(seriesWithChangedMaxValue, airScope.standard, "시", 360.0, 120.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA)
+        cache.air(seriesWithChangedMaxValue, airScope.standard, "h", 360.0, 120.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA)
+        cache.air(seriesWithChangedMaxValue, AirQuality.standard("airnow"), "h", 360.0, 120.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA)
+        cache.air(seriesWithChangedMaxValue, AirQuality.standard("airnow"), "h", 360.0, 120.0, AirColors.of(Theme.DARK), d1, LayoutDirection.Ltr, resolverA)
+        cache.air(seriesWithChangedMaxValue, AirQuality.standard("airnow"), "h", 360.0, 120.0, AirColors.of(Theme.DARK), d2, LayoutDirection.Ltr, resolverA)
+        cache.air(seriesWithChangedMaxValue, AirQuality.standard("airnow"), "h", 360.0, 120.0, AirColors.of(Theme.DARK), dFont, LayoutDirection.Ltr, resolverA)
+        cache.air(seriesWithChangedMaxValue, AirQuality.standard("airnow"), "h", 360.0, 120.0, AirColors.of(Theme.DARK), dFont, LayoutDirection.Rtl, resolverA)
+        cache.air(seriesWithChangedMaxValue, AirQuality.standard("airnow"), "h", 360.0, 120.0, AirColors.of(Theme.DARK), dFont, LayoutDirection.Rtl, resolverB)
+        // Bounded to 1 air entry: switching back to original inputs rebuilds.
+        val aRebuilt = cache.air(series, airScope.standard, "시", 384.0, 100.0, AirColors.of(Theme.LIGHT), d1, LayoutDirection.Ltr, resolverA)
+        assertNotSame(a0, aRebuilt)
+        assertEquals(13, cache.airPrepares)
     }
 
     @Test
