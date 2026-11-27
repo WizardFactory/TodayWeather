@@ -597,7 +597,7 @@ test('reporting queries exclude development, internal and pre-release installati
     for (const file of ['analytics/daily-monetization.sql', 'analytics/ios-att-monetization.sql', 'analytics/retention.sql']) {
         const sql = read(file);
         assert.match(sql, /traffic_type IN \('development', 'internal'\) OR r\.debug_mode = 1/, file);
-        assert.match(sql, /u\.released_at IS NULL OR TIMESTAMP_MICROS\(r\.event_timestamp\) < u\.released_at/, file);
+        assert.match(sql, /u\.released_at IS NULL OR TIMESTAMP_MICROS\(r\.event_timestamp\) < u\.released_at\s+OR PARSE_DATE\('%Y%m%d', r\.event_date\) < DATE\(u\.released_at, 'Asia\/Seoul'\)/, file);
         assert.match(sql, /user_pseudo_id NOT IN \(SELECT user_pseudo_id FROM excluded WHERE user_pseudo_id IS NOT NULL\)/, file);
         const list = sql.match(/untagged_versions AS \(([\s\S]*?)\n\)/);
         assert.ok(list, `${file} lists the untagged versions`);

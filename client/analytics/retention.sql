@@ -3,7 +3,7 @@
 -- Exclusions read every version in the window, so an installation that sent internal traffic from another version
 -- is dropped too; cohorts and retention count @app_version events only.
 WITH raw AS (
-  SELECT PARSE_DATE('%Y%m%d', event_date) AS date, event_timestamp, event_name, user_pseudo_id, is_active_user, platform,
+  SELECT event_date, PARSE_DATE('%Y%m%d', event_date) AS date, event_timestamp, event_name, user_pseudo_id, is_active_user, platform,
     app_info.version AS app_version,
     (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'traffic_type') AS traffic_type,
     (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'debug_mode') AS debug_mode
@@ -12,8 +12,8 @@ WITH raw AS (
     AND app_info.id = 'net.wizardfactory.todayweather'
 ), untagged_versions AS (
   -- Native builds made before #3228 never send traffic_type=internal, so a team device running one is found by its
-  -- events received before that version's public store release (KST; GA4's event_timestamp is the receipt time, so a
-  -- pre-release event uploaded after the release time is missed; docs/operations/monetization.md lists each source).
+  -- events before that version's public store release (KST): event_timestamp before the release time, or event_date
+  -- before the release day (docs/operations/monetization.md lists each source and the timestamp caveat).
   -- released_at NULL: not released, every event is pre-release. Add every further build made before #3228 and set
   -- released_at when it ships; builds from #3228 on tag themselves. Keep the three queries' lists identical.
   SELECT 'ANDROID' AS platform, '2.0.0' AS version, TIMESTAMP '2026-11-20 17:00:00+09' AS released_at
@@ -27,7 +27,8 @@ WITH raw AS (
   SELECT DISTINCT r.user_pseudo_id FROM raw r
   LEFT JOIN untagged_versions u ON u.platform = r.platform AND u.version = r.app_version
   WHERE r.traffic_type IN ('development', 'internal') OR r.debug_mode = 1
-    OR (u.version IS NOT NULL AND (u.released_at IS NULL OR TIMESTAMP_MICROS(r.event_timestamp) < u.released_at))
+    OR (u.version IS NOT NULL AND (u.released_at IS NULL OR TIMESTAMP_MICROS(r.event_timestamp) < u.released_at
+      OR PARSE_DATE('%Y%m%d', r.event_date) < DATE(u.released_at, 'Asia/Seoul')))
 ), clean AS (
   SELECT * FROM raw WHERE user_pseudo_id IS NOT NULL AND app_version = @app_version
     AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded WHERE user_pseudo_id IS NOT NULL)
