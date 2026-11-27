@@ -77,6 +77,16 @@ These rules govern server2 work. Ordinary maintenance of legacy behavior in `ser
 - When changing a route, collector, response, mode or storage contract, update the affected architecture document and Archify JSON. Regenerate HTML through the installed Archify skill and verify artifact, browser and visual results separately. Do not manually patch generated HTML.
 - Report what changed, the checks actually executed, and material limitations. Do not claim a live provider call, mobile build, deployment, Claude execution or cross-provider review based only on source inspection or adapter presence.
 
+## Android device and profiling skills
+
+The Android skills under `.agents/skills/` are unchanged upstream copies; each `PROVENANCE.md` names its source. These rules take precedence over their text:
+
+- Target an emulator only. Before any Gradle install or connected task, `adb`, Simpleperf, Perfetto or `android-emulator-qa` step, set `ANDROID_SERIAL` to an online `emulator-<port>` listed by `adb devices`; stop if there is none. Pass that serial to every command: `adb -s "$ANDROID_SERIAL"`, `simpleperf_hotspots.sh --serial "$ANDROID_SERIAL"`, Gradle with `ANDROID_SERIAL` exported. A physical phone needs AK's approval for that run.
+- Do not download Perfetto's helper scripts (`record_android_trace`, `cpu_profile`, `heap_profile`, `java_heap_dump`), from `main` or any other ref. Record with the device's own `perfetto` (`adb -s "$ANDROID_SERIAL" shell perfetto ...`) and analyse with the skill's bundled `trace_processor` wrapper, which pins its download and checks the SHA-256. Run it as `python3 <skill>/references/perfetto/bin/trace_processor`; do not `chmod` tracked skill files.
+- Keep device-path overrides such as `ANDROID_PERF_DEVICE_DATA` at their defaults.
+- Write skill outputs (traces, profiles, heap dumps, `r8-analyzer`'s `tmp/` files) under ignored `reports/`, passing those paths where a skill names `tmp/`. Install Python packages a skill needs into a temporary virtual environment, not the ambient Python.
+- This project uses AGP 9.3 or later, so `r8-analyzer` takes Path A. Do not follow Path B's edits of Gradle settings.
+
 ## Rust build artifacts and disk capacity
 
 - Before building, check free disk space and the size of the selected Cargo target directory. Reuse an ignored `CARGO_TARGET_DIR` when compatible; do not create a separate full dependency cache for every agent. The coordinating agent owns shared targets and build scheduling. Keep enough space for the expected build plus a 3 GiB reserve; pause new builds and clean eligible caches if that reserve cannot be maintained.
