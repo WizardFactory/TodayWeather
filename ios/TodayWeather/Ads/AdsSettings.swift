@@ -56,17 +56,8 @@ struct AdsSettings: Equatable {
         #endif
     }
 
-    /// `traffic_type` of the analytics events (#3228): `development` unless the build has real ad units and is no debug
-    /// build; then `internal` for a TestFlight or Xcode install and `production` for an App Store install. Before the
-    /// install environment is known, and when it cannot be read (`environment` nil), a build with a provisioning profile
-    /// (`provisioned`, a locally signed build) is `internal` and any other `production`.
-    static func trafficType(_ settings: AdsSettings?, environment: InstallEnvironment? = nil,
-                            provisioned: Bool = false) -> String {
-        guard settings?.releaseAds == true else { return "development" }
-        switch environment {
-        case .sandbox, .xcode: return "internal"
-        case .production: return "production"
-        case nil: return provisioned ? "internal" : "production"
-        }
+    /// `traffic_type` of the analytics events: `development` unless the build has real ad units and is no debug build.
+    static func trafficType(_ settings: AdsSettings?) -> String {
+        settings?.releaseAds == true ? "production" : "development"
     }
 }

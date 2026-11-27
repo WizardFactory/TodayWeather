@@ -16,9 +16,6 @@ import UIKit
 ///   Config and UMP gate native cards, forecast interstitials and the anchored banner under the tab bar (#3211,
 ///   `tw_app_banner_enabled`). `tw_banner_enabled` gates every format. A build without valid AdMob identifiers
 ///   (`AdsSettings`) requests no ads; one without a banner unit requests no banner.
-/// - Events carry `traffic_type`: `development` for test units, else `internal` for TestFlight and Xcode installs and
-///   `production` for App Store installs, once StoreKit has told the install environment (#3228, `resolveTrafficType`);
-///   until then, or without an answer, `internal` for a build with a provisioning profile and `production` otherwise.
 /// - Crashlytics collects crash reports with a configured Firebase app, independent of the analytics choice, as in
 ///   the Cordova build.
 @MainActor
@@ -29,13 +26,11 @@ final class Monetization {
         let settings = AdsSettings.current
         // The choice is handed back to a fallback Cordova build at every write (IN-17). Without a stored choice the
         // device's region setting decides (not the app's language; `AnalyticsRegion`).
-        let trafficType = AdsSettings.trafficType(settings, provisioned: InstallEnvironment.provisioned())
-        let analytics = UsageAnalytics(sdk: FirebaseAnalyticsSdk(), records: HandBackConsentRecords.app,
-                                       trafficType: trafficType, region: Locale.current.region?.identifier,
-                                       log: { log.notice("\($0, privacy: .public)") })
-        let monetization = Monetization(analytics: analytics, settings: settings)
-        monetization.resolveTrafficType()
-        return monetization
+        return Monetization(analytics: UsageAnalytics(sdk: FirebaseAnalyticsSdk(), records: HandBackConsentRecords.app,
+                                                      trafficType: AdsSettings.trafficType(settings),
+                                                      region: Locale.current.region?.identifier,
+                                                      log: { log.notice("\($0, privacy: .public)") }),
+                            settings: settings)
     }()
 
     private(set) var nativeAds: ForecastNativeAds?
@@ -77,26 +72,6 @@ final class Monetization {
         self.settings = settings
         self.interstitial = interstitial
         self.openURL = openURL
-    }
-
-    /// Reads the install environment once in the background and retags the events sent after it (#3228); nothing
-    /// waits for it. Until then, and after a failed read, events keep the build's value (for a Release build with real
-    /// units `internal` with a provisioning profile, else `production`): the reports drop an installation that sent
-    /// `internal` at any time, so its earlier events go with it. Builds with test units read nothing (`development`);
-    /// nil then.
-    @discardableResult
-    func resolveTrafficType(provisioned: Bool = InstallEnvironment.provisioned(),
-                            read: @escaping @Sendable () async -> InstallEnvironment? = { await InstallEnvironment.current() })
-        -> Task<Void, Never>? {
-        guard settings?.releaseAds == true else { return nil }
-        return Task { [weak self] in
-            let environment = await read()
-            guard let self else { return }
-            let value = AdsSettings.trafficType(settings, environment: environment, provisioned: provisioned)
-            analytics.trafficType = value
-            let source = environment.map { "\($0)" } ?? "unknown"
-            log.notice("traffic_type \(value, privacy: .public) (install environment \(source, privacy: .public))")
-        }
     }
 
     /// Connects to the app's launch: each new shell gets the analytics choice, the menu rows and the screens. The

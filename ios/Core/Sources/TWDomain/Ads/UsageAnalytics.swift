@@ -54,8 +54,7 @@ public final class UsageAnalytics {
     public let collectsByDefault: Bool
     private let sdk: any AnalyticsSdk
     private let records: any AnalyticsConsentRecords
-    /// `traffic_type` of the events sent from now on: the app sets it once it knows the install environment (#3228).
-    public var trafficType: String
+    private let trafficType: String
     private let log: @MainActor (String) -> Void
     private var enabled = false
     private var started = false
@@ -64,8 +63,7 @@ public final class UsageAnalytics {
     private var trackingStatus: String?
     private var sentTrackingStatus: String?
 
-    /// `trafficType` is `development` for builds with Google's test units or debug builds, `production` otherwise until
-    /// the app has read the install environment (`internal` for TestFlight and Xcode installs).
+    /// `trafficType` is `development` for builds with Google's test units or debug builds, `production` otherwise.
     /// `region` is the device's region (`Locale.current.region?.identifier`); nil when unknown.
     public init(sdk: any AnalyticsSdk, records: any AnalyticsConsentRecords, trafficType: String, region: String?,
                 log: @escaping @MainActor (String) -> Void = { _ in }) {

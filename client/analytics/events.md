@@ -1,15 +1,12 @@
 # TodayWeather measurement contract v1
 
 Only the allowlist in `service.monetization.js` is emitted. Custom events carry
-`measurement_version=1` and `traffic_type=development|production|internal`.
-Development means debug mode or Google test-ad-unit configuration. Internal
-(native 2.x apps from #3228) means a Release build installed from TestFlight or
-Xcode or carrying a provisioning profile (iOS), or by an installer other than
-Google Play (Android); the Cordova
-builds send development or production only. Firebase native automatic events do
-not carry these custom fields; exclude developer and internal installations in
-downstream queries, not just individual custom events
-([team installations](../../docs/operations/monetization.md#team-installations-3228)).
+`measurement_version=1` and `traffic_type=development|production`. Development
+means debug mode or Google test-ad-unit configuration. Firebase native automatic
+events do not carry these custom fields; exclude developer installations/builds
+in downstream queries, not just individual custom events. Release builds send
+`production` on team devices too; the queries find those by release date and a
+private list ([team installations](../../docs/operations/monetization.md#team-installations-3228)).
 
 | Event | Producer | Parameters | Meaning |
 | --- | --- | --- | --- |

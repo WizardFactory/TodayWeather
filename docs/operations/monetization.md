@@ -166,56 +166,96 @@ three days. A return counts in either version group, so an update from 1.x
 to 2.x counts as a return when the installation pseudonym survives it (not
 verified on devices). Exclude known developer and team installations: the
 templates drop every event, native automatic events included, of an installation
-pseudonym that carried `traffic_type=development` or `internal`, integer
-`debug_mode=1`, or an event of an untagged version before its release
+pseudonym that carried `traffic_type=development` or integer `debug_mode=1`, that
+ran a native version before its release, or that is on the private team list
 ([team installations](#team-installations-3228)). Consent loss,
 identity reset/reinstall and filtered samples limit comparison with AdMob.
 
 ### Team installations (#3228)
 
-The native apps tag their own installs: `development` for builds with Google's
-test units, `internal` for a Release build installed from TestFlight or Xcode
-(iOS, StoreKit 2 `AppTransaction` environment `sandbox` or `xcode`) or by any
-installer other than Google Play (Android, `getInstallSourceInfo`), and
-`production` otherwise. Before the iOS read resolves, and after it fails, an iOS
-build carrying a provisioning profile (development, ad hoc or enterprise signing)
-sends `internal` and any other build `production`; a failed Android read keeps
-`production`. An installation that sent `internal` in the window a query reads
-drops out entirely, earlier events included; a query sees no tag outside that
-window (retention reads every app version there, not only `@app_version`). Play's
-internal, closed and open testing tracks install through Play, so their testers
-count as `production`. Installations whose pseudonym changed (reinstall, data
-reset) are separate installations.
+Release builds send `traffic_type=production` on every install, so the queries
+find team devices by two other means and drop all their events on every date:
 
-Builds made before #3228 carry no `internal` tag. The queries' `untagged_versions`
-list therefore excludes an installation that sent an event of a listed version
-before that version's public store release (KST): an event whose
-`event_timestamp` precedes the release time, or whose `event_date` precedes
-the release day. GA4's schema page defines `event_timestamp` as the time
-Google Analytics received the event. A sample of this export (the native events
-of November, checked on 2026-11-27) looked like device times instead. Timestamps
-within an installation differed per event, as one upload batch's would not. None
-was earlier than the device's previous event, and the server offset was a few
-seconds at most. The queries do not rely on that sample: an event dated the
-release day that was logged before the release time and received after it
-counts as after the release, whatever day it arrived. A version
-without a release time is excluded entirely. Native versions that are not listed
-are assumed to carry the tag. The list holds every native version in the GA4
-export on 2026-11-27 (Android 2.0.0 and 2.0.1, iOS 2.0.1 and 2.0.2) and the
-known iOS builds that were not released then. When a listed version ships, set its
-time in all three queries; add any further build made from a commit before #3228.
-Both exclusions only see events within the query's date range, so a range
-starting after a release keeps a team device that ran only that store build. TestFlight or sideloaded builds of these versions after their release are
-not distinguishable from store installs.
+- **Release-date rule** (pre-release builds): the queries' `release_dates` list
+  holds each native version's public store release. An installation that ran a
+  listed version before that release is a team installation, whatever range the
+  query reads: the `prerelease` step reads every daily table since the export
+  began (2026-10-01). It catches TestFlight, Xcode and sideloaded builds and
+  Play's pre-launch test devices before a release. A version with no release
+  time (`NULL`) is unreleased, and every installation that ran it counts.
+- **Private team list** (released builds): `@team_installations` holds the
+  `user_pseudo_id` of team devices that run store builds, which the rule cannot
+  tell from real users, such as an App Store install on a team phone. It also
+  pins down devices the rule found.
+
+An app-side tag (`traffic_type=internal` from StoreKit `AppTransaction` and the
+Android installer) was tried first and dropped on 2026-11-27 (AK). On a
+TestFlight build on the team iPhone XR, `AppTransaction` gave no answer
+(`storekitd`: no context to handle authentication), so the build still sent
+`production`.
+
+**Release dates.** Add a native version to all three queries when its first
+build is distributed (TestFlight, internal testing, a sideloaded APK), with
+`NULL`. Set its time when it ships, from the store console or the release
+record, and add the source to the table below. A version missing from the list
+is not checked. The time compared is `event_timestamp`, and also `event_date`
+against the release day. GA4's schema page defines `event_timestamp` as the time
+Google Analytics received the event. A sample of this export (native events of
+November, checked 2026-11-27) behaved like device times: timestamps differed per
+event within an installation, and the server offset was a few seconds at most.
+An event dated the release day that was logged before the release time and
+received after it would count as after the release. Builds of a version
+installed outside the store after its release cannot be told from store installs
+by the rule.
 
 | Platform | Version | Public release (KST) | Source |
 | --- | --- | --- | --- |
 | Android | 2.0.0 | 2026-11-20 17:00 | Play Console production release history (read 2026-11-24) |
 | Android | 2.0.1 | 2026-11-24 13:39 | Play Console publishing overview ([GTM log](../../gtm/log.md)) |
 | iOS | 2.0.1 | 2026-11-21 (day only, from 00:00) | Apple lookup API release date ([GTM log](../../gtm/log.md)) |
-| iOS | 2.0.2 | 2026-11-24 10:48 (phased release start) | App Store Connect API ([GTM log](../../gtm/log.md)) |
-| iOS | 2.0.3 | not released on 2026-11-27 | Submitted for review on 2026-11-24 ([store release runbook](cordova-store-release.md)) |
-| iOS | 2.0.4 | not released on 2026-11-27 | TestFlight build on a team iPhone (release records, 2026-11-26) |
+| iOS | 2.0.2 | 2026-11-24 (day only, from 00:00) | App Store install of 2.0.2 in the GA4 export at 00:08 KST on 2026-11-24, the version's first day there; the GTM log's 10:48 KST is the phased-release start, not availability |
+| iOS | 2.0.3 | 2026-11-25 00:05:47 | Apple lookup API `currentVersionReleaseDate` 2026-11-24T15:05:47Z (read 2026-11-27) |
+| iOS | 2.0.4 | not released | TestFlight builds (1) and (2); build 2 holds abandoned #3230 code and must not ship |
+
+**The private list.** It lives at `~/.config/todayweather/gtm/team-installations.txt`
+(mode 0600, outside Git, backed up as label `gtm-team-installations` by
+[`scripts/private-inputs.py`](private-inputs.md)). One installation per line:
+`user_pseudo_id`, device, owner, date added and evidence, separated by tabs;
+lines starting with `#` are comments. Never put an ID in Git, a PR or an issue.
+
+To add a device, find its installation in the export by what you know of it, for
+example its model, app version, install source and the days it was used, and
+check that exactly one installation matches:
+
+```sql
+SELECT user_pseudo_id, device.mobile_model_name, device.operating_system_version,
+  app_info.version, app_info.install_source, MIN(event_date) AS first_day, MAX(event_date) AS last_day
+FROM `PROJECT.DATASET.events_*`
+WHERE _TABLE_SUFFIX >= '20261001' AND app_info.id = 'net.wizardfactory.todayweather'
+  AND device.mobile_model_name = 'iPhone XR'
+GROUP BY 1, 2, 3, 4, 5 ORDER BY first_day
+```
+
+`app_info.install_source` is `manual_install` for sideloaded Android installs
+and for iOS installs outside the App Store (TestFlight, Xcode); store installs
+show `com.android.vending` or `iTunes`. It is evidence for one installation, not
+a rule: a real user can sideload an APK. A device's events reach the export
+about a day later, after its daily table is created. A reinstall or data reset gives
+the device a new pseudonym, so add the new one. Then take a new backup
+snapshot.
+
+**Passing the list.** In the BigQuery console, which has no parameter input,
+replace `@team_installations` with a literal array, as for the dates. This
+prints it from the file:
+
+```sh
+awk -F'\t' '!/^#/ && NF {printf "%s\x27%s\x27", (n++ ? ", " : "["), $1} END {print "]"}' \
+  ~/.config/todayweather/gtm/team-installations.txt
+```
+
+An empty list is `ARRAY<STRING>[]`. Both forms ran on the export on 2026-11-27.
+With the `bq` CLI, pass `--parameter='team_installations:ARRAY<STRING>:["id1","id2"]'`
+(Google's documented array syntax; not run here, as this Mac has no `bq`).
 
 eCPM and ARPDAU come from AdMob earnings, not from BigQuery: ARPDAU = AdMob
 estimated earnings / Firebase active users for the same date range and platform.

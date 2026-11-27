@@ -592,29 +592,33 @@ test('monetization queries count impressions from the app ad_lifecycle event, no
     assert.match(daily, /LEFT JOIN exported_days x ON x\.day = DATE_ADD\(d\.day, INTERVAL 1 DAY\)/, 'no return rate before the next table');
 });
 
-test('reporting queries exclude development, internal and pre-release installations with one release list (#3228)', () => {
+test('reporting queries exclude development, listed team and pre-release installations with one release list (#3228)', () => {
     const lists = [];
     for (const file of ['analytics/daily-monetization.sql', 'analytics/ios-att-monetization.sql', 'analytics/retention.sql']) {
         const sql = read(file);
-        assert.match(sql, /traffic_type IN \('development', 'internal'\) OR r\.debug_mode = 1/, file);
-        assert.match(sql, /u\.released_at IS NULL OR TIMESTAMP_MICROS\(r\.event_timestamp\) < u\.released_at\s+OR PARSE_DATE\('%Y%m%d', r\.event_date\) < DATE\(u\.released_at, 'Asia\/Seoul'\)/, file);
-        assert.match(sql, /user_pseudo_id NOT IN \(SELECT user_pseudo_id FROM excluded WHERE user_pseudo_id IS NOT NULL\)/, file);
-        const list = sql.match(/untagged_versions AS \(([\s\S]*?)\n\)/);
-        assert.ok(list, `${file} lists the untagged versions`);
+        assert.doesNotMatch(sql, /'internal'/, `${file}: the apps send no internal tag`);
+        assert.match(sql, /SELECT user_pseudo_id FROM raw WHERE traffic_type = 'development' OR debug_mode = 1/, file);
+        assert.match(sql, /UNION DISTINCT SELECT id FROM UNNEST\(@team_installations\) AS id/, `${file} reads the private list`);
+        assert.match(sql, /UNION DISTINCT SELECT user_pseudo_id FROM prerelease/, file);
+        assert.match(sql, /e\._TABLE_SUFFIX BETWEEN '20261001'/, `${file}: the rule reads every table since the export began`);
+        assert.match(sql, /u\.released_at IS NULL OR TIMESTAMP_MICROS\(e\.event_timestamp\) < u\.released_at\s+OR PARSE_DATE\('%Y%m%d', e\.event_date\) < DATE\(u\.released_at, 'Asia\/Seoul'\)/, file);
+        assert.match(sql, /LEFT JOIN excluded x ON x\.user_pseudo_id = r\.user_pseudo_id\s+WHERE r\.user_pseudo_id IS NOT NULL AND x\.user_pseudo_id IS NULL/, `${file}: anti-join (BigQuery rejects NOT IN here)`);
+        const list = sql.match(/release_dates AS \(([\s\S]*?)\n\), prerelease AS/);
+        assert.ok(list, `${file} lists the release dates`);
         lists.push(list[1]);
     }
     assert.equal(new Set(lists).size, 1, 'the three queries carry the same release list');
     const retention = read('analytics/retention.sql');
     assert.doesNotMatch(retention, /app_info\.version = @app_version/, 'exclusions read every version in the window');
-    assert.match(retention, /WHERE user_pseudo_id IS NOT NULL AND app_version = @app_version/, 'cohorts count the queried version');
+    assert.match(retention, /x\.user_pseudo_id IS NULL AND r\.app_version = @app_version/, 'cohorts count the queried version');
     const rows = [...lists[0].matchAll(/'(ANDROID|IOS)'(?: AS platform)?, '([0-9.]+)'(?: AS version)?, (TIMESTAMP '[^']+'|CAST\(NULL AS TIMESTAMP\))/g)]
         .map(m => `${m[1]} ${m[2]} ${m[3]}`);
     assert.deepEqual(rows, [
         "ANDROID 2.0.0 TIMESTAMP '2026-11-20 17:00:00+09'",
         "ANDROID 2.0.1 TIMESTAMP '2026-11-24 13:39:00+09'",
         "IOS 2.0.1 TIMESTAMP '2026-11-21 00:00:00+09'",
-        "IOS 2.0.2 TIMESTAMP '2026-11-24 10:48:00+09'",
-        'IOS 2.0.3 CAST(NULL AS TIMESTAMP)',
+        "IOS 2.0.2 TIMESTAMP '2026-11-24 00:00:00+09'",
+        "IOS 2.0.3 TIMESTAMP '2026-11-25 00:05:47+09'",
         'IOS 2.0.4 CAST(NULL AS TIMESTAMP)',
     ]);
     const doc = fs.readFileSync(path.join(__dirname, '../../docs/operations/monetization.md'), 'utf8');

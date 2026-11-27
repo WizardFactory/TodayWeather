@@ -211,17 +211,6 @@ struct UsageAnalyticsTests {
         #expect(event.params.last?.1 == .text("development"))
     }
 
-    /// The app retags later events once it knows the install environment (#3228); earlier events keep their value.
-    @Test func laterEventsCarryAChangedTrafficType() throws {
-        let sdk = FakeAnalyticsSdk()
-        let analytics = UsageAnalytics(sdk: sdk, records: MemoryRecords(), trafficType: "production", region: "KR")
-        analytics.start()
-        #expect(analytics.track("favorite_change", ["action": .text("add")]))
-        analytics.trafficType = "internal"
-        #expect(analytics.track("favorite_change", ["action": .text("remove")]))
-        #expect(sdk.events.map { $0.params.last?.1 } == [.text("production"), .text("internal")])
-    }
-
     @Test func withdrawalStopsCollectionAtOnceAndAfterARestart() {
         let records = MemoryRecords()
         let (analytics, sdk, _) = make(records)
