@@ -20,6 +20,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import net.wizardfactory.todayweather.analytics.AnalyticsSdk
 import net.wizardfactory.todayweather.analytics.ConsentStore
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.CordovaHandBack
@@ -182,6 +183,59 @@ class HandBackTest {
             Thread.sleep(20)
         }
         assertEquals("true", suite.getString(CordovaHandBack.CONSENT, null))
+    }
+
+    /** #3238 CODEX-2: Analytics.setCollectionEnabled(true) must wait for suite hand-back commit so HandBackConsent preserves the grant on restart. */
+    @Test
+    fun setCollectionEnabledWaitsForHandBackCommitBeforeReturningSuccess() {
+        val app = object : TodayWeatherApp() {
+            init {
+                attachBaseContext(context)
+            }
+            override fun analyticsSdk() = object : AnalyticsSdk {
+                override fun setCollectionEnabled(enabled: Boolean) {}
+                override fun setConsent(analytics: Boolean) {}
+                override fun logEvent(name: String, params: Map<String, Any>) {}
+            }
+        }
+        val store = ConsentStore(app)
+        store.write(false)
+        app.handBack.write(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1))
+        assertEquals("false", suite.getString(CordovaHandBack.CONSENT, null))
+
+        val lockHeld = CountDownLatch(1)
+        val releaseLock = CountDownLatch(1)
+        val saveReturned = CountDownLatch(1)
+        var saveResult = false
+        val holder = thread(name = "handback-block-codex2") {
+            synchronized(app.handBack) {
+                lockHeld.countDown()
+                releaseLock.await(5, TimeUnit.SECONDS)
+            }
+        }
+        val saver = thread(name = "analytics-save-codex2") {
+            assertTrue(lockHeld.await(5, TimeUnit.SECONDS))
+            saveResult = app.analytics.setCollectionEnabled(true)
+            saveReturned.countDown()
+        }
+        try {
+            assertTrue(lockHeld.await(5, TimeUnit.SECONDS))
+            assertFalse(
+                "setCollectionEnabled(true) must not return before suite hand-back commits",
+                saveReturned.await(300, TimeUnit.MILLISECONDS),
+            )
+            releaseLock.countDown()
+            assertTrue(saveReturned.await(5, TimeUnit.SECONDS))
+            assertTrue(saveResult)
+            assertEquals("true", suite.getString(CordovaHandBack.CONSENT, null))
+            // Simulating process death immediately after save returns: HandBackConsent must keep the grant.
+            HandBackConsent.beforeStart(app)
+            assertEquals("true", store.storedChoice())
+        } finally {
+            releaseLock.countDown()
+            holder.join(5_000)
+            saver.join(5_000)
+        }
     }
 
     /** #3238 AC3: scheduled consent hand-back writes run off the main looper and preserve FIFO order. */

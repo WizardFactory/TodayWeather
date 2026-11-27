@@ -11,6 +11,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import net.wizardfactory.todayweather.AnalyticsGuard
+import net.wizardfactory.todayweather.HandBackConsent
+import net.wizardfactory.todayweather.HandBackWriter
+import net.wizardfactory.todayweather.core.storage.AppState
+import net.wizardfactory.todayweather.core.storage.CordovaHandBack
+import net.wizardfactory.todayweather.core.storage.CordovaMigration
+import net.wizardfactory.todayweather.core.storage.Place
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -500,6 +506,149 @@ class AnalyticsTest {
             }
             assertEquals(true, saveResult.get())
             assertTrue(a.choice.value)
+            assertTrue(a.collecting.value)
+        }
+    }
+
+    /** #3238 CODEX-2: delayed suite hand-back delays completion and SDK enablement; once finished, HandBackConsent preserves the grant. */
+    @Test
+    fun setCollectionEnabledWaitsForDelayedSuiteHandBackBeforeEnablingSdk() {
+        choices.edit().clear().commit()
+        collection.edit().clear().commit()
+        val suite = context.getSharedPreferences(CordovaMigration.SUITE, Context.MODE_PRIVATE)
+        suite.edit().clear().commit()
+        val store = ConsentStore(choices, collection)
+        val writer = HandBackWriter(suite) { store.storedChoice() }
+        store.write(false)
+        writer.write(AppState(places = listOf(Place.currentPositionPlaceholder()), placeIndex = 0))
+        assertEquals("false", suite.getString(CordovaHandBack.CONSENT, null))
+
+        val enteredHandBack = CountDownLatch(1)
+        val releaseHandBack = CountDownLatch(1)
+        val sdk = Sdk()
+        val a = Analytics(sdk, store, "development", { "DE" }, onChoiceWritten = {
+            enteredHandBack.countDown()
+            assertTrue(releaseHandBack.await(5, TimeUnit.SECONDS))
+            writer.rewrite()
+        }).also { it.start() }
+        sdk.calls.clear()
+
+        val done = CountDownLatch(1)
+        val result = AtomicReference<Boolean>()
+        val bg = thread(name = "delayed-handback-codex2") {
+            result.set(a.setCollectionEnabled(true))
+            done.countDown()
+        }
+        try {
+            assertTrue(enteredHandBack.await(5, TimeUnit.SECONDS), "must enter onChoiceWritten")
+            assertFalse(done.await(200, TimeUnit.MILLISECONDS), "setCollectionEnabled(true) must wait for suite hand-back")
+            assertFalse(a.collecting.value, "must not collect before suite hand-back commits")
+            assertFalse("collection true" in sdk.calls, "SDK must not enable before suite hand-back commits")
+
+            releaseHandBack.countDown()
+            assertTrue(done.await(5, TimeUnit.SECONDS))
+            assertEquals(true, result.get())
+            assertTrue(a.choice.value)
+            assertTrue(a.collecting.value)
+            assertEquals("true", suite.getString(CordovaHandBack.CONSENT, null))
+
+            // Restart path: HandBackConsent preserves the grant and next Analytics.start() restores collection.
+            HandBackConsent.beforeStart(context)
+            val restartedSdk = Sdk()
+            val restarted = Analytics(restartedSdk, ConsentStore(context), "development") { "DE" }.also { it.start() }
+            assertTrue(restarted.choice.value)
+            assertTrue(restarted.collecting.value)
+            assertEquals(collectionOn, restartedSdk.calls)
+        } finally {
+            releaseHandBack.countDown()
+            bg.join(5_000)
+        }
+    }
+
+    /** #3238 CODEX-2: a failed suite hand-back rolls back a grant without enabling the SDK and reports failure. */
+    @Test
+    fun failedSuiteHandBackRollsBackGrantAndDoesNotEnableSdk() {
+        choices.edit().clear().commit()
+        collection.edit().clear().commit()
+        val store = ConsentStore(choices, collection)
+        val sdk = Sdk()
+        val a = Analytics(sdk, store, "development", { "DE" }, onChoiceWritten = { false }).also { it.start() }
+        sdk.calls.clear()
+
+        assertFalse(a.setCollectionEnabled(true))
+        assertFalse(a.choice.value)
+        assertFalse(a.collecting.value)
+        assertEquals("false", store.storedChoice())
+        assertFalse(collection.getBoolean(ConsentStore.ENABLED, true))
+        assertFalse("collection true" in sdk.calls, "SDK must never be enabled when hand-back fails")
+
+        // Withdrawal with failed hand-back still records collection off and reports failure.
+        assertFalse(a.setCollectionEnabled(false))
+        assertFalse(a.choice.value)
+        assertFalse(a.collecting.value)
+        assertFalse(collection.getBoolean(ConsentStore.ENABLED, true))
+    }
+
+    /** #3238 CODEX-3: beginChoice(false) returns immediately without blocking on recordCollection(true) and supersedes the in-flight opt-in. */
+    @Test
+    fun optOutWhileOptInIsBlockedInRecordCollectionPreventsSdkEnableAndEvents() {
+        choices.edit().clear().commit()
+        collection.edit().clear().commit()
+        val sdk = Sdk()
+        val a = analytics(sdk, "DE")
+        sdk.calls.clear()
+        val enteredRecord = CountDownLatch(1)
+        val releaseRecord = CountDownLatch(1)
+        collection.onCommit = {
+            enteredRecord.countDown()
+            releaseRecord.await(5, TimeUnit.SECONDS)
+        }
+        val gen1 = a.beginChoice(true)
+        val gen1Outcome = AtomicReference<Analytics.ChoiceOutcome>()
+        val optInThread = thread(name = "opt-in-codex3") {
+            gen1Outcome.set(a.commitChoice(true, gen1))
+        }
+        val gen2Outcome = AtomicReference<Analytics.ChoiceOutcome>()
+        var optOutThread: Thread? = null
+        try {
+            assertTrue(enteredRecord.await(5, TimeUnit.SECONDS), "opt-in must enter recordCollection(true)")
+            a.screen("tab.forecast")
+            assertFalse(a.collecting.value, "collecting must stay false while recordCollection(true) is still in flight")
+
+            // beginChoice(false) must return immediately without waiting for the latch and stop the SDK at once.
+            val beginDone = CountDownLatch(1)
+            val gen2Ref = AtomicReference<Long>()
+            val mainCaller = thread(name = "main-begin-optout") {
+                gen2Ref.set(a.beginChoice(false))
+                beginDone.countDown()
+            }
+            assertTrue(beginDone.await(500, TimeUnit.MILLISECONDS), "beginChoice(false) must not block on disk commit")
+            mainCaller.join(1_000)
+            val gen2 = gen2Ref.get()!!
+            assertFalse(a.choice.value)
+            assertFalse(a.collecting.value)
+            assertEquals(collectionOff, sdk.calls.takeLast(2), "beginChoice(false) must stop SDK immediately")
+
+            optOutThread = thread(name = "opt-out-codex3") {
+                gen2Outcome.set(a.commitChoice(false, gen2))
+            }
+            collection.onCommit = null
+            releaseRecord.countDown()
+            optInThread.join(5_000)
+            optOutThread.join(5_000)
+
+            assertEquals(Analytics.ChoiceOutcome.SUPERSEDED, gen1Outcome.get())
+            assertEquals(Analytics.ChoiceOutcome.APPLIED, gen2Outcome.get())
+            assertFalse("collection true" in sdk.calls, "opt-in superseded by opt-out must never enable SDK")
+            assertTrue(sdk.events.isEmpty(), "superseded opt-in must not flush pendingScreen or log events")
+            assertFalse(a.choice.value)
+            assertFalse(a.collecting.value)
+            assertEquals("false", choices.getString(ConsentStore.KEY, null))
+        } finally {
+            collection.onCommit = null
+            releaseRecord.countDown()
+            optInThread.join(5_000)
+            optOutThread?.join(5_000)
         }
     }
 

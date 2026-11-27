@@ -6,7 +6,13 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Browser
 import android.webkit.WebSettings
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import net.wizardfactory.todayweather.analytics.Analytics
 import net.wizardfactory.todayweather.core.domain.settings.Handoffs
 import net.wizardfactory.todayweather.core.storage.DeviceIdentity
 
@@ -18,13 +24,80 @@ class MenuHandoffs(
     val sendFeedback: () -> Unit = {},
 )
 
+/** A one-shot usage analytics save failure owned by the app so Activity recreation does not drop it. */
+data class PrivacySaveFailure(val requestId: Long, val messageRes: Int)
+
+/**
+ * Serializes usage analytics choices on an app-scoped background dispatcher and tracks the latest
+ * unconsumed save failure across Activity recreations (#3238).
+ */
+class AnalyticsChoiceController(
+    private val beginChoice: (Boolean) -> Long,
+    private val commitChoice: suspend (Boolean, Long) -> Analytics.ChoiceOutcome,
+    private val scope: CoroutineScope,
+    private val writer: CoroutineDispatcher,
+    private val failureMessageRes: Int = R.string.LOC_PRIVACY_SAVE_FAILED,
+) {
+    constructor(
+        analytics: Analytics,
+        scope: CoroutineScope,
+        writer: CoroutineDispatcher,
+    ) : this(analytics::beginChoice, { value, id -> analytics.commitChoice(value, id) }, scope, writer)
+
+    private val lock = Any()
+    private var latestRequestId = 0L
+    private var suppressedUpToRequestId = 0L
+    private val failureFlow = MutableStateFlow<PrivacySaveFailure?>(null)
+
+    val saveFailure: StateFlow<PrivacySaveFailure?> = failureFlow.asStateFlow()
+
+    fun submit(value: Boolean) {
+        val id = beginChoice(value)
+        synchronized(lock) {
+            if (id > latestRequestId) latestRequestId = id
+            failureFlow.value = null
+        }
+        scope.launch(writer) {
+            val outcome = commitChoice(value, id)
+            if (outcome == Analytics.ChoiceOutcome.FAILED) {
+                synchronized(lock) {
+                    if (id == latestRequestId && id > suppressedUpToRequestId) {
+                        failureFlow.value = PrivacySaveFailure(id, failureMessageRes)
+                    }
+                }
+            }
+        }
+    }
+
+    fun onPopupOpened() {
+        synchronized(lock) {
+            suppressedUpToRequestId = maxOf(suppressedUpToRequestId, latestRequestId)
+            failureFlow.value = null
+        }
+    }
+
+    fun consumeFailure(requestId: Long) {
+        synchronized(lock) {
+            if (failureFlow.value?.requestId == requestId) {
+                failureFlow.value = null
+            }
+        }
+    }
+}
+
 /** The menu's privacy rows (#2894): the usage analytics choice and its change, and the ad privacy form. */
 class PrivacyActions(
     val choice: StateFlow<Boolean>,
-    /** The popup's choice; false when it could not be fully applied (`LOC_PRIVACY_SAVE_FAILED`). */
-    val setAnalytics: suspend (Boolean) -> Boolean,
+    /** Submits the popup's choice off the main thread; failures surface via [saveFailure]. */
+    val setAnalytics: (Boolean) -> Unit,
     /** The popup asks for consent (an opt-in region at the start, `Analytics.optInRegion`); else it offers 끄기 and 켜기. */
     val optIn: Boolean,
+    /** Unconsumed save failure from the latest usage analytics choice (`LOC_PRIVACY_SAVE_FAILED`). */
+    val saveFailure: StateFlow<PrivacySaveFailure?> = MutableStateFlow(null),
+    /** Marks a displayed [PrivacySaveFailure] as consumed so it does not reappear after recreation. */
+    val consumeFailure: (Long) -> Unit = {},
+    /** Suppresses any earlier in-flight save failure when the user reopens the analytics popup. */
+    val onPopupOpened: () -> Unit = {},
     /** 광고 개인정보 선택; the argument runs when no form can open (`LOC_AD_PRIVACY_UNAVAILABLE`). */
     val openAdPrivacy: (onUnavailable: () -> Unit) -> Unit,
 )

@@ -104,6 +104,7 @@ class WeatherRepository(
     private val running = MutableStateFlow<Set<String>>(emptySet())
     private val loadTimes = HashMap<String, Long>()
     private val latestRequest = HashMap<String, Long>()
+    private val locationStartGeneration = HashMap<String, Long>()
     private val inFlightLocations = HashMap<String, String>()
     private var requests = 0L
     private val commits = Mutex()
@@ -177,15 +178,31 @@ class WeatherRepository(
         }
         val key = key(place)
         val location = locationKey(place)
-        if (reserveWidgetAttempt != null) {
-            val busy = synchronized(this) { key in inFlightLocations || location in inFlightLocations.values }
-            if (busy || !reserveWidgetAttempt()) return LoadResult.Skipped
+        val generationBefore = if (reserveWidgetAttempt != null) {
+            val snapshot = synchronized(this) {
+                if (key in inFlightLocations || location in inFlightLocations.values) return LoadResult.Skipped
+                latestRequest[key] to locationStartGeneration[location]
+            }
+            if (!reserveWidgetAttempt()) return LoadResult.Skipped
+            snapshot
+        } else {
+            null
         }
         val request = synchronized(this) {
-            if (reserveWidgetAttempt != null && (key in inFlightLocations || location in inFlightLocations.values)) return LoadResult.Skipped
+            if (reserveWidgetAttempt != null) {
+                val (keyGenBefore, locGenBefore) = generationBefore!!
+                if (key in inFlightLocations || location in inFlightLocations.values ||
+                    latestRequest[key] != keyGenBefore || locationStartGeneration[location] != locGenBefore
+                ) {
+                    return LoadResult.Skipped
+                }
+            }
             inFlightLocations[key] = location
             running.update { it + key }
-            (++requests).also { latestRequest[key] = it }
+            (++requests).also {
+                latestRequest[key] = it
+                locationStartGeneration[location] = it
+            }
         }
         val headers = mapOf("Accept-Language" to WeatherRequests.acceptLanguage(languages))
         val body = try {

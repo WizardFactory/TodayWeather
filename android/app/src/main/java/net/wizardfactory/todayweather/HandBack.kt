@@ -76,8 +76,8 @@ class HandBackWriter(private val suite: SharedPreferences, private val consent: 
  * made there holds, also when that build could not read the hand-back and so did not claim the state, and a failed
  * mirror there (which removes the choice) withdraws. Before anything was handed over, the grant stands; a grant made
  * there is not carried over, as the first migration carries none. Runs before the choice applies ([EarlyStartProvider]);
- * each write of the choice is scheduled for hand-back on a single background executor ([HandBackWriter.watchConsent]),
- * so a grant here reaches the suite in order off the main thread.
+ * user choice saves commit the suite hand-back on the serialized background analytics writer before returning success,
+ * while [HandBackWriter.watchConsent] schedules a single background executor off the main thread for any other writes.
  *
  * Without a choice here the region default applies (analytics default-on, 2026-11-24) and nothing is adopted: the suite
  * is backed up while this app's choice is not, so a suite choice cannot tell a fallback build's withdrawal on this

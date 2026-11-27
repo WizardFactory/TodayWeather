@@ -58,7 +58,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -188,9 +187,14 @@ class MainActivity : ComponentActivity() {
             app.appState.state.first { it != null && !it.startShows }
             opened.consent.start(this@MainActivity)
         }
-        val privacy = PrivacyActions(app.analytics.choice, { value ->
-            app.appScope.async(app.analyticsWriter) { app.analytics.setCollectionEnabled(value) }.await()
-        }, app.analytics.optInRegion) { onUnavailable ->
+        val privacy = PrivacyActions(
+            choice = app.analytics.choice,
+            setAnalytics = app.analyticsChoices::submit,
+            optIn = app.analytics.optInRegion,
+            saveFailure = app.analyticsChoices.saveFailure,
+            consumeFailure = app.analyticsChoices::consumeFailure,
+            onPopupOpened = app.analyticsChoices::onPopupOpened,
+        ) { onUnavailable ->
             opened.consent.openPrivacyOptions(this, ::refreshNativeEligibility, onUnavailable)
         }
         setContent {
@@ -415,7 +419,8 @@ fun AppContent(
     // 이용 통계's popup and the privacy alerts (`showAlert('TodayWeather', …)`), by their message.
     var analyticsPopup by rememberSaveable { mutableStateOf(false) }
     var privacyAlert by rememberSaveable { mutableStateOf<Int?>(null) }
-    val privacyScope = rememberCoroutineScope()
+    val saveFailure by (privacy?.saveFailure ?: remember { MutableStateFlow(null) }).collectAsState()
+    val activeSaveFailure = if (analyticsPopup) null else saveFailure
     val analyticsChoice by (privacy?.choice ?: remember { MutableStateFlow(false) }).collectAsState()
     val applies by session.applies.collectAsState()
     val locating by session.locating.collectAsState()
@@ -515,7 +520,7 @@ fun AppContent(
     val screen = pages.lastOrNull()?.let(::screenName) ?: "tab.${navigation.selected.state}"
     LaunchedEffect(screen) { onScreen(screen) }
     val tabContentVisible = pages.isEmpty() && !navigation.menuOpen && !retry && !startPopup &&
-        positionRetry == null && !about && !intro && !analyticsPopup && privacyAlert == null && foregroundMessages.isEmpty()
+        positionRetry == null && !about && !intro && !analyticsPopup && privacyAlert == null && activeSaveFailure == null && foregroundMessages.isEmpty()
     val selected = navigation.selected
     var forecastRead by remember(selected, state.placeIndex, tabContentVisible) { mutableStateOf(false) }
     LaunchedEffect(selected, tabContentVisible) { if (tabContentVisible) onVisit(selected) }
@@ -581,7 +586,10 @@ fun AppContent(
                     MenuRow.NATIONAL_WEATHER -> openNation(NationRoutes.NATION)
                     MenuRow.NATIONAL_AIR -> openNation(NationRoutes.NATION_AIR)
                     // The privacy rows leave the menu open.
-                    MenuRow.ANALYTICS -> analyticsPopup = true
+                    MenuRow.ANALYTICS -> {
+                        privacy?.onPopupOpened?.invoke()
+                        analyticsPopup = true
+                    }
                     MenuRow.AD_PRIVACY -> privacy?.openAdPrivacy?.invoke { privacyAlert = R.string.LOC_AD_PRIVACY_UNAVAILABLE }
                     MenuRow.PRIVACY_POLICY, MenuRow.TERMS ->
                         handoffs.openSystem(Handoffs.policyPage(if (row == MenuRow.TERMS) "terms" else "privacy", AppLanguage.catalog(AppLocale.systemTags().firstOrNull())))
@@ -643,13 +651,13 @@ fun AppContent(
                     // `chooseAnalytics`: back closes it without a choice.
                     fun choose(value: Boolean) {
                         analyticsPopup = false
-                        privacy?.let { actions ->
-                            privacyScope.launch {
-                                if (!actions.setAnalytics(value)) privacyAlert = R.string.LOC_PRIVACY_SAVE_FAILED
-                            }
-                        }
+                        privacy?.setAnalytics?.invoke(value)
                     }
                     AnalyticsPopup(privacy?.optIn ?: true, ::choose, onBack = { analyticsPopup = false })
+                }
+                activeSaveFailure?.let { failure ->
+                    IonicAlert("TodayWeather", listOf(stringResource(failure.messageRes)), stringResource(R.string.LOC_OK),
+                        onClose = { privacy?.consumeFailure?.invoke(failure.requestId) })
                 }
                 privacyAlert?.let { message -> IonicAlert("TodayWeather", listOf(stringResource(message)), stringResource(R.string.LOC_OK), onClose = { privacyAlert = null }) }
                 if (startPopup) {

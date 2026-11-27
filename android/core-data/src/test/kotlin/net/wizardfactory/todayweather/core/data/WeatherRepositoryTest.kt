@@ -278,6 +278,104 @@ class WeatherRepositoryTest {
         assertIs<LoadResult.Loaded>(fgResult.get())
     }
 
+    /** #3238 CODEX-1: foreground load for the same key completing HTTP (paused on compute) during widget reservation must not be superseded. */
+    @Test
+    fun widgetSkipsWhenForegroundCompletesHttpForSameKeyDuringReservation() {
+        val httpCalls = AtomicInteger(0)
+        val compute = Manual()
+        val fgCompletedHttp = CountDownLatch(1)
+        val repo = WeatherRepository("https://server.test.invalid", null, { _, _ ->
+            val call = httpCalls.incrementAndGet()
+            if (call == 1) seoulBody else seoulBody
+        }, { now }, io = kotlinx.coroutines.Dispatchers.Unconfined, compute = compute)
+        val enteredReserve = CountDownLatch(1)
+        val releaseReserve = CountDownLatch(1)
+        val widgetResult = AtomicReference<LoadResult>()
+        val fgResult = AtomicReference<LoadResult>()
+        val widgetThread = thread(name = "widget-same-key-race") {
+            widgetResult.set(runBlocking {
+                repo.loadFromWidget(seoul, units, listOf("ko")) {
+                    enteredReserve.countDown()
+                    releaseReserve.await(5, TimeUnit.SECONDS)
+                    true
+                }
+            })
+        }
+        var fgThread: Thread? = null
+        try {
+            assertTrue(enteredReserve.await(5, TimeUnit.SECONDS), "widget load must enter reserveWidgetAttempt")
+            fgThread = thread(name = "fg-same-key-race") {
+                fgResult.set(runBlocking { repo.load(seoul, units, listOf("ko"), force = true) })
+            }
+            // Wait until foreground finishes HTTP (clears inFlightLocations) and queues strictJson on Manual compute.
+            val deadline = System.currentTimeMillis() + 5_000
+            while ((!compute.pending() || repo.loading.value.isNotEmpty()) && System.currentTimeMillis() < deadline) {
+                Thread.sleep(10)
+            }
+            assertTrue(compute.pending(), "foreground parse must be queued on compute")
+            assertTrue(repo.loading.value.isEmpty(), "foreground HTTP must have completed and cleared inFlightLocations")
+            fgCompletedHttp.countDown()
+
+            releaseReserve.countDown()
+            widgetThread.join(5_000)
+            assertEquals(LoadResult.Skipped, widgetResult.get(), "widget must skip when foreground already started for the same key")
+            assertEquals(1, httpCalls.get(), "widget must not send an extra HTTP request")
+
+            // Drain foreground parse + convert on Manual compute; foreground must succeed, not be Superseded.
+            val drainDeadline = System.currentTimeMillis() + 5_000
+            while (fgResult.get() == null && System.currentTimeMillis() < drainDeadline) {
+                if (compute.pending()) compute.runFirst() else Thread.sleep(10)
+            }
+            fgThread.join(5_000)
+            assertIs<LoadResult.Loaded>(fgResult.get(), "foreground load must succeed and not be superseded")
+        } finally {
+            releaseReserve.countDown()
+            widgetThread.join(5_000)
+            val cleanupDeadline = System.currentTimeMillis() + 2_000
+            while (fgThread?.isAlive == true && System.currentTimeMillis() < cleanupDeadline) {
+                if (compute.pending()) compute.runFirst() else Thread.sleep(10)
+            }
+            fgThread?.join(5_000)
+        }
+    }
+
+    /** #3238 CODEX-1: foreground load for a different key at the same location completing during widget reservation causes widget to skip. */
+    @Test
+    fun widgetSkipsWhenForegroundCompletesForSameLocationDifferentKeyDuringReservation() {
+        val httpCalls = AtomicInteger(0)
+        val repo = WeatherRepository("https://server.test.invalid", null, { _, _ ->
+            httpCalls.incrementAndGet()
+            seoulBody
+        }, { now })
+        val enteredReserve = CountDownLatch(1)
+        val releaseReserve = CountDownLatch(1)
+        val widgetResult = AtomicReference<LoadResult>()
+        val widgetThread = thread(name = "widget-same-loc-race") {
+            widgetResult.set(runBlocking {
+                repo.loadFromWidget(seoul.copy(currentPosition = true), units, listOf("ko")) {
+                    enteredReserve.countDown()
+                    releaseReserve.await(5, TimeUnit.SECONDS)
+                    true
+                }
+            })
+        }
+        try {
+            assertTrue(enteredReserve.await(5, TimeUnit.SECONDS), "widget load must enter reserveWidgetAttempt")
+            // Foreground loads the saved place at identical coordinates (different key, same location) and finishes completely.
+            val fgLoaded = runBlocking { repo.load(seoul, units, listOf("ko"), force = true) }
+            assertIs<LoadResult.Loaded>(fgLoaded)
+            assertTrue(repo.loading.value.isEmpty(), "foreground load finished and cleared inFlightLocations")
+
+            releaseReserve.countDown()
+            widgetThread.join(5_000)
+            assertEquals(LoadResult.Skipped, widgetResult.get(), "widget must skip when same location already loaded during reservation")
+            assertEquals(1, httpCalls.get(), "widget must not send an extra HTTP request")
+        } finally {
+            releaseReserve.countDown()
+            widgetThread.join(5_000)
+        }
+    }
+
     @Test
     fun widgetsShareOnlyMatchingCoordinatesAndCanReadLegacyCurrentCaches() = runTest {
         val dir = Files.createTempDirectory("widget-weather").toFile()

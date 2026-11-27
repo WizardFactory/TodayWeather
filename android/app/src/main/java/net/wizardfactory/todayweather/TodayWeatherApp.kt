@@ -88,7 +88,18 @@ open class TodayWeatherApp : Application() {
      * before Firebase. Test-unit builds report `development` traffic, release builds `production`, as the Cordova builds did.
      */
     val analytics: Analytics by lazy {
-        Analytics(analyticsSdk(), ConsentStore(this), if (BuildConfig.RELEASE_ADS) "production" else "development", ::deviceRegion)
+        Analytics(
+            analyticsSdk(),
+            ConsentStore(this),
+            if (BuildConfig.RELEASE_ADS) "production" else "development",
+            ::deviceRegion,
+            onChoiceWritten = { handBack.rewrite() },
+        )
+    }
+
+    /** App-scoped controller serializing usage analytics choices off Main and preserving save failures across Activity recreations. */
+    val analyticsChoices: AnalyticsChoiceController by lazy {
+        AnalyticsChoiceController(analytics, appScope, analyticsWriter)
     }
 
     /**
@@ -196,8 +207,9 @@ open class TodayWeatherApp : Application() {
         super.onCreate()
         migration.start()
         NotificationChannels.ensure(this)
-        // SharedPreferences notifies listeners on the main thread; run the hand-back commit on one
-        // background thread so writes stay off Main and keep their order (HandBackConsent).
+        // User choice saves commit the suite hand-back on analyticsWriter before returning success;
+        // keep the listener on one background thread so any other writes to the choice file still hand
+        // back off Main in order (HandBackConsent).
         handBack.watchConsent(getSharedPreferences(ConsentStore.CHOICE_FILE, MODE_PRIVATE)) { handBackExecutor.execute(it) }
     }
 }
