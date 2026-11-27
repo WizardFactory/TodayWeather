@@ -6,9 +6,9 @@ import android.os.Build
 /**
  * `traffic_type` of the analytics events (#3228), so business metrics can drop the team's installs:
  * - `development`: a build with Google's test ad units (debug builds), whatever its installer.
- * - `production`: a release build installed by Google Play. Play's internal and closed testing tracks install
- *   through Play too, so their testers stay `production`; the queries' pre-release dates cover only the versions
- *   built before this tag.
+ * - `production`: a release build installed by Google Play. Play's internal, closed and open testing tracks install
+ *   through Play too, so their testers stay `production`; the queries' release-date rule excludes installations
+ *   that ran a version before its production release, for every version (docs/operations/monetization.md).
  * - `internal`: a release build from any other installer or none (adb, a file manager, another store).
  *
  * A failed installer read keeps `production`: a read of the app's own install source has no expected failure, and

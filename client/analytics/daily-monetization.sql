@@ -13,9 +13,7 @@ WITH raw AS (
     CASE WHEN STARTS_WITH(app_info.version, '1.') THEN 'cordova'
       WHEN SAFE_CAST(SPLIT(app_info.version, '.')[SAFE_OFFSET(0)] AS INT64) >= 2 THEN 'native'
       ELSE 'other' END AS version_group,
-    (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'traffic_type') AS traffic_type,
     EXISTS(SELECT 1 FROM UNNEST(event_params) WHERE key = 'measurement_version') AS reporting,
-    (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'debug_mode') AS debug_mode,
     (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'action') AS action,
     (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'ad_format') AS ad_format
   FROM `PROJECT.DATASET.events_*`
@@ -32,23 +30,21 @@ WITH raw AS (
   UNION ALL SELECT 'IOS', '2.0.2', TIMESTAMP '2026-11-24 00:00:00+09'
   UNION ALL SELECT 'IOS', '2.0.3', TIMESTAMP '2026-11-25 00:05:47+09'
   UNION ALL SELECT 'IOS', '2.0.4', CAST(NULL AS TIMESTAMP)
-), prerelease AS (
-  -- Team installations by rule: any installation that ran a listed version before its release (event time before the
-  -- release time, or event date before the release day), in every daily table since the export began (2026-10-01),
-  -- whatever range the query reports: a later table can reveal a team installation for an earlier report. Daily
-  -- tables only (an eight-digit suffix), not streaming ones such as events_intraday_*.
-  SELECT DISTINCT e.user_pseudo_id FROM `PROJECT.DATASET.events_*` e
-  JOIN release_dates u ON u.platform = e.platform AND u.version = e.app_info.version
-  WHERE e._TABLE_SUFFIX >= '20261001' AND REGEXP_CONTAINS(e._TABLE_SUFFIX, r'^[0-9]{8}$')
-    AND e.app_info.id = 'net.wizardfactory.todayweather'
-    AND (u.released_at IS NULL OR TIMESTAMP_MICROS(e.event_timestamp) < u.released_at
-      OR PARSE_DATE('%Y%m%d', e.event_date) < DATE(u.released_at, 'Asia/Seoul'))
 ), excluded AS (
-  -- Exclude all events of developer and team installations, including native automatic events: development or internal
-  -- traffic (the native apps tag TestFlight, Xcode and non-Play installs internal, #3228) or debug mode in the window,
-  -- and the pre-release rule (docs/operations/monetization.md, "Team installations").
-  SELECT user_pseudo_id FROM raw WHERE traffic_type IN ('development', 'internal') OR debug_mode = 1
-  UNION DISTINCT SELECT user_pseudo_id FROM prerelease
+  -- Developer and team installations, all their events dropped including native automatic events, found in every
+  -- daily table since the export began (2026-10-01), whatever range the query reports: a later table can reveal a
+  -- team installation for an earlier report. Daily tables only (an eight-digit suffix), not streaming ones such as
+  -- events_intraday_*. Signals: development or internal traffic (the native apps tag TestFlight, Xcode and non-Play
+  -- installs internal, #3228), debug mode, or an event of a listed version before its release (event time before the
+  -- release time, or event date before the release day). docs/operations/monetization.md, "Team installations".
+  SELECT DISTINCT e.user_pseudo_id FROM `PROJECT.DATASET.events_*` e
+  LEFT JOIN release_dates u ON u.platform = e.platform AND u.version = e.app_info.version
+  WHERE e._TABLE_SUFFIX >= '20261001' AND REGEXP_CONTAINS(e._TABLE_SUFFIX, r'^[0-9]{8}$')
+    AND e.app_info.id = 'net.wizardfactory.todayweather' AND e.user_pseudo_id IS NOT NULL
+    AND ((SELECT value.string_value FROM UNNEST(e.event_params) WHERE key = 'traffic_type') IN ('development', 'internal')
+      OR (SELECT value.int_value FROM UNNEST(e.event_params) WHERE key = 'debug_mode') = 1
+      OR (u.version IS NOT NULL AND (u.released_at IS NULL OR TIMESTAMP_MICROS(e.event_timestamp) < u.released_at
+        OR PARSE_DATE('%Y%m%d', e.event_date) < DATE(u.released_at, 'Asia/Seoul'))))
 ), eligible AS (
   -- An anti-join: BigQuery rejects NOT IN over a subquery that reads another table.
   SELECT r.* FROM raw r LEFT JOIN excluded x ON x.user_pseudo_id = r.user_pseudo_id

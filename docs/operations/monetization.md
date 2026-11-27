@@ -187,13 +187,14 @@ The queries drop all events of a team installation, on every date, by two signal
   `Bundle.appStoreReceiptURL`, deprecated from iOS 18. StoreKit 2's
   `AppTransaction` was tried first and gave no answer on a TestFlight install on
   the team iPhone XR (`storekitd`: no context to handle authentication). Both
-  checks run synchronously at launch. An installation that sent `internal` in the
-  window a query reads is dropped entirely, its earlier events included.
+  checks run synchronously at launch. An installation that sent `internal`
+  (or `development`, or `debug_mode=1`) in any daily table since the export began
+  is dropped entirely, on every date.
 - **Release-date rule.** The queries' `release_dates` list holds each native
   version's production release. An installation that ran a listed version before
-  that release is a team installation. The `prerelease` step reads every daily
-  table since the export began (2026-10-01), not only the reported range, and no
-  streaming tables. This covers Play testing tracks, whose installs come from Play
+  that release is a team installation. The queries' `excluded` step reads both
+  signals in every daily table since the export began (2026-10-01), not only the
+  reported range, and no streaming tables (`events_intraday_*`). This covers Play testing tracks, whose installs come from Play
   and are tagged `production`: the [release runbook](android-release.md#7-store-declarations-and-test-tracks)
   promotes the same APK from internal testing to open testing to production. It
   also covers TestFlight builds of unreleased versions. A version with no
@@ -217,8 +218,9 @@ source in the table below. These are release steps in the
 [Android runbook](android-release.md#8-production-rollout) and the
 [iOS release section](../../ios/README.md#analytics-release-list). The list is
 repeated in the three queries, because BigQuery runs each template on its own.
-`client/test/monetization.test.cjs` fails when the copies differ or a version has
-no row here. A version missing from the list is not checked.
+`client/test/monetization.test.cjs` fails when the copies differ, a version is
+listed twice, or this table does not name the same versions and days. A version
+missing from the list is not checked.
 
 The time compared is `event_timestamp`, and also `event_date` against the
 release day. GA4's schema page defines `event_timestamp` as the time Google

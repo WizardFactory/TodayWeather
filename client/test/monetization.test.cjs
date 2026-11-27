@@ -592,37 +592,39 @@ test('monetization queries count impressions from the app ad_lifecycle event, no
     assert.match(daily, /LEFT JOIN exported_days x ON x\.day = DATE_ADD\(d\.day, INTERVAL 1 DAY\)/, 'no return rate before the next table');
 });
 
-test('reporting queries exclude development, internal and pre-release installations with one release list (#3228)', () => {
+test('reporting queries exclude development, internal and pre-release installations over the whole export (#3228)', () => {
     const lists = [];
     for (const file of ['analytics/daily-monetization.sql', 'analytics/ios-att-monetization.sql', 'analytics/retention.sql']) {
         const sql = read(file);
-        assert.match(sql, /SELECT user_pseudo_id FROM raw WHERE traffic_type IN \('development', 'internal'\) OR debug_mode = 1/, file);
         assert.doesNotMatch(sql, /team_installations/, `${file}: no manual list`);
-        assert.match(sql, /UNION DISTINCT SELECT user_pseudo_id FROM prerelease/, file);
-        assert.match(sql, /WHERE e\._TABLE_SUFFIX >= '20261001' AND REGEXP_CONTAINS\(e\._TABLE_SUFFIX, r'\^\[0-9\]\{8\}\$'\)\n/, `${file}: every daily table since the export began, past the reported range, no streaming tables`);
+        assert.match(sql, /WHERE e\._TABLE_SUFFIX >= '20261001' AND REGEXP_CONTAINS\(e\._TABLE_SUFFIX, r'\^\[0-9\]\{8\}\$'\)\n/,
+            `${file}: every daily table since the export began, past the reported range, no streaming tables`);
+        assert.match(sql, /UNNEST\(e\.event_params\) WHERE key = 'traffic_type'\) IN \('development', 'internal'\)/, `${file}: tags in any table`);
+        assert.match(sql, /UNNEST\(e\.event_params\) WHERE key = 'debug_mode'\) = 1/, file);
         assert.match(sql, /u\.released_at IS NULL OR TIMESTAMP_MICROS\(e\.event_timestamp\) < u\.released_at\s+OR PARSE_DATE\('%Y%m%d', e\.event_date\) < DATE\(u\.released_at, 'Asia\/Seoul'\)/, file);
         assert.match(sql, /LEFT JOIN excluded x ON x\.user_pseudo_id = r\.user_pseudo_id\s+WHERE r\.user_pseudo_id IS NOT NULL AND x\.user_pseudo_id IS NULL/, `${file}: anti-join (BigQuery rejects NOT IN here)`);
-        const list = sql.match(/release_dates AS \(([\s\S]*?)\n\), prerelease AS/);
+        const list = sql.match(/release_dates AS \(([\s\S]*?)\n\), excluded AS/);
         assert.ok(list, `${file} lists the release dates`);
         lists.push(list[1]);
     }
     assert.equal(new Set(lists).size, 1, 'the three queries carry the same release list');
     const retention = read('analytics/retention.sql');
-    assert.doesNotMatch(retention, /app_info\.version = @app_version/, 'exclusions read every version in the window');
     assert.match(retention, /x\.user_pseudo_id IS NULL AND r\.app_version = @app_version/, 'cohorts count the queried version');
-    const rows = [...lists[0].matchAll(/'(ANDROID|IOS)'(?: AS platform)?, '([0-9.]+)'(?: AS version)?, (TIMESTAMP '[^']+'|CAST\(NULL AS TIMESTAMP\))/g)]
-        .map(m => `${m[1]} ${m[2]} ${m[3]}`);
-    assert.deepEqual(rows, [
-        "ANDROID 2.0.0 TIMESTAMP '2026-11-20 17:00:00+09'",
-        "ANDROID 2.0.1 TIMESTAMP '2026-11-24 13:39:00+09'",
-        "IOS 2.0.1 TIMESTAMP '2026-11-21 00:00:00+09'",
-        "IOS 2.0.2 TIMESTAMP '2026-11-24 00:00:00+09'",
-        "IOS 2.0.3 TIMESTAMP '2026-11-25 00:05:47+09'",
-        'IOS 2.0.4 CAST(NULL AS TIMESTAMP)',
-    ]);
+    // The list changes at every release (docs/operations/android-release.md, ios/README.md): check its form and that the
+    // doc table names the same versions and days, not a fixed list.
+    const body = lists[0].split('\n').filter(line => !/^\s*--/.test(line)).join('\n');
+    const rows = [...body.matchAll(/'(ANDROID|IOS)'(?: AS platform)?, '([0-9]+\.[0-9]+\.[0-9]+)'(?: AS version)?, (?:TIMESTAMP '(\d{4}-\d{2}-\d{2}) \d{2}:\d{2}:\d{2}\+09'|CAST\(NULL AS TIMESTAMP\))/g)]
+        .map(m => ({platform: m[1], version: m[2], day: m[3] || null}));
+    assert.equal(rows.length, (body.match(/SELECT /g) || []).length, 'every row has a platform, a version and a KST time or NULL');
+    assert.ok(rows.length > 0);
+    assert.equal(new Set(rows.map(r => `${r.platform} ${r.version}`)).size, rows.length, 'no version twice');
     const doc = fs.readFileSync(path.join(__dirname, '../../docs/operations/monetization.md'), 'utf8');
+    const table = doc.slice(doc.indexOf('| Platform | Version | Production release (KST) | Source |'));
+    const docRows = [...table.matchAll(/^\| (Android|iOS) \| ([0-9.]+) \| ([^|]+) \|/gm)].map(m => ({platform: m[1].toUpperCase(), version: m[2], when: m[3].trim()}));
+    assert.deepEqual(docRows.map(r => `${r.platform} ${r.version}`).sort(), rows.map(r => `${r.platform} ${r.version}`).sort(), 'the doc table lists the same versions');
     for (const row of rows) {
-        const [platform, version] = row.split(' ');
-        assert.match(doc, new RegExp(`\\| ${platform === 'IOS' ? 'iOS' : 'Android'} \\| ${version.replace(/\./g, '\\.')} \\|`), `${row} has a source row`);
+        const docRow = docRows.find(r => r.platform === row.platform && r.version === row.version);
+        if (row.day) assert.ok(docRow.when.startsWith(row.day), `${row.platform} ${row.version}: doc says ${docRow.when}, query ${row.day}`);
+        else assert.match(docRow.when, /^not released/, `${row.platform} ${row.version}: NULL in the queries`);
     }
 });
