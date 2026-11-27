@@ -191,15 +191,14 @@ Builds made before #3228 carry no `internal` tag. The queries' `untagged_version
 list therefore excludes an installation that sent an event of a listed version
 before that version's public store release (KST): an event whose
 `event_timestamp` precedes the release time, or whose `event_date` precedes
-the release day. Google's schema page calls it the time Google Analytics
-received the event, but in this export (checked on 2026-11-27 over the native
-events of November) it is each event's own time on the device, corrected by a
-server offset of at most a few seconds. Timestamps within an installation
-differ per event, as they would not if a batch shared one upload time. None
-is earlier than the device's previous event. If GA4 ever stamped the receipt
-time instead, the `event_date` check still catches a pre-release event that
-arrives on a later day. Only one logged and received on the release day itself,
-before and after the release time, would count as after the release. A version
+the release day. GA4's schema page defines `event_timestamp` as the time
+Google Analytics received the event. A sample of this export (the native events
+of November, checked on 2026-11-27) looked like device times instead. Timestamps
+within an installation differed per event, as one upload batch's would not. None
+was earlier than the device's previous event, and the server offset was a few
+seconds at most. The queries do not rely on that sample: an event dated the
+release day that was logged before the release time and received after it
+counts as after the release, whatever day it arrived. A version
 without a release time is excluded entirely. Native versions that are not listed
 are assumed to carry the tag. The list holds every native version in the GA4
 export on 2026-11-27 (Android 2.0.0 and 2.0.1, iOS 2.0.1 and 2.0.2) and the
