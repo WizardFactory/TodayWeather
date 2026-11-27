@@ -68,8 +68,9 @@ class CurrentPositionTest {
         val events = mutableListOf<String>()
         val updated = mutableListOf<Int>()
         val state = Memory(AppState(places = places, placeIndex = index, units = UnitSettings.defaults("KR")))
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = WeatherRepository("https://server.test.invalid", null, { url, _ -> requests += url; if ("51.51" in url) londonBody else seoulBody },
-            { testScheduler.currentTime }, StandardTestDispatcher(testScheduler))
+            { testScheduler.currentTime }, dispatcher, dispatcher)
         val telemetry = Telemetry { name, params -> if (name == "location_permission") events += "${params["outcome"]}" }
         val session = WeatherSession(repository, backgroundScope, state, { listOf("ko-KR") }, { null }, telemetry = telemetry, random = { 0.5 },
             location = device, cityUpdated = { updated += it })

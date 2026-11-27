@@ -159,7 +159,7 @@ class AlarmsScreenTest {
                      restoration: StateRestorationTester? = null) {
         memory = Memory(AppState(places = places, placeIndex = index, units = UnitSettings.defaults("KR"), push = push).closeStart().copy(placeIndex = index))
         val http = HttpGet { _, _ -> File(inputs, "kma-seoul.json").readText() }
-        val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined)
+        val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
         val alarms = AlarmsHost { s, openSettings ->
             // The page changed the state; the post would send the place's list as stored.
@@ -268,7 +268,7 @@ class AlarmsScreenTest {
             runBlocking { withTimeout(5_000) { transport.firstArrived.await() } }
 
             val http = HttpGet { _, _ -> File(inputs, "kma-seoul.json").readText() }
-            val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined)
+            val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
             val session = WeatherSession(repository, scope, holder, { listOf("ko-KR") }, { null })
             val alarms = AlarmsHost { s, openSettings ->
                 AlarmPage(holder, access, post = { i -> io.launch { sync.postPlace(i) } }, openSettings = openSettings, scope = s)

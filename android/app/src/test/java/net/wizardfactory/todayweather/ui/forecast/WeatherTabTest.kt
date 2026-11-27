@@ -120,7 +120,7 @@ class WeatherTabTest {
         memory = Memory(AppState(places = places ?: listOf(Place.currentPositionPlaceholder(), seoul, london), placeIndex = index,
             units = UnitSettings.defaults("KR")))
         repository = WeatherRepository("https://server.test.invalid", null, HttpGet { url, _ -> requests += url; answer(url) },
-            io = Dispatchers.Unconfined)
+            io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         session = WeatherSession(repository, scope, memory, { languageTags }, { null })
         // The activity's glyph: a tap with location off clears the selected place's gate, as MainActivity's does.
         val glyph = LocationGlyph(rule.activity) { memory.current().let { s -> s.places.getOrNull(s.placeIndex)?.let(repository::invalidate) } }

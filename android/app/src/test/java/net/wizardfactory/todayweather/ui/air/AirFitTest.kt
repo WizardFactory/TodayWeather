@@ -95,7 +95,7 @@ abstract class AirFitTest(private val lang: String) {
             override fun change(update: (AppState) -> AppState) { flow.value = update(flow.value) }
         }
         val repository = WeatherRepository("https://server.test.invalid", null,
-            HttpGet { url, _ -> File(inputs, if ("51.51" in url) "vc-london.json" else "kma-seoul.json").readText() }, io = Dispatchers.Unconfined)
+            HttpGet { url, _ -> File(inputs, if ("51.51" in url) "vc-london.json" else "kma-seoul.json").readText() }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf(lang) }, { null })
         rule.setContent {
             val state by memory.flow.collectAsState()

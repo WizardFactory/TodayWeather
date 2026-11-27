@@ -37,8 +37,9 @@ class WeatherTelemetryTest {
         val events = mutableListOf<Pair<String, Map<String, Any>>>()
         val telemetry = Telemetry { name, params -> events += name to params }
         val state = Memory(AppState(places = listOf(place), placeIndex = 0, units = UnitSettings.defaults("KR")))
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = WeatherRepository("https://server.test.invalid", null, http, { testScheduler.currentTime },
-            StandardTestDispatcher(testScheduler), telemetry)
+            dispatcher, dispatcher, telemetry)
         val session = WeatherSession(repository, backgroundScope, state, { listOf("ko-KR") }, { null }, telemetry = telemetry,
             clock = { testScheduler.currentTime }) { 0.5 }
         return session to events

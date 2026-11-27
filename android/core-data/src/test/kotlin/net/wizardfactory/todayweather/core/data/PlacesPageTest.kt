@@ -76,7 +76,8 @@ class PlacesPageTest {
             }
         }
         val telemetry = Telemetry { name, params -> if (name == "favorite_change") events += "$name:${params["action"]}" }
-        val repository = WeatherRepository("https://server.test.invalid", null, http, { testScheduler.currentTime }, StandardTestDispatcher(testScheduler))
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = WeatherRepository("https://server.test.invalid", null, http, { testScheduler.currentTime }, dispatcher, dispatcher)
         val session = WeatherSession(repository, backgroundScope, state, { listOf("ko-KR") }, { null })
         val flow = StartFlow(state, repository, GeocodeClient("https://server.test.invalid", http), device, { listOf("ko-KR") }, telemetry)
         val opened = mutableListOf<Place>()

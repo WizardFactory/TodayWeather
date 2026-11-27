@@ -1,13 +1,16 @@
 package net.wizardfactory.todayweather.ui.nation
 
 import java.util.TimeZone
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.wizardfactory.todayweather.core.data.NationSource
 import net.wizardfactory.todayweather.core.data.PageLoad
 import net.wizardfactory.todayweather.core.domain.Warnings
@@ -50,6 +53,8 @@ class NationLoads(
     private val units: () -> UnitSettings?,
     private val languages: () -> List<String>,
     private val timeZone: () -> String = { TimeZone.getDefault().id },
+    /** Where warning responses are parsed into cards. */
+    private val compute: CoroutineDispatcher = Dispatchers.Default,
 ) {
     private val states = MutableStateFlow<Map<String, NationPageState>>(emptyMap())
     private val jobs = HashMap<String, Job>()
@@ -64,8 +69,14 @@ class NationLoads(
         jobs[route] = scope.launch {
             val state = when (route) {
                 NationRoutes.WARNINGS -> when (val load = source.special(languages())) {
-                    is PageLoad.Loaded -> NationPageState.Warnings(
-                        WarningCards.cards(Warnings.parse(load.value, languages().firstOrNull() ?: "en-US", timeZone())))
+                    is PageLoad.Loaded -> {
+                        val language = languages().firstOrNull() ?: "en-US"
+                        val zone = timeZone()
+                        val cards = withContext(compute) {
+                            WarningCards.cards(Warnings.parse(load.value, language, zone))
+                        }
+                        NationPageState.Warnings(cards)
+                    }
                     is PageLoad.Failed -> NationPageState.Warnings(emptyList())
                 }
                 else -> {

@@ -14,6 +14,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -45,7 +47,8 @@ class WeatherRepositoryTest {
 
     private fun currentOf(entry: WeatherEntry?) = entry!!.weather["currentWeather"]!!.jsonObject
 
-    private fun repository(http: HttpGet, cache: File? = null) = WeatherRepository("https://server.test.invalid", cache, http, { now })
+    private fun TestScope.repository(http: HttpGet, cache: File? = null) =
+        WeatherRepository("https://server.test.invalid", cache, http, { now }, compute = StandardTestDispatcher(testScheduler))
 
     @Test
     fun datedSummaryKeepsItsRequestWhenReopeningOffline() = runTest {
@@ -318,8 +321,9 @@ class WeatherRepositoryTest {
         val first = CompletableDeferred<String>()
         var call = 0
         // The cache runs on the test's scheduler, so no time passes and the older request makes one attempt only.
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val repo = WeatherRepository("https://server.test.invalid", null, { _, _ -> if (++call == 1) first.await() else seoulBody },
-            { now }, kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+            { now }, dispatcher, dispatcher)
         val older = async { repo.load(seoul, units, listOf("ko"), force = true) }
         runCurrent()
         assertIs<LoadResult.Loaded>(repo.load(seoul, units, listOf("ko"), force = true))
@@ -341,8 +345,9 @@ class WeatherRepositoryTest {
         val newer = Json.parseToJsonElement(seoulBody).jsonObject
             .let { JsonObject(it + ("current" to JsonObject(it["current"]!!.jsonObject + ("t1h" to kotlinx.serialization.json.JsonPrimitive(-5))))) }
             .toString()
+        val compute = StandardTestDispatcher(testScheduler)
         var call = 0
-        val repo = WeatherRepository("https://server.test.invalid", cache, { _, _ -> if (++call == 1) seoulBody else newer }, { now }, io)
+        val repo = WeatherRepository("https://server.test.invalid", cache, { _, _ -> if (++call == 1) seoulBody else newer }, { now }, io, compute)
         val older = async { repo.load(seoul, units, listOf("ko"), force = true) }
         runCurrent()
         io.runAll() // the older answer reads the cache, then queues its write
@@ -356,7 +361,7 @@ class WeatherRepositoryTest {
         assertIs<LoadResult.Loaded>(later.await())
         older.await()
         assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
-        val restarted = WeatherRepository("https://server.test.invalid", cache, { _, _ -> error("no request") }, { now }, io)
+        val restarted = WeatherRepository("https://server.test.invalid", cache, { _, _ -> error("no request") }, { now }, io, compute)
         val fromCache = async { restarted.cached(seoul) }
         runCurrent()
         while (io.pending()) {
@@ -372,8 +377,154 @@ class WeatherRepositoryTest {
         private val tasks = ArrayDeque<Runnable>()
         override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) { tasks += block }
         fun pending() = tasks.isNotEmpty()
+        fun runFirst() = tasks.removeFirst().run()
         fun runLast() = tasks.removeLast().run()
         fun runAll() { while (tasks.isNotEmpty()) tasks.removeFirst().run() }
+    }
+
+    /** #3233 AC1: JSON parsing and WeatherConverter.convert run on the injected compute dispatcher, not the caller's. */
+    @Test
+    fun parseAndConvertRunOnTheComputeDispatcher() = runTest {
+        val compute = Manual()
+        var fetched = 0
+        val telemetry = Telemetry { name, _ -> if (name == "weather_fetch") fetched++ }
+        val repo = WeatherRepository("https://server.test.invalid", null, { _, _ -> seoulBody }, { now },
+            StandardTestDispatcher(testScheduler), compute, telemetry)
+        val load = async { repo.load(seoul, units, listOf("ko"), force = true) }
+        runCurrent()
+        assertTrue(load.isActive, "load must wait for strictJson on compute")
+        assertTrue(compute.pending(), "strictJson must be queued on compute")
+        assertEquals(0, fetched, "telemetry must wait until strictJson finishes")
+
+        compute.runFirst()
+        runCurrent()
+        assertEquals(1, fetched, "telemetry runs on caller dispatcher after strictJson")
+        assertTrue(load.isActive, "load must wait for WeatherConverter.convert on compute")
+        assertTrue(compute.pending(), "WeatherConverter.convert must be queued on compute")
+
+        compute.runFirst()
+        runCurrent()
+        assertFalse(compute.pending())
+        val result = assertIs<LoadResult.Loaded>(load.await())
+        assertEquals(currentOf(WeatherEntry(converted(seoulBody), 0)), currentOf(result.entry))
+    }
+
+    /** #3233 AC2: a newer request finishing while an older request is queued on compute supersedes the older one and preserves memory and cache. */
+    @Test
+    fun aNewerRequestSupersedesAnOlderOneQueuedOnCompute() = runTest {
+        val cache = Files.createTempDirectory("weather-compute-supersede").toFile()
+        try {
+            val io = StandardTestDispatcher(testScheduler)
+            val compute = Manual()
+            val newer = Json.parseToJsonElement(seoulBody).jsonObject
+                .let { JsonObject(it + ("current" to JsonObject(it["current"]!!.jsonObject + ("t1h" to JsonPrimitive(-5))))) }
+                .toString()
+            var call = 0
+            val repo = WeatherRepository("https://server.test.invalid", cache, { _, _ -> if (++call == 1) seoulBody else newer },
+                { now }, io, compute)
+
+            val older = async { repo.load(seoul, units, listOf("ko"), force = true) }
+            runCurrent()
+            assertTrue(older.isActive && compute.pending(), "older strictJson queued on compute")
+            // Advance older past strictJson (and the first latest() check) so its convert is queued on compute.
+            compute.runFirst()
+            runCurrent()
+            assertTrue(older.isActive && compute.pending(), "older convert queued on compute")
+
+            // Newer request arrives and completes both parse and convert on compute before older's convert runs.
+            val later = async { repo.load(seoul, units, listOf("ko"), force = true) }
+            runCurrent()
+            assertTrue(later.isActive && compute.pending(), "newer strictJson queued on compute")
+            compute.runLast()
+            runCurrent()
+            assertTrue(later.isActive && compute.pending(), "newer convert queued on compute")
+            compute.runLast()
+            runCurrent()
+            assertIs<LoadResult.Loaded>(later.await())
+            assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
+
+            // Now older's convert runs; commits.withLock sees it is no longer latest and returns Superseded.
+            assertTrue(compute.pending(), "older convert still queued")
+            compute.runFirst()
+            runCurrent()
+            assertEquals(LoadResult.Superseded, older.await())
+            assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
+
+            val restarted = WeatherRepository("https://server.test.invalid", cache, { _, _ -> error("no request") },
+                { now }, io, io)
+            assertEquals("-5", currentOf(restarted.cached(seoul))["t1h"]!!.jsonPrimitive.content,
+                "disk cache keeps the newer answer")
+        } finally {
+            cache.deleteRecursively()
+        }
+    }
+
+    /** #3233 CODEX-1: a superseded off-main strictJson failure returns Superseded and leaves memory and cache intact. */
+    @Test
+    fun aSupersededStrictJsonFailureOnComputeIsSuperseded() = runTest {
+        assertSupersededComputeFailure(olderBody = "{not-json", advancePastStrictJson = false)
+    }
+
+    /** #3233 CODEX-1: a superseded off-main WeatherConverter.convert null result returns Superseded and leaves memory and cache intact. */
+    @Test
+    fun aSupersededConvertNullOnComputeIsSuperseded() = runTest {
+        assertSupersededComputeFailure(olderBody = "{}", advancePastStrictJson = true)
+    }
+
+    /** #3233 CODEX-1: a superseded off-main WeatherConverter.convert exception returns Superseded and leaves memory and cache intact. */
+    @Test
+    fun aSupersededConvertExceptionOnComputeIsSuperseded() = runTest {
+        assertSupersededComputeFailure(olderBody = "null", advancePastStrictJson = true)
+    }
+
+    private suspend fun TestScope.assertSupersededComputeFailure(olderBody: String, advancePastStrictJson: Boolean) {
+        val cache = Files.createTempDirectory("weather-compute-fail-supersede").toFile()
+        try {
+            val io = StandardTestDispatcher(testScheduler)
+            val compute = Manual()
+            val newer = Json.parseToJsonElement(seoulBody).jsonObject
+                .let { JsonObject(it + ("current" to JsonObject(it["current"]!!.jsonObject + ("t1h" to JsonPrimitive(-5))))) }
+                .toString()
+            var call = 0
+            val repo = WeatherRepository("https://server.test.invalid", cache, { _, _ -> if (++call == 1) olderBody else newer },
+                { now }, io, compute)
+
+            val older = async { repo.load(seoul, units, listOf("ko"), force = true) }
+            runCurrent()
+            assertTrue(older.isActive && compute.pending(), "older strictJson queued on compute")
+            if (advancePastStrictJson) {
+                compute.runFirst()
+                runCurrent()
+                assertTrue(older.isActive && compute.pending(), "older convert queued on compute")
+            }
+
+            // Newer request arrives and completes both parse and convert on compute before older's pending compute task runs.
+            val later = async { repo.load(seoul, units, listOf("ko"), force = true) }
+            runCurrent()
+            assertTrue(later.isActive && compute.pending(), "newer strictJson queued on compute")
+            compute.runLast()
+            runCurrent()
+            assertTrue(later.isActive && compute.pending(), "newer convert queued on compute")
+            compute.runLast()
+            runCurrent()
+            assertIs<LoadResult.Loaded>(later.await())
+            assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
+
+            // Older's queued compute failure runs after supersession and must return Superseded, leaving memory and cache intact.
+            assertTrue(compute.pending(), "older compute task still queued")
+            compute.runFirst()
+            runCurrent()
+            assertFalse(compute.pending())
+            assertEquals(LoadResult.Superseded, older.await())
+            assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
+
+            val restarted = WeatherRepository("https://server.test.invalid", cache, { _, _ -> error("no request") },
+                { now }, io, io)
+            assertEquals("-5", currentOf(restarted.cached(seoul))["t1h"]!!.jsonPrimitive.content,
+                "disk cache keeps the newer answer")
+        } finally {
+            cache.deleteRecursively()
+        }
     }
 
     /** A02 (kept): `updateCity` replaces a field only when the response has a truthy value for it. */

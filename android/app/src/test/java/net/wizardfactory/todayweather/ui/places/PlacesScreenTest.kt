@@ -144,7 +144,7 @@ class PlacesScreenTest {
                 }
             }
         }
-        val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined)
+        val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         // As the app wires it (#3180): the screens read the saved state through the preview of an unsaved place.
         preview = LinkPreview(memory)
         val session = WeatherSession(repository, scope, preview, { listOf("ko-KR") }, { null })
