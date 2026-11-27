@@ -65,6 +65,7 @@ class AfterFirstFrameIdleScheduler(
     /** Per-decorView draw state, accessed on the main thread only; never strongly references the View or Activity. */
     private class DecorDrawState {
         var drawn = false
+        var attachListener: View.OnAttachStateChangeListener? = null
         var listener: ViewTreeObserver.OnDrawListener? = null
         var savedVto: WeakReference<ViewTreeObserver>? = null
         var postDrawRunnable: Runnable? = null
@@ -259,7 +260,49 @@ class AfterFirstFrameIdleScheduler(
     }
 
     private fun ensureDrawListener(decorView: View, state: DecorDrawState): Boolean {
-        if (state.drawn || state.listener != null || state.postDrawRunnable != null) return true
+        if (state.drawn || state.postDrawRunnable != null) return true
+        // Wait for window attachment before registering an OnDrawListener: on Android 7.0/7.1 (API 24–25),
+        // ViewTreeObserver.merge() invalidates the floating observer without migrating OnDrawListeners.
+        if (decorView.isAttachedToWindow) {
+            state.attachListener?.let {
+                decorView.removeOnAttachStateChangeListener(it)
+                state.attachListener = null
+            }
+            if (state.listener != null && state.savedVto?.get()?.isAlive == true) return true
+            state.listener?.let { removeOnDrawListenerSafely(decorView, state.savedVto?.get(), it) }
+            state.listener = null
+            state.savedVto = null
+            return registerOnDrawListener(decorView, state)
+        }
+        if (state.attachListener != null) return true
+        val attachListener = object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                v.removeOnAttachStateChangeListener(this)
+                if (state.attachListener === this) state.attachListener = null
+                if (state.drawn || (state.observers == 0 && state.waiters.isEmpty())) {
+                    detachIfUnused(v, state)
+                    return
+                }
+                if (!registerOnDrawListener(v, state)) {
+                    val callbacks = state.waiters.toList()
+                    state.waiters.clear()
+                    if (callbacks.isNotEmpty()) {
+                        Choreographer.getInstance().postFrameCallback {
+                            mainHandler.post { callbacks.forEach { it() } }
+                        }
+                    }
+                    detachIfUnused(v, state)
+                }
+            }
+
+            override fun onViewDetachedFromWindow(v: View) = Unit
+        }
+        state.attachListener = attachListener
+        decorView.addOnAttachStateChangeListener(attachListener)
+        return true
+    }
+
+    private fun registerOnDrawListener(decorView: View, state: DecorDrawState): Boolean {
         val vto = decorView.viewTreeObserver
         if (!vto.isAlive) return false
         val viewRef = WeakReference(decorView)
@@ -292,6 +335,10 @@ class AfterFirstFrameIdleScheduler(
         if (state.drawn || state.observers > 0 || state.waiters.isNotEmpty()) return
         state.postDrawRunnable?.let(mainHandler::removeCallbacks)
         state.postDrawRunnable = null
+        state.attachListener?.let { listener ->
+            view?.removeOnAttachStateChangeListener(listener)
+        }
+        state.attachListener = null
         state.listener?.let { listener ->
             removeOnDrawListenerSafely(view, state.savedVto?.get(), listener)
         }

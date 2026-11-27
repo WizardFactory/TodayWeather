@@ -647,4 +647,40 @@ class AdsConsentTest {
             assertEquals(3_500L, firedAtElapsedMs - frameDoneMs)
         }
     }
+
+    @Test
+    @Config(sdk = [24])
+    fun afterFirstFrameIdleSchedulerStartsOnceWhenScheduledBeforeWindowAttachOnApi24() {
+        val mainLooper = Shadows.shadowOf(Looper.getMainLooper())
+        val prodScheduler = AfterFirstFrameIdleScheduler(minDelayMs = 1_000L, maxIdleWaitMs = 2_000L)
+        val platform = Platform(allowed = true, update = null)
+        val c = consent(platform, startScheduler = prodScheduler)
+
+        // Activity.onCreate/onResume path before decorView attaches to a window (e.g. recreation with state already loaded).
+        val controller = Robolectric.buildActivity(Activity::class.java).create().start().resume()
+        val unattachedActivity = controller.get()
+        assertFalse(unattachedActivity.window.decorView.isAttachedToWindow, "precondition: decorView not yet attached")
+
+        c.start(unattachedActivity)
+        mainLooper.idleFor(Duration.ofMillis(5_000))
+        assertEquals(0, ready, "must not start before window attach and first draw")
+
+        // On API 24/25, attaching the decorView invalidates the floating ViewTreeObserver without migrating OnDrawListeners.
+        controller.visible()
+        assertTrue(unattachedActivity.window.decorView.isAttachedToWindow, "decorView is attached after visible()")
+
+        mainLooper.idleFor(Duration.ofMillis(5_000))
+        assertEquals(0, ready, "must not start after attach until actual first draw")
+
+        unattachedActivity.window.decorView.viewTreeObserver.dispatchOnDraw()
+        mainLooper.idleFor(Duration.ofMillis(0))
+        assertEquals(0, ready, "does not start immediately on first draw")
+
+        mainLooper.idleFor(Duration.ofMillis(999))
+        assertEquals(0, ready, "does not start before minDelayMs")
+
+        mainLooper.idleFor(Duration.ofMillis(1))
+        assertEquals(listOf("update", "sdk"), platform.calls, "starts once after attach, first draw, and delay on API 24")
+        assertEquals(1, ready)
+    }
 }
