@@ -6,10 +6,10 @@ Consumes [intent](../intent/android-defer-ads-sdk.md) and the 2026-11-27 Galaxy 
 
 1. `AdsConsent` accepts an injectable `SdkStartScheduler` returning a `CancelHandle`, so JVM tests can drive and verify deferred SDK start deterministically without sleeping or relying on real `Choreographer` / `MessageQueue` timing.
 2. The production default scheduler (`AfterFirstFrameIdleScheduler`) sequences three stages on the main looper without waiting for user input:
-   - Wait for the next `Choreographer.FrameCallback` so the first content frame can draw.
-   - Wait a minimum delay (`minDelayMs`, default `1_000L` ms) via `Handler.postDelayed` after that frame callback so the first frame finishes and early post-TTID interactions (such as a tap 200 ms after TTID) do not collide with `WebViewChromium.init`.
-   - Register a one-shot `MessageQueue.IdleHandler` on `Looper.getMainLooper().queue` alongside an upper-bound fallback (`maxIdleWaitMs`, default `2_000L` ms; `3_000L` ms total cap after the first frame) so the SDK starts at the first main-thread idle point after the delay, or at the upper bound if the main thread stays continuously busy.
-3. Calling `CancelHandle.cancel()` at any stage removes any pending frame callback, delayed runnables, and idle handler, prevents the scheduled callback from running, and releases references cleanly.
+   - Wait for the activity's actual first content draw via `ViewTreeObserver.OnDrawListener` on its decor view (posting out of `onDraw` so the post-frame timer starts right after that draw pass finishes, or starting immediately if `observeFirstDraw(activity)` already recorded that activity's first draw before consent resolved on a static screen; falls back to `Choreographer.FrameCallback` + `Handler.post` only if no live view tree observer is available).
+   - Wait a minimum delay (`minDelayMs`, default `1_000L` ms) via `Handler.postDelayed` after that first content draw so early post-TTID interactions (such as a tap 200 ms after TTID) do not collide with `WebViewChromium.init`.
+   - Register a one-shot `MessageQueue.IdleHandler` on `Looper.getMainLooper().queue` alongside a deadline-bounded fallback (`deadlineMs = frameDoneMs + minDelayMs + maxIdleWaitMs`, default `3_000L` ms total cap after the first content draw) so the SDK starts at the first main-thread idle point after the delay, or at the original deadline (immediately if the delay itself ran past `deadlineMs`) if the main thread stays continuously busy.
+3. Calling `CancelHandle.cancel()` at any stage removes any pending draw listener, frame callback, delayed runnables, and idle handler, prevents the scheduled callback from running, and releases references to the activity and decor view cleanly.
 
 ## Trace section
 

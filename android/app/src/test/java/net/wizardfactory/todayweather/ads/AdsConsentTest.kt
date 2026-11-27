@@ -1,7 +1,9 @@
 package net.wizardfactory.todayweather.ads
 
 import android.app.Activity
+import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import java.time.Duration
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import kotlin.test.assertEquals
@@ -13,6 +15,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowSystemClock
 
 /**
  * UMP and the Ads SDK start (#2894, #2871, #3234): UMP runs as soon as the tabs open, the consent form shows when
@@ -95,7 +98,7 @@ class AdsConsentTest {
         val pendingCount: Int
             get() = entries.count { !it.cancelled && !it.ran }
 
-        override fun schedule(run: () -> Unit): CancelHandle {
+        override fun schedule(activity: Activity, run: () -> Unit): CancelHandle {
             scheduledCount++
             val entry = Entry(run)
             entries += entry
@@ -500,29 +503,148 @@ class AdsConsentTest {
     }
 
     @Test
-    fun afterFirstFrameIdleSchedulerWaitsForFrameDelayAndIdleAndHonorsCancel() {
+    fun afterFirstFrameIdleSchedulerWaitsForActualActivityDrawBeforeStartingDelay() {
         val mainLooper = Shadows.shadowOf(Looper.getMainLooper())
         val prodScheduler = AfterFirstFrameIdleScheduler(minDelayMs = 1_000L, maxIdleWaitMs = 2_000L)
+        val freshActivity = Robolectric.buildActivity(Activity::class.java).setup().get()
         var runs = 0
 
-        prodScheduler.schedule { runs++ }
+        prodScheduler.schedule(freshActivity) { runs++ }
         assertEquals(0, runs, "does not run synchronously")
 
-        mainLooper.idleFor(Duration.ofMillis(20)) // Choreographer frame callback runs, schedules 1000 ms delay.
-        assertEquals(0, runs, "does not run right after the first frame")
+        // Main looper runs well past minDelayMs + maxIdleWaitMs without a content draw: SDK must not start.
+        mainLooper.idleFor(Duration.ofMillis(5_000))
+        assertEquals(0, runs, "must not start while the activity has not drawn its first content frame")
 
-        mainLooper.idleFor(Duration.ofMillis(500))
+        // Trigger the actual first content draw and finish its posted post-draw callback.
+        freshActivity.window.decorView.viewTreeObserver.dispatchOnDraw()
+        mainLooper.idleFor(Duration.ofMillis(0))
+        assertEquals(0, runs, "does not run right after the first content draw")
+
+        mainLooper.idleFor(Duration.ofMillis(999))
         assertEquals(0, runs, "does not run before the minimum post-frame delay elapses")
 
-        mainLooper.idleFor(Duration.ofMillis(600))
-        assertEquals(1, runs, "runs once after the minimum delay and main-thread idle")
+        mainLooper.idleFor(Duration.ofMillis(1))
+        assertEquals(1, runs, "runs once after the first draw, minimum delay, and main-thread idle")
 
-        // Cancelling before the delay completes prevents execution.
+        // Cancelling before draw or before the delay completes prevents execution.
+        val cancelActivity = Robolectric.buildActivity(Activity::class.java).setup().get()
         var cancelledRuns = 0
-        val handle = prodScheduler.schedule { cancelledRuns++ }
-        mainLooper.idleFor(Duration.ofMillis(200))
+        val handle = prodScheduler.schedule(cancelActivity) { cancelledRuns++ }
         handle.cancel()
+        cancelActivity.window.decorView.viewTreeObserver.dispatchOnDraw()
         mainLooper.idleFor(Duration.ofMillis(5_000))
         assertEquals(0, cancelledRuns, "cancelled schedule never fires")
+    }
+
+    @Test
+    fun afterFirstFrameIdleSchedulerStartsTimerWithoutExtraDrawWhenActivityAlreadyDrew() {
+        val mainLooper = Shadows.shadowOf(Looper.getMainLooper())
+        val prodScheduler = AfterFirstFrameIdleScheduler(minDelayMs = 1_000L, maxIdleWaitMs = 2_000L)
+        val freshActivity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val platform = Platform(allowed = false, update = null)
+        val c = consent(platform, startScheduler = prodScheduler)
+
+        // Activity starts showing content and draws its first frame before UMP returns.
+        c.start(freshActivity)
+        freshActivity.window.decorView.viewTreeObserver.dispatchOnDraw()
+        mainLooper.idleFor(Duration.ofMillis(0))
+        assertEquals(0, ready)
+
+        // Screen stays static (no further onDraw or user input) when UMP resolves.
+        platform.allowed = true
+        platform.answerUpdate()
+        assertEquals(listOf("update"), platform.calls, "still waits minDelayMs after resolving")
+        assertEquals(0, ready)
+
+        mainLooper.idleFor(Duration.ofMillis(999))
+        assertEquals(0, ready, "does not start before minDelayMs")
+
+        mainLooper.idleFor(Duration.ofMillis(1))
+        assertEquals(listOf("update", "sdk"), platform.calls, "starts without waiting for another draw or user input")
+        assertEquals(1, ready)
+    }
+
+    @Test
+    fun afterFirstFrameIdleSchedulerCapsFallbackAtOriginalDeadlineWhenDelayRunsLate() {
+        val mainLooper = Shadows.shadowOf(Looper.getMainLooper())
+        val handler = Handler(Looper.getMainLooper())
+
+        // Case 1: startIdleWait runs late at +2,500 ms and the queue never goes idle -> fires at +3,000 ms, not +4,500 ms.
+        run {
+            val prodScheduler = AfterFirstFrameIdleScheduler(minDelayMs = 1_000L, maxIdleWaitMs = 2_000L)
+            val freshActivity = Robolectric.buildActivity(Activity::class.java).setup().get()
+            var runs = 0
+            var firedAtElapsedMs = -1L
+            var runsAt2900 = -1
+
+            prodScheduler.schedule(freshActivity) {
+                runs++
+                firedAtElapsedMs = SystemClock.uptimeMillis()
+            }
+            freshActivity.window.decorView.viewTreeObserver.dispatchOnDraw()
+            mainLooper.idleFor(Duration.ofMillis(0))
+            val frameDoneMs = SystemClock.uptimeMillis()
+
+            // Stall at +100 ms for 2,400 ms so startIdleWait runs late at +2,500 ms, then keep queue non-idle to +4,600 ms.
+            handler.postDelayed({
+                ShadowSystemClock.advanceBy(Duration.ofMillis(2_400))
+                val busyUntil = frameDoneMs + 4_600L
+                val keepBusy = object : Runnable {
+                    override fun run() {
+                        val elapsed = SystemClock.uptimeMillis() - frameDoneMs
+                        if (elapsed == 2_900L) runsAt2900 = runs
+                        if (SystemClock.uptimeMillis() < busyUntil) {
+                            ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+                            handler.post(this)
+                        }
+                    }
+                }
+                handler.post(keepBusy)
+            }, 100L)
+
+            mainLooper.idleFor(Duration.ofMillis(100))
+            assertEquals(0, runsAt2900, "must not fire before the 3,000 ms deadline while main thread stays busy")
+            assertEquals(1, runs, "fallback must fire when main thread stays busy")
+            assertEquals(
+                3_000L,
+                firedAtElapsedMs - frameDoneMs,
+                "fallback must fire at the original minDelayMs + maxIdleWaitMs deadline (3,000 ms), not 4,500 ms",
+            )
+        }
+
+        // Case 2: startIdleWait runs past the 3,000 ms deadline (at +3,500 ms) -> fires immediately.
+        run {
+            val prodScheduler = AfterFirstFrameIdleScheduler(minDelayMs = 1_000L, maxIdleWaitMs = 2_000L)
+            val freshActivity = Robolectric.buildActivity(Activity::class.java).setup().get()
+            var runs = 0
+            var firedAtElapsedMs = -1L
+
+            prodScheduler.schedule(freshActivity) {
+                runs++
+                firedAtElapsedMs = SystemClock.uptimeMillis()
+            }
+            freshActivity.window.decorView.viewTreeObserver.dispatchOnDraw()
+            mainLooper.idleFor(Duration.ofMillis(0))
+            val frameDoneMs = SystemClock.uptimeMillis()
+
+            handler.postDelayed({
+                ShadowSystemClock.advanceBy(Duration.ofMillis(3_400))
+                val busyUntil = frameDoneMs + 5_000L
+                val keepBusy = object : Runnable {
+                    override fun run() {
+                        if (SystemClock.uptimeMillis() < busyUntil) {
+                            ShadowSystemClock.advanceBy(Duration.ofMillis(100))
+                            handler.post(this)
+                        }
+                    }
+                }
+                handler.post(keepBusy)
+            }, 100L)
+
+            mainLooper.idleFor(Duration.ofMillis(100))
+            assertEquals(1, runs, "must fire immediately when startIdleWait runs past the original deadline")
+            assertEquals(3_500L, firedAtElapsedMs - frameDoneMs)
+        }
     }
 }
