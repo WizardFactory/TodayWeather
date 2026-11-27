@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -40,15 +41,17 @@ class ChartArtworkTest {
         rule.setContent {
             val cache = rememberForecastChartImages()
             val measurer = rememberTextMeasurer()
+            val density = LocalDensity.current
             Column {
                 for (name in names) Row {
                     for (theme in Theme.entries) {
                         val colors = ChartColors.of(theme, daily = false)
                         val scene = Svg(120.0, 120.0, listOf(SvgImage(null, "img/icons_default/$name.png", 0.0, 0.0, 120.0, 120.0)))
                         val images = cache.prepare(colors, scene)
+                        val prepared = prepareSvg(scene, 0.0, images, colors, density, measurer)
                         Canvas(Modifier.size(120.dp).testTag("$theme-$name")) {
                             drawRect(colors.background)
-                            drawSvg(scene, 0.0, images, measurer, colors)
+                            drawSvg(prepared)
                         }
                     }
                 }
@@ -78,14 +81,16 @@ class ChartArtworkTest {
         rule.setContent {
             val cache = rememberForecastChartImages()
             val measurer = rememberTextMeasurer()
+            val density = LocalDensity.current
             Column {
                 for (daily in listOf(false, true)) Row {
                     for (theme in Theme.entries) {
                         val colors = ChartColors.of(theme, daily)
                         val images = cache.prepare(colors, scene)
+                        val prepared = prepareSvg(scene, 0.0, images, colors, density, measurer)
                         Canvas(Modifier.size(120.dp).testTag("$theme-$daily")) {
                             drawRect(colors.background)
-                            drawSvg(scene, 0.0, images, measurer, colors)
+                            drawSvg(prepared)
                         }
                     }
                 }
