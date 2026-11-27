@@ -1,5 +1,7 @@
 -- GoogleSQL. Replace PROJECT.DATASET; @start_date/@end_date DATE, @app_version STRING.
 -- Installation cohort, not a person/account cohort. Only complete D1/D7 windows are reported.
+-- Exclusions read every version in the window, so an installation that sent internal traffic from another version
+-- is dropped too; cohorts and retention count @app_version events only.
 WITH raw AS (
   SELECT PARSE_DATE('%Y%m%d', event_date) AS date, event_timestamp, event_name, user_pseudo_id, is_active_user, platform,
     app_info.version AS app_version,
@@ -7,10 +9,11 @@ WITH raw AS (
     (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'debug_mode') AS debug_mode
   FROM `PROJECT.DATASET.events_*`
   WHERE _TABLE_SUFFIX BETWEEN FORMAT_DATE('%Y%m%d', @start_date) AND FORMAT_DATE('%Y%m%d', DATE_ADD(@end_date, INTERVAL 7 DAY))
-    AND app_info.id = 'net.wizardfactory.todayweather' AND app_info.version = @app_version
+    AND app_info.id = 'net.wizardfactory.todayweather'
 ), untagged_versions AS (
   -- Native builds made before #3228 never send traffic_type=internal, so a team device running one is found by its
-  -- events before that version's public store release (KST; docs/operations/monetization.md lists each source).
+  -- events received before that version's public store release (KST; GA4's event_timestamp is the receipt time, so a
+  -- pre-release event uploaded after the release time is missed; docs/operations/monetization.md lists each source).
   -- released_at NULL: not released, every event is pre-release. Add every further build made before #3228 and set
   -- released_at when it ships; builds from #3228 on tag themselves. Keep the three queries' lists identical.
   SELECT 'ANDROID' AS platform, '2.0.0' AS version, TIMESTAMP '2026-11-20 17:00:00+09' AS released_at
@@ -26,7 +29,7 @@ WITH raw AS (
   WHERE r.traffic_type IN ('development', 'internal') OR r.debug_mode = 1
     OR (u.version IS NOT NULL AND (u.released_at IS NULL OR TIMESTAMP_MICROS(r.event_timestamp) < u.released_at))
 ), clean AS (
-  SELECT * FROM raw WHERE user_pseudo_id IS NOT NULL
+  SELECT * FROM raw WHERE user_pseudo_id IS NOT NULL AND app_version = @app_version
     AND user_pseudo_id NOT IN (SELECT user_pseudo_id FROM excluded WHERE user_pseudo_id IS NOT NULL)
 ), cohorts AS (
   SELECT user_pseudo_id, platform, MIN(date) AS cohort_date FROM clean

@@ -604,6 +604,9 @@ test('reporting queries exclude development, internal and pre-release installati
         lists.push(list[1]);
     }
     assert.equal(new Set(lists).size, 1, 'the three queries carry the same release list');
+    const retention = read('analytics/retention.sql');
+    assert.doesNotMatch(retention, /app_info\.version = @app_version/, 'exclusions read every version in the window');
+    assert.match(retention, /WHERE user_pseudo_id IS NOT NULL AND app_version = @app_version/, 'cohorts count the queried version');
     const rows = [...lists[0].matchAll(/'(ANDROID|IOS)'(?: AS platform)?, '([0-9.]+)'(?: AS version)?, (TIMESTAMP '[^']+'|CAST\(NULL AS TIMESTAMP\))/g)]
         .map(m => `${m[1]} ${m[2]} ${m[3]}`);
     assert.deepEqual(rows, [

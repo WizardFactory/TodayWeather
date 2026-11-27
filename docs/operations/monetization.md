@@ -180,23 +180,27 @@ installer other than Google Play (Android, `getInstallSourceInfo`), and
 `production` otherwise. Before the iOS read resolves, and after it fails, an iOS
 build carrying a provisioning profile (development, ad hoc or enterprise signing)
 sends `internal` and any other build `production`; a failed Android read keeps
-`production`. An installation that sends `internal` at any time drops out
-entirely, earlier events included. Play's
+`production`. An installation that sent `internal` in the window a query reads
+drops out entirely, earlier events included; a query sees no tag outside that
+window (retention reads every app version there, not only `@app_version`). Play's
 internal, closed and open testing tracks install through Play, so their testers
 count as `production`. Installations whose pseudonym changed (reinstall, data
 reset) are separate installations.
 
 Builds made before #3228 carry no `internal` tag. The queries' `untagged_versions`
 list therefore excludes an installation that sent an event of a listed version
-before that version's public store release (event timestamp, KST). A version
+before that version's public store release (KST). The time compared is
+`event_timestamp`, which GA4 defines as the time Google Analytics received the
+event, not when the device logged it: an event logged before a release time and
+uploaded after it counts as after the release, so a team device whose only
+pre-release events arrive that way stays in. A version
 without a release time is excluded entirely. Native versions that are not listed
 are assumed to carry the tag. The list holds every native version in the GA4
 export on 2026-11-27 (Android 2.0.0 and 2.0.1, iOS 2.0.1 and 2.0.2) and the
 known iOS builds that were not released then. When a listed version ships, set its
 time in all three queries; add any further build made from a commit before #3228.
-The pre-release exclusion only sees events within the query's date range, so a
-range starting after a release keeps a team device that ran only that store
-build. TestFlight or sideloaded builds of these versions after their release are
+Both exclusions only see events within the query's date range, so a range
+starting after a release keeps a team device that ran only that store build. TestFlight or sideloaded builds of these versions after their release are
 not distinguishable from store installs.
 
 | Platform | Version | Public release (KST) | Source |

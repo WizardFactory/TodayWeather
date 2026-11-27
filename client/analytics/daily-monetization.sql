@@ -24,7 +24,8 @@ WITH raw AS (
     AND app_info.id = 'net.wizardfactory.todayweather'
 ), untagged_versions AS (
   -- Native builds made before #3228 never send traffic_type=internal, so a team device running one is found by its
-  -- events before that version's public store release (KST; docs/operations/monetization.md lists each source).
+  -- events received before that version's public store release (KST; GA4's event_timestamp is the receipt time, so a
+  -- pre-release event uploaded after the release time is missed; docs/operations/monetization.md lists each source).
   -- released_at NULL: not released, every event is pre-release. Add every further build made before #3228 and set
   -- released_at when it ships; builds from #3228 on tag themselves. Keep the three queries' lists identical.
   SELECT 'ANDROID' AS platform, '2.0.0' AS version, TIMESTAMP '2026-11-20 17:00:00+09' AS released_at
