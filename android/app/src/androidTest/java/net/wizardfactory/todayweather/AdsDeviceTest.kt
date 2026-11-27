@@ -158,6 +158,7 @@ class AdsDeviceTest {
         capture("analytics-popup")
         rule.onNode(hasText(rule.activity.getString(R.string.analytics_consent_allow)) and hasAnyAncestor(hasTestTag(PopupTags.POPUP)), useUnmergedTree = true)
             .performClick()
+        rule.waitUntil(5_000) { app.analytics.choice.value }
         rule.waitForIdle()
         assertTrue(app.analytics.choice.value)
         rule.activity.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
