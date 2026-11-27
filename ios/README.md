@@ -640,7 +640,7 @@ The script builds the app and the UI tests ad hoc signed with `ios/Private.xccon
 
 ## Private inputs
 
-The build and the tests run without private inputs. They stay outside Git (ignored by `ios/.gitignore`): the Firebase configuration `GoogleService-Info.plist` of the existing Firebase iOS app (IN-03, IN-04; without it the app does not configure Firebase), and a `Private.xcconfig` with the server URL `TW_SERVER_URL` (IN-04, IN-08; Info.plist `TWServerURL`, empty without it), the weather photo feed `TW_WEATHER_PHOTOS_URL` (IN-07; Info.plist `TWWeatherPhotosURL`, empty without it), the feedback address `TW_MAIL_TO` (IN-12; Info.plist `TWMailTo`, empty without it), the AdMob and Places identifiers (IN-08, IN-10, IN-15) and release signing (IN-19).
+The build and the tests run without private inputs. They live in `~/.config/todayweather/ios/` on the release Mac, and every change to them is backed up to S3 in the same task ([private inputs](../docs/operations/private-inputs.md)). They stay outside Git (ignored by `ios/.gitignore`): the Firebase configuration `GoogleService-Info.plist` of the existing Firebase iOS app (IN-03, IN-04; without it the app does not configure Firebase), and a `Private.xcconfig` with the server URL `TW_SERVER_URL` (IN-04, IN-08; Info.plist `TWServerURL`, empty without it), the weather photo feed `TW_WEATHER_PHOTOS_URL` (IN-07; Info.plist `TWWeatherPhotosURL`, empty without it), the feedback address `TW_MAIL_TO` (IN-12; Info.plist `TWMailTo`, empty without it), the AdMob and Places identifiers (IN-08, IN-10, IN-15) and release signing (IN-19).
 
 ## App Store release (IN-19)
 

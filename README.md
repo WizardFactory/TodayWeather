@@ -122,7 +122,7 @@ $ cp -rf ../../../applewatch/TodayWeather\ WatchKit\ 1\ Extension ./
 
 ### Publishing
 
-Releases are tagged per target (`android/`, `ios/`, `webapp/`, `backend/…`) with notes in GitHub Releases: [release convention](docs/operations/github-releases.md), [Android release runbook](docs/operations/android-release.md), [PR CI and release CI](docs/development/ci-tiers.md).
+Releases are tagged per target (`android/`, `ios/`, `webapp/`, `backend/…`) with notes in GitHub Releases: [release convention](docs/operations/github-releases.md), [Android release runbook](docs/operations/android-release.md), [PR CI and release CI](docs/development/ci-tiers.md). Private build inputs and their S3 backup: [private inputs](docs/operations/private-inputs.md).
 
 Historical Cordova releases (Android and iOS): see "release mobile application" above. API-authenticated store metadata export and internal/TestFlight upload commands are documented in the [Cordova store release guide](docs/operations/cordova-store-release.md).
 
