@@ -4,13 +4,133 @@ import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.MessageQueue
+import android.os.Trace
 import android.util.Log
+import android.view.Choreographer
 import com.google.android.gms.ads.MobileAds
 import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
+import com.google.android.ump.UserMessagingPlatform
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import com.google.android.ump.UserMessagingPlatform
+
+/** Cancels a scheduled deferred Ads SDK start. */
+fun interface CancelHandle {
+    fun cancel()
+}
+
+/**
+ * Schedules [run] (the Ads SDK start) after the first content frame and a main-thread idle point.
+ * The returned [CancelHandle] cancels the pending start if the activity stops before it fires.
+ */
+fun interface SdkStartScheduler {
+    fun schedule(run: () -> Unit): CancelHandle
+}
+
+/**
+ * Production scheduler for the Ads SDK start (#3234):
+ * 1. Waits for the next [Choreographer] frame callback so the first content frame can draw.
+ * 2. Waits [minDelayMs] (default 1,000 ms) after that frame callback so the frame finishes and
+ *    immediate post-TTID interactions (such as a tap 200 ms after TTID) do not collide with
+ *    `WebViewChromium.init`. Does not wait for user input.
+ * 3. Waits for a main-thread idle point ([MessageQueue.IdleHandler]), capped by [maxIdleWaitMs]
+ *    (default 2,000 ms; 3,000 ms total after the first frame) so a busy main thread cannot postpone
+ *    ads indefinitely.
+ */
+class AfterFirstFrameIdleScheduler(
+    private val minDelayMs: Long = DEFAULT_MIN_DELAY_MS,
+    private val maxIdleWaitMs: Long = DEFAULT_MAX_IDLE_WAIT_MS,
+) : SdkStartScheduler {
+    init {
+        require(minDelayMs >= 0L) { "minDelayMs must be non-negative: $minDelayMs" }
+        require(maxIdleWaitMs >= 0L) { "maxIdleWaitMs must be non-negative: $maxIdleWaitMs" }
+    }
+
+    override fun schedule(run: () -> Unit): CancelHandle {
+        val mainLooper = Looper.getMainLooper()
+        val handler = Handler(mainLooper)
+        val cancelled = AtomicBoolean(false)
+        var done = false
+        var frameCallback: Choreographer.FrameCallback? = null
+        var delayRunnable: Runnable? = null
+        var fallbackRunnable: Runnable? = null
+        var idleHandler: MessageQueue.IdleHandler? = null
+
+        fun fire() {
+            if (cancelled.get() || done) return
+            done = true
+            fallbackRunnable?.let(handler::removeCallbacks)
+            fallbackRunnable = null
+            idleHandler?.let(mainLooper.queue::removeIdleHandler)
+            idleHandler = null
+            run()
+        }
+
+        val startIdleWait = Runnable {
+            delayRunnable = null
+            if (cancelled.get() || done) return@Runnable
+            val idle = MessageQueue.IdleHandler {
+                idleHandler = null
+                fire()
+                false
+            }
+            val fallback = Runnable {
+                fallbackRunnable = null
+                fire()
+            }
+            idleHandler = idle
+            fallbackRunnable = fallback
+            mainLooper.queue.addIdleHandler(idle)
+            handler.postDelayed(fallback, maxIdleWaitMs)
+        }
+
+        val frame = Choreographer.FrameCallback {
+            frameCallback = null
+            if (cancelled.get() || done) return@FrameCallback
+            delayRunnable = startIdleWait
+            handler.postDelayed(startIdleWait, minDelayMs)
+        }
+
+        fun arm() {
+            if (cancelled.get() || done) return
+            frameCallback = frame
+            Choreographer.getInstance().postFrameCallback(frame)
+        }
+
+        val armRunnable = Runnable { arm() }
+        if (Looper.myLooper() == mainLooper) {
+            arm()
+        } else {
+            handler.post(armRunnable)
+        }
+
+        return CancelHandle {
+            if (!cancelled.compareAndSet(false, true)) return@CancelHandle
+            fun cleanup() {
+                handler.removeCallbacks(armRunnable)
+                frameCallback?.let { Choreographer.getInstance().removeFrameCallback(it) }
+                frameCallback = null
+                delayRunnable?.let(handler::removeCallbacks)
+                delayRunnable = null
+                fallbackRunnable?.let(handler::removeCallbacks)
+                fallbackRunnable = null
+                idleHandler?.let(mainLooper.queue::removeIdleHandler)
+                idleHandler = null
+            }
+            if (Looper.myLooper() == mainLooper) cleanup() else handler.post { cleanup() }
+        }
+    }
+
+    companion object {
+        /** Minimum wait after the first frame callback so early taps clear `WebViewChromium.init`. */
+        const val DEFAULT_MIN_DELAY_MS = 1_000L
+
+        /** Upper bound on waiting for a main-thread idle point after [DEFAULT_MIN_DELAY_MS]. */
+        const val DEFAULT_MAX_IDLE_WAIT_MS = 2_000L
+    }
+}
 
 /** A consent form loaded to be shown once. */
 fun interface ConsentFormHandle {
@@ -86,20 +206,23 @@ class GoogleAdsPlatform(private val context: Context) : AdsPlatform {
 }
 
 /**
- * The consent flow and the Ads SDK start of an app open (the emi adapter's `init` with the plugin's `initialize`, #2871):
- * UMP is updated, the consent form shows when required, and the SDK starts in the same session as soon as ads may be
- * requested; with a consent stored from an earlier session it starts at once. When UMP fails, release builds show no
- * ads, as Google's consent guidance asks; debug builds, which use Google's test units, start the SDK without UMP
- * once, unless the failure is a consent decision ([releaseAds]). [onReady] runs once the SDK has started.
- * The form loads without an activity and shows on the activity shown when it has loaded ([start], [stop]), as the
- * plugin loaded it and then showed it: an update or a form answered after a configuration change, or a form lost
- * with its activity, shows on the next one.
+ * The consent flow and the Ads SDK start of an app open (the emi adapter's `init` with the plugin's `initialize`, #2871,
+ * deferred SDK start #3234): UMP is updated and the consent form shows when required as soon as the tabs open. Once ads
+ * may be requested, the SDK start is scheduled through [startScheduler] (by default after the first content frame, a
+ * short post-frame delay, and a main-thread idle point) so `WebViewChromium.init` does not block early interactions.
+ * When UMP fails, release builds show no ads, as Google's consent guidance asks; debug builds, which use Google's test
+ * units, schedule the SDK start without UMP once, unless the failure is a consent decision ([releaseAds]). [onReady]
+ * runs once the SDK has started. The form loads without an activity and shows on the activity shown when it has loaded
+ * ([start], [stop]), as the plugin loaded it and then showed it: an update or a form answered after a configuration
+ * change, or a form lost with its activity, shows on the next one. A pending deferred SDK start is cancelled when its
+ * activity stops and re-scheduled on the next activity so the SDK starts at most once without leaking the old activity.
  */
 class AdsConsent(
     private val platform: AdsPlatform,
     private val releaseAds: Boolean,
     private val track: (String, Map<String, Any?>) -> Boolean,
-    private val onReady: () -> Unit,
+    private val startScheduler: SdkStartScheduler = AfterFirstFrameIdleScheduler(),
+    private val onReady: () -> Unit = {},
 ) {
     private val requestAllowed = MutableStateFlow(false)
     val allowed = requestAllowed.asStateFlow()
@@ -114,14 +237,20 @@ class AdsConsent(
     private var formActivity: Activity? = null
     private var current: Activity? = null
     private var started = false
+    private var pendingStart: CancelHandle? = null
+    private var startGeneration = 0
     private var fellBack = false
 
     /**
-     * An activity is shown: the first one of the app open runs the flow, a later one shows a form still due and starts
-     * what consent allows.
+     * An activity is shown: the first one of the app open runs the flow, a later one shows a form still due and
+     * schedules what consent allows.
      */
     fun start(activity: Activity) {
+        val previous = current
         current = activity
+        if (previous != null && previous !== activity) {
+            cancelPendingStart()
+        }
         if (!requested) {
             requested = true
             platform.requestConsentUpdate(activity, onUpdated = {
@@ -138,11 +267,12 @@ class AdsConsent(
         startIfAllowed()
     }
 
-    /** The activity is gone, with a form it showed. */
+    /** The activity is gone, with any form it showed and any pending deferred SDK start. */
     fun stop(activity: Activity) {
         if (current === activity) current = null
         if (formActivity === activity) formActivity = null
         if (privacyActivity === activity) privacyActivity = null
+        if (current == null && privacyActivity == null) cancelPendingStart()
     }
 
     /** The plugin's `handleConsentForm`: the form when consent is required, loaded, then shown. */
@@ -203,6 +333,7 @@ class AdsConsent(
                 startIfAllowed()
                 true
             } catch (_: Exception) {
+                cancelPendingStart()
                 requestAllowed.value = false
                 false
             }
@@ -222,7 +353,11 @@ class AdsConsent(
 
     private fun startIfAllowed() {
         val consent = platform.canRequestAds()
-        if (consent) startSdk()
+        if (consent || fellBack) {
+            scheduleStartSdk()
+        } else {
+            cancelPendingStart()
+        }
         requestAllowed.value = sdkReady && (consent || fellBack)
     }
 
@@ -232,21 +367,54 @@ class AdsConsent(
         // A consent decision is never bypassed.
         if (releaseAds || fellBack || CONSENT_DECISION.containsMatchIn(reason)) return
         fellBack = true
-        startSdk()
+        scheduleStartSdk()
     }
 
-    private fun startSdk() {
+    private fun scheduleStartSdk() {
+        if (started || pendingStart != null) return
+        val active = current ?: privacyActivity
+        if (active == null || active.isFinishing || active.isDestroyed) return
+        val generation = ++startGeneration
+        var settled = false
+        val handle = startScheduler.schedule {
+            if (generation != startGeneration || settled) return@schedule
+            settled = true
+            pendingStart = null
+            val live = current ?: privacyActivity
+            if (live == null || live.isFinishing || live.isDestroyed) return@schedule
+            startSdkNow()
+        }
+        if (!settled && !started && generation == startGeneration) {
+            pendingStart = handle
+        }
+    }
+
+    private fun cancelPendingStart() {
+        startGeneration++
+        val handle = pendingStart ?: return
+        pendingStart = null
+        handle.cancel()
+    }
+
+    private fun startSdkNow() {
         if (started) return
+        if (!platform.canRequestAds() && !fellBack) return
         started = true
-        platform.startSdk {
-            sdkReady = true
-            requestAllowed.value = platform.canRequestAds() || fellBack
-            onReady()
+        Trace.beginSection(TRACE_START_SDK)
+        try {
+            platform.startSdk {
+                sdkReady = true
+                requestAllowed.value = platform.canRequestAds() || fellBack
+                onReady()
+            }
+        } finally {
+            Trace.endSection()
         }
     }
 
     companion object {
         private val CONSENT_DECISION = Regex("consent is required|status unknown", RegexOption.IGNORE_CASE)
+        internal const val TRACE_START_SDK = "ads.startSdk"
     }
 }
 

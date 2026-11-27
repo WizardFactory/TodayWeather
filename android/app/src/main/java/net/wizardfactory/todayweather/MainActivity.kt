@@ -807,7 +807,7 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     /** The anchored banner of this app open (#3211): `tw_app_banner_enabled`, under the all-ads policy and its delay. */
     val ads = TwAds(viewModelScope, adConfig, twApp.analytics::track, SystemClock::elapsedRealtime)
-    val consent = AdsConsent(twApp.adsPlatform(), BuildConfig.RELEASE_ADS, twApp.analytics::track) {}
+    val consent = AdsConsent(twApp.adsPlatform(), BuildConfig.RELEASE_ADS, twApp.analytics::track)
 
     /** The settings pages' changes; a unit change posts the push list again in the app's scope (`Push.updateUnits`). */
     val settings = SettingsActions(twApp.appState, session) { twApp.appScope.launch(Dispatchers.IO) { twApp.push.updateUnits() } }

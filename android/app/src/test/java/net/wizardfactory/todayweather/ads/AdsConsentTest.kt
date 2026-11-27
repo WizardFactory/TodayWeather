@@ -1,20 +1,25 @@
 package net.wizardfactory.todayweather.ads
 
 import android.app.Activity
+import android.os.Looper
+import java.time.Duration
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
 /**
- * UMP and the Ads SDK start of the Cordova build (the emi adapter's `init` and the plugin's `initialize`, #2894, #2871):
- * the SDK starts in the first session once consent allows ads, at once with a stored consent, never against a consent
- * decision; release builds show no ads when UMP fails, debug builds start without UMP once. The ad privacy row shows the
- * form where one is required and the cannot-open message otherwise.
+ * UMP and the Ads SDK start (#2894, #2871, #3234): UMP runs as soon as the tabs open, the consent form shows when
+ * required, and the Ads SDK starts only after consent allows ads and the injected [SdkStartScheduler] fires (never
+ * before, never twice across activity recreation, and never without consent or against a consent decision); release
+ * builds show no ads when UMP fails, debug builds start without UMP once. The ad privacy row shows the form where one
+ * is required and the cannot-open message otherwise.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -77,16 +82,64 @@ class AdsConsentTest {
         }
     }
 
+    /** Deterministic scheduler for JVM tests: holds scheduled runs until [runAll] and tracks cancellations. */
+    private class TestScheduler : SdkStartScheduler {
+        private class Entry(val run: () -> Unit, var cancelled: Boolean = false, var ran: Boolean = false)
+
+        private val entries = mutableListOf<Entry>()
+        var scheduledCount = 0
+            private set
+        var cancelledCount = 0
+            private set
+
+        val pendingCount: Int
+            get() = entries.count { !it.cancelled && !it.ran }
+
+        override fun schedule(run: () -> Unit): CancelHandle {
+            scheduledCount++
+            val entry = Entry(run)
+            entries += entry
+            return CancelHandle {
+                if (!entry.cancelled) {
+                    entry.cancelled = true
+                    cancelledCount++
+                }
+            }
+        }
+
+        fun runAll() {
+            val active = entries.filter { !it.cancelled && !it.ran }
+            for (entry in active) {
+                if (!entry.cancelled && !entry.ran) {
+                    entry.ran = true
+                    entry.run()
+                }
+            }
+        }
+
+        /** Simulates a stale callback firing even after its [CancelHandle] was cancelled. */
+        fun runCancelledCallbacks() {
+            for (entry in entries.filter { it.cancelled && !it.ran }) {
+                entry.ran = true
+                entry.run()
+            }
+        }
+    }
+
     private val events = mutableListOf<String>()
     private var ready = 0
+    private val scheduler = TestScheduler()
 
-    private fun consent(platform: Platform, release: Boolean = true) =
-        AdsConsent(platform, release, { _, params -> events += "${params["action"]}"; true }) { ready++ }
+    private fun consent(platform: Platform, release: Boolean = true, startScheduler: SdkStartScheduler = scheduler) =
+        AdsConsent(platform, release, { _, params -> events += "${params["action"]}"; true }, startScheduler) { ready++ }
 
     @Test
     fun theFirstSessionStartsTheSdkOnceConsentAllowsAds() {
         val platform = Platform(allowed = false)
         consent(platform).start(activity)
+        assertEquals(listOf("update", "load", "form"), platform.calls, "SDK start waits for the scheduler")
+        assertEquals(0, ready)
+        scheduler.runAll()
         assertEquals(listOf("update", "load", "form", "sdk"), platform.calls)
         assertEquals(1, ready)
     }
@@ -103,8 +156,11 @@ class AdsConsentTest {
         c.start(second)
         platform.answerUpdate()
         assertEquals(listOf(second), platform.formActivities, "the form opens on the shown activity")
+        assertEquals(0, ready, "SDK start waits for the scheduler after consent")
+        scheduler.runAll()
         assertEquals(1, ready)
         c.start(second)
+        scheduler.runAll()
         assertEquals(listOf("update", "load", "form", "sdk"), platform.calls, "the SDK starts once")
     }
 
@@ -124,6 +180,7 @@ class AdsConsentTest {
         val second = Robolectric.buildActivity(Activity::class.java).setup().get()
         c.start(second)
         assertEquals(listOf(first.get(), second), platform.formActivities)
+        scheduler.runAll()
         assertEquals(1, ready, "consent given on the new activity starts the SDK")
     }
 
@@ -140,6 +197,7 @@ class AdsConsentTest {
         c.start(second)
         platform.answerLoad()
         assertEquals(listOf(second), platform.formActivities, "never the destroyed activity")
+        scheduler.runAll()
         assertEquals(listOf("update", "load", "form", "sdk"), platform.calls, "one load, the SDK once")
         assertEquals(1, ready)
     }
@@ -158,24 +216,138 @@ class AdsConsentTest {
         val second = Robolectric.buildActivity(Activity::class.java).setup().get()
         c.start(second)
         assertEquals(listOf(second), platform.formActivities)
+        scheduler.runAll()
         assertEquals(1, ready)
     }
 
     @Test
-    fun aStoredConsentStartsTheSdkAtOnce() {
+    fun aStoredConsentDefersTheSdkStartUntilTheSchedulerFires() {
         val platform = Platform(allowed = true, update = null)
         val c = consent(platform)
         c.start(activity)
-        assertEquals(listOf("update", "sdk"), platform.calls)
+        assertEquals(listOf("update"), platform.calls, "UMP runs immediately, but SDK start waits for the scheduler")
+        assertEquals(1, scheduler.pendingCount)
+        assertEquals(0, ready)
+        assertFalse(c.allowed.value)
+
         c.start(activity)
+        assertEquals(1, scheduler.pendingCount, "repeated start on the same activity does not schedule twice")
+        assertEquals(listOf("update"), platform.calls)
+
+        scheduler.runAll()
+        assertEquals(listOf("update", "sdk"), platform.calls)
+        assertEquals(1, ready)
+        assertTrue(c.allowed.value)
+
+        c.start(activity)
+        scheduler.runAll()
         assertEquals(listOf("update", "sdk"), platform.calls, "a later activity of the same app open starts nothing again")
         assertEquals(1, ready)
+    }
+
+    @Test
+    fun recreationBeforeTheDeferredStartCancelsThePendingStartAndStartsOnce() {
+        val platform = Platform(allowed = true, update = null)
+        val c = consent(platform)
+        val first = Robolectric.buildActivity(Activity::class.java).setup()
+        c.start(first.get())
+        assertEquals(listOf("update"), platform.calls)
+        assertEquals(1, scheduler.pendingCount)
+        assertEquals(0, ready)
+
+        first.pause().stop().destroy()
+        c.stop(first.get())
+        assertEquals(0, scheduler.pendingCount, "destroying the activity cancels the pending SDK start")
+        assertEquals(1, scheduler.cancelledCount)
+
+        scheduler.runCancelledCallbacks()
+        assertEquals(listOf("update"), platform.calls, "a stale callback from the destroyed activity cannot start the SDK")
+        assertEquals(0, ready)
+
+        val second = Robolectric.buildActivity(Activity::class.java).setup()
+        c.start(second.get())
+        assertEquals(1, scheduler.pendingCount, "the recreated activity schedules the pending start")
+        assertEquals(listOf("update"), platform.calls)
+
+        scheduler.runAll()
+        assertEquals(listOf("update", "sdk"), platform.calls, "the SDK starts exactly once")
+        assertEquals(1, ready)
+        assertTrue(c.allowed.value)
+
+        // A further recreation after the SDK has started must not schedule or start it again.
+        second.pause().stop().destroy()
+        c.stop(second.get())
+        val third = Robolectric.buildActivity(Activity::class.java).setup().get()
+        c.start(third)
+        scheduler.runAll()
+        assertEquals(0, scheduler.pendingCount)
+        assertEquals(listOf("update", "sdk"), platform.calls)
+        assertEquals(1, ready)
+    }
+
+    @Test
+    fun recreationBeforeStopRebindsThePendingStartAndStartsOnce() {
+        val platform = Platform(allowed = true, update = null)
+        val c = consent(platform)
+        val first = Robolectric.buildActivity(Activity::class.java).setup()
+        val second = Robolectric.buildActivity(Activity::class.java).setup()
+        c.start(first.get())
+        assertEquals(1, scheduler.pendingCount)
+
+        c.start(second.get())
+        assertEquals(1, scheduler.cancelledCount, "rebinding to the new activity cancels the old pending start")
+        assertEquals(1, scheduler.pendingCount)
+
+        first.pause().stop().destroy()
+        c.stop(first.get())
+        assertEquals(1, scheduler.pendingCount, "stopping the old activity keeps the new activity's pending start")
+
+        scheduler.runCancelledCallbacks()
+        scheduler.runAll()
+        assertEquals(listOf("update", "sdk"), platform.calls, "the SDK starts exactly once")
+        assertEquals(1, ready)
+    }
+
+    @Test
+    fun revokingConsentBeforeTheDeferredStartFiresPreventsSdkStart() {
+        val platform = Platform(allowed = true, update = null).apply { privacyRequired = true }
+        val c = consent(platform)
+        c.start(activity)
+        assertEquals(1, scheduler.pendingCount)
+
+        platform.allowed = false
+        c.openPrivacyOptions(activity) { error("expected a form") }
+        assertEquals(0, scheduler.pendingCount, "revoking consent cancels the pending SDK start")
+        assertEquals(1, scheduler.cancelledCount)
+
+        scheduler.runCancelledCallbacks()
+        scheduler.runAll()
+        assertEquals(listOf("update", "privacy form"), platform.calls, "no SDK start after consent is revoked")
+        assertEquals(0, ready)
+        assertFalse(c.allowed.value)
+    }
+
+    @Test
+    fun noSdkStartWithoutConsentEvenIfConsentFlipsBeforeSchedulerFires() {
+        val platform = Platform(allowed = true, update = null)
+        val c = consent(platform)
+        c.start(activity)
+        assertEquals(1, scheduler.pendingCount)
+
+        // Consent becomes false externally before the deferred callback fires.
+        platform.allowed = false
+        scheduler.runAll()
+        assertEquals(listOf("update"), platform.calls, "SDK must not start when canRequestAds is false")
+        assertEquals(0, ready)
+        assertFalse(c.allowed.value)
     }
 
     @Test
     fun aDeclinedConsentStartsNothing() {
         val platform = Platform(allowed = false, formGivesConsent = false)
         consent(platform).start(activity)
+        scheduler.runAll()
+        assertEquals(0, scheduler.scheduledCount)
         assertEquals(listOf("update", "load", "form"), platform.calls)
         assertEquals(0, ready)
     }
@@ -184,12 +356,16 @@ class AdsConsentTest {
     fun aUmpFailureShowsNoAdsInReleaseBuilds() {
         val platform = Platform(allowed = false, update = "No form(s) configured")
         consent(platform, release = true).start(activity)
+        scheduler.runAll()
+        assertEquals(0, scheduler.scheduledCount)
         assertEquals(listOf("update"), platform.calls)
         assertEquals(listOf("consent_failed"), events)
         assertEquals(0, ready)
 
         val stored = Platform(allowed = true, update = "network")
         consent(stored, release = true).start(activity)
+        assertEquals(listOf("update"), stored.calls, "stored consent defers SDK start until scheduler fires")
+        scheduler.runAll()
         assertEquals(listOf("update", "sdk"), stored.calls, "a stored consent still allows ads")
     }
 
@@ -197,14 +373,20 @@ class AdsConsentTest {
     fun debugBuildsStartWithoutUmpUnlessConsentWasDecided() {
         val platform = Platform(allowed = false, update = "No form(s) configured")
         consent(platform, release = false).start(activity)
+        assertEquals(listOf("update"), platform.calls)
+        assertEquals(0, ready)
+        scheduler.runAll()
         assertEquals(listOf("update", "sdk"), platform.calls)
         assertEquals(1, ready)
 
+        val before = scheduler.scheduledCount
         for (reason in listOf("Consent is required", "consent status unknown")) {
             val decided = Platform(allowed = false, update = reason)
             consent(decided, release = false).start(activity)
+            scheduler.runAll()
             assertEquals(listOf("update"), decided.calls, reason)
         }
+        assertEquals(before, scheduler.scheduledCount)
     }
 
     @Test
@@ -212,6 +394,7 @@ class AdsConsentTest {
         val platform = Platform(allowed = true)
         val consent = consent(platform)
         consent.start(activity)
+        scheduler.runAll()
         assertTrue(consent.allowed.value)
         platform.privacyRequired = true
         platform.allowed = false
@@ -239,8 +422,9 @@ class AdsConsentTest {
                 onDone(true) // UMP can answer synchronously; canRequestAds stays true.
             }
         }
-        c = AdsConsent(platform, true, { _, _ -> true }) {}
+        c = AdsConsent(platform, true, { _, _ -> true }, scheduler) {}
         c.start(activity)
+        scheduler.runAll()
         inventory.setForeground(true)
         inventory.setEnabled(c.nativeAllowed)
         loads.single()("old-personalization")
@@ -258,8 +442,9 @@ class AdsConsentTest {
         val platform = object : AdsPlatform by original {
             override fun showPrivacyOptionsForm(activity: Activity, onDone: (Boolean) -> Unit) { dismiss = onDone }
         }
-        val c = AdsConsent(platform, true, { _, _ -> true }) {}
+        val c = AdsConsent(platform, true, { _, _ -> true }, scheduler) {}
         c.start(activity)
+        scheduler.runAll()
         val refreshed = mutableListOf<Boolean>()
         c.openPrivacyOptions(activity, { refreshed += c.nativeAllowed }) { error("expected a form") }
         c.start(activity) // Rechecking UMP while the form is open still cannot authorize a native ad.
@@ -287,7 +472,57 @@ class AdsConsentTest {
         val broken = object : AdsPlatform by platform {
             override fun privacyOptionsRequired(): Boolean = error("UMP failed")
         }
-        AdsConsent(broken, true, { _, _ -> true }) {}.openPrivacyOptions(activity) { unavailable++ }
+        AdsConsent(broken, true, { _, _ -> true }, scheduler) {}.openPrivacyOptions(activity) { unavailable++ }
         assertEquals(3, unavailable)
+    }
+
+    @Test
+    fun debugFallbackReschedulesCleanlyAcrossRecreationAndStartsOnce() {
+        val platform = Platform(allowed = false, update = "No form(s) configured")
+        val c = consent(platform, release = false)
+        val first = Robolectric.buildActivity(Activity::class.java).setup()
+        c.start(first.get())
+        assertEquals(1, scheduler.pendingCount)
+        assertEquals(listOf("update"), platform.calls)
+
+        first.pause().stop().destroy()
+        c.stop(first.get())
+        assertEquals(0, scheduler.pendingCount)
+        assertEquals(1, scheduler.cancelledCount)
+
+        val second = Robolectric.buildActivity(Activity::class.java).setup().get()
+        c.start(second)
+        assertEquals(1, scheduler.pendingCount, "debug fallback re-schedules on the recreated activity")
+        scheduler.runAll()
+        assertEquals(listOf("update", "sdk"), platform.calls)
+        assertEquals(1, ready)
+        assertTrue(c.allowed.value)
+    }
+
+    @Test
+    fun afterFirstFrameIdleSchedulerWaitsForFrameDelayAndIdleAndHonorsCancel() {
+        val mainLooper = Shadows.shadowOf(Looper.getMainLooper())
+        val prodScheduler = AfterFirstFrameIdleScheduler(minDelayMs = 1_000L, maxIdleWaitMs = 2_000L)
+        var runs = 0
+
+        prodScheduler.schedule { runs++ }
+        assertEquals(0, runs, "does not run synchronously")
+
+        mainLooper.idleFor(Duration.ofMillis(20)) // Choreographer frame callback runs, schedules 1000 ms delay.
+        assertEquals(0, runs, "does not run right after the first frame")
+
+        mainLooper.idleFor(Duration.ofMillis(500))
+        assertEquals(0, runs, "does not run before the minimum post-frame delay elapses")
+
+        mainLooper.idleFor(Duration.ofMillis(600))
+        assertEquals(1, runs, "runs once after the minimum delay and main-thread idle")
+
+        // Cancelling before the delay completes prevents execution.
+        var cancelledRuns = 0
+        val handle = prodScheduler.schedule { cancelledRuns++ }
+        mainLooper.idleFor(Duration.ofMillis(200))
+        handle.cancel()
+        mainLooper.idleFor(Duration.ofMillis(5_000))
+        assertEquals(0, cancelledRuns, "cancelled schedule never fires")
     }
 }
