@@ -28,7 +28,6 @@ Every object is written with server-side encryption and a conditional create, so
 | Label | Contents | Made by |
 | --- | --- | --- |
 | `native-inputs` | Android `android/private.properties` and `release/tw-google-services.json` (the Android build's `google-services.json`), iOS `ios/Private.xcconfig` and `ios/GoogleService-Info.plist` | `scripts/private-inputs.py` |
-| `gtm-team-installations` | `gtm/team-installations.txt`, the private team-installation list of the analytics queries ([team installations](monetization.md#team-installations-3228)) | `scripts/private-inputs.py snapshot --label gtm-team-installations gtm/team-installations.txt` |
 | none (time only) | Store-build release files | Manual capture on 2026-10-01 |
 | `ios-signing` | iOS distribution certificate, key and provisioning profile | Manual capture on 2026-10-02 |
 

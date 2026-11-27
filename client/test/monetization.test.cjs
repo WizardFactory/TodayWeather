@@ -592,13 +592,12 @@ test('monetization queries count impressions from the app ad_lifecycle event, no
     assert.match(daily, /LEFT JOIN exported_days x ON x\.day = DATE_ADD\(d\.day, INTERVAL 1 DAY\)/, 'no return rate before the next table');
 });
 
-test('reporting queries exclude development, listed team and pre-release installations with one release list (#3228)', () => {
+test('reporting queries exclude development, internal and pre-release installations with one release list (#3228)', () => {
     const lists = [];
     for (const file of ['analytics/daily-monetization.sql', 'analytics/ios-att-monetization.sql', 'analytics/retention.sql']) {
         const sql = read(file);
-        assert.doesNotMatch(sql, /'internal'/, `${file}: the apps send no internal tag`);
-        assert.match(sql, /SELECT user_pseudo_id FROM raw WHERE traffic_type = 'development' OR debug_mode = 1/, file);
-        assert.match(sql, /UNION DISTINCT SELECT id FROM UNNEST\(@team_installations\) AS id/, `${file} reads the private list`);
+        assert.match(sql, /SELECT user_pseudo_id FROM raw WHERE traffic_type IN \('development', 'internal'\) OR debug_mode = 1/, file);
+        assert.doesNotMatch(sql, /team_installations/, `${file}: no manual list`);
         assert.match(sql, /UNION DISTINCT SELECT user_pseudo_id FROM prerelease/, file);
         assert.match(sql, /WHERE e\._TABLE_SUFFIX >= '20261001' AND REGEXP_CONTAINS\(e\._TABLE_SUFFIX, r'\^\[0-9\]\{8\}\$'\)\n/, `${file}: every daily table since the export began, past the reported range, no streaming tables`);
         assert.match(sql, /u\.released_at IS NULL OR TIMESTAMP_MICROS\(e\.event_timestamp\) < u\.released_at\s+OR PARSE_DATE\('%Y%m%d', e\.event_date\) < DATE\(u\.released_at, 'Asia\/Seoul'\)/, file);

@@ -1,5 +1,4 @@
--- GoogleSQL. Replace PROJECT.DATASET; @start_date/@end_date DATE, @app_version STRING, @team_installations
--- ARRAY<STRING> (the private team list; [] when empty).
+-- GoogleSQL. Replace PROJECT.DATASET; @start_date/@end_date DATE, @app_version STRING.
 -- Installation cohort, not a person/account cohort. Only complete D1/D7 windows are reported. Exclusions read every
 -- version in the window, so an installation excluded on another version is dropped too; cohorts count @app_version.
 WITH raw AS (
@@ -11,9 +10,10 @@ WITH raw AS (
   WHERE _TABLE_SUFFIX BETWEEN FORMAT_DATE('%Y%m%d', @start_date) AND FORMAT_DATE('%Y%m%d', DATE_ADD(@end_date, INTERVAL 7 DAY))
     AND app_info.id = 'net.wizardfactory.todayweather'
 ), release_dates AS (
-  -- Public store release of each native version (KST; docs/operations/monetization.md gives each source). NULL: not
-  -- released (TestFlight or other pre-release builds). Add every native build when it is first distributed and set
-  -- released_at when it ships; a version missing here is not checked. Keep the three queries' lists identical.
+  -- Public (production) release of each native version (KST; docs/operations/monetization.md gives each source). NULL:
+  -- not released (internal or open testing, TestFlight). Add every native version when its first build is distributed
+  -- and set released_at when it ships (release step in docs/operations/android-release.md and ios/README.md); a version
+  -- missing here is not checked. Keep the three queries' lists identical (client/test/monetization.test.cjs).
   SELECT 'ANDROID' AS platform, '2.0.0' AS version, TIMESTAMP '2026-11-20 17:00:00+09' AS released_at
   UNION ALL SELECT 'ANDROID', '2.0.1', TIMESTAMP '2026-11-24 13:39:00+09'
   UNION ALL SELECT 'IOS', '2.0.1', TIMESTAMP '2026-11-21 00:00:00+09'
@@ -32,12 +32,11 @@ WITH raw AS (
     AND (u.released_at IS NULL OR TIMESTAMP_MICROS(e.event_timestamp) < u.released_at
       OR PARSE_DATE('%Y%m%d', e.event_date) < DATE(u.released_at, 'Asia/Seoul'))
 ), excluded AS (
-  -- Exclude all events of developer and team installations, including native automatic events: development traffic or
-  -- debug mode in the window, the pre-release rule, and the private list @team_installations (ARRAY<STRING> of
-  -- user_pseudo_id; docs/operations/monetization.md, "Team installations").
-  SELECT user_pseudo_id FROM raw WHERE traffic_type = 'development' OR debug_mode = 1
+  -- Exclude all events of developer and team installations, including native automatic events: development or internal
+  -- traffic (the native apps tag TestFlight, Xcode and non-Play installs internal, #3228) or debug mode in the window,
+  -- and the pre-release rule (docs/operations/monetization.md, "Team installations").
+  SELECT user_pseudo_id FROM raw WHERE traffic_type IN ('development', 'internal') OR debug_mode = 1
   UNION DISTINCT SELECT user_pseudo_id FROM prerelease
-  UNION DISTINCT SELECT id FROM UNNEST(@team_installations) AS id
 ), clean AS (
   -- An anti-join: BigQuery rejects NOT IN over a subquery that reads another table.
   SELECT r.* FROM raw r LEFT JOIN excluded x ON x.user_pseudo_id = r.user_pseudo_id

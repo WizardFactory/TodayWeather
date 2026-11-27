@@ -166,99 +166,76 @@ three days. A return counts in either version group, so an update from 1.x
 to 2.x counts as a return when the installation pseudonym survives it (not
 verified on devices). Exclude known developer and team installations: the
 templates drop every event, native automatic events included, of an installation
-pseudonym that carried `traffic_type=development` or integer `debug_mode=1`, that
-ran a native version before its release, or that is on the private team list
+pseudonym that carried `traffic_type=development` or `internal` or integer
+`debug_mode=1`, or that ran a native version before its release
 ([team installations](#team-installations-3228)). Consent loss,
 identity reset/reinstall and filtered samples limit comparison with AdMob.
 
 ### Team installations (#3228)
 
-Release builds send `traffic_type=production` on every install, so the queries
-find team devices by two other means and drop all their events on every date:
+The queries drop all events of a team installation, on every date, by two signals
+(AK, 2026-11-27):
 
-- **Release-date rule** (pre-release builds): the queries' `release_dates` list
-  holds each native version's public store release. An installation that ran a
-  listed version before that release is a team installation, whatever range the
-  query reads: the `prerelease` step reads every daily table since the export
-  began (2026-10-01). It catches TestFlight, Xcode and sideloaded builds and
-  Play's pre-launch test devices before a release. A version with no release
-  time (`NULL`) is unreleased, and every installation that ran it counts.
-- **Private team list** (released builds): `@team_installations` holds the
-  `user_pseudo_id` of team devices that run store builds, which the rule cannot
-  tell from real users, such as an App Store install on a team phone. It also
-  pins down devices the rule found.
+- **`traffic_type=internal`.** It is sent by Release builds with real ad units
+  (debug builds and test units send `development`). On Android, the app is tagged
+  `internal` when the installer that `PackageManager.getInstallSourceInfo()`
+  reports is not Google Play (`com.android.vending`), or when there is none, as
+  with `adb install` or a file manager. A failed read gives `production`. On iOS,
+  the app is tagged `internal` when its bundle carries `embedded.mobileprovision`
+  (Xcode, ad hoc, enterprise; Apple strips it from store downloads), or when the
+  App Store receipt is TestFlight's `sandboxReceipt`. The receipt name comes from
+  `Bundle.appStoreReceiptURL`, deprecated from iOS 18. StoreKit 2's
+  `AppTransaction` was tried first and gave no answer on a TestFlight install on
+  the team iPhone XR (`storekitd`: no context to handle authentication). Both
+  checks run synchronously at launch. An installation that sent `internal` in the
+  window a query reads is dropped entirely, its earlier events included.
+- **Release-date rule.** The queries' `release_dates` list holds each native
+  version's production release. An installation that ran a listed version before
+  that release is a team installation. The `prerelease` step reads every daily
+  table since the export began (2026-10-01), not only the reported range, and no
+  streaming tables. This covers Play testing tracks, whose installs come from Play
+  and are tagged `production`: the [release runbook](android-release.md#7-store-declarations-and-test-tracks)
+  promotes the same APK from internal testing to open testing to production. It
+  also covers TestFlight builds of unreleased versions. A version with no
+  release time (`NULL`) is unreleased, and every installation that ran it counts.
 
-An app-side tag (`traffic_type=internal` from StoreKit `AppTransaction` and the
-Android installer) was tried first and dropped on 2026-11-27 (AK). On a
-TestFlight build on the team iPhone XR, `AppTransaction` gave no answer
-(`storekitd`: no context to handle authentication), so the build still sent
-`production`.
+Known limitations, accepted:
 
-**Release dates.** Add a native version to all three queries when its first
-build is distributed (TestFlight, internal testing, a sideloaded APK), with
-`NULL`. Set its time when it ships, from the store console or the release
-record, and add the source to the table below. A version missing from the list
-is not checked. The time compared is `event_timestamp`, and also `event_date`
-against the release day. GA4's schema page defines `event_timestamp` as the time
-Google Analytics received the event. A sample of this export (native events of
+- Real users on Play's open testing track, and any external TestFlight testers,
+  who ran a version before its production release are excluded too. The open
+  test window is short (AK, 2026-11-27).
+- A team phone running a store build from Play or the App Store sends
+  `production`, and after the release it cannot be told from a real user.
+- Older native builds (Android 2.0.0 and 2.0.1, iOS 2.0.1 to 2.0.3, TestFlight
+  2.0.4 (1) and (2)) send no `internal`. Before their release the release-date
+  rule covers them; after it, sideloaded or TestFlight copies of those versions
+  count as users.
+
+**Release dates.** Add a native version to the list when its first build is
+distributed, with `NULL`. Set its time when production serves it, with the
+source in the table below. These are release steps in the
+[Android runbook](android-release.md#8-production-rollout) and the
+[iOS release section](../../ios/README.md#analytics-release-list). The list is
+repeated in the three queries, because BigQuery runs each template on its own.
+`client/test/monetization.test.cjs` fails when the copies differ or a version has
+no row here. A version missing from the list is not checked.
+
+The time compared is `event_timestamp`, and also `event_date` against the
+release day. GA4's schema page defines `event_timestamp` as the time Google
+Analytics received the event. A sample of this export (native events of
 November, checked 2026-11-27) behaved like device times: timestamps differed per
 event within an installation, and the server offset was a few seconds at most.
 An event dated the release day that was logged before the release time and
-received after it would count as after the release. Builds of a version
-installed outside the store after its release cannot be told from store installs
-by the rule.
+received after it counts as after the release.
 
-| Platform | Version | Public release (KST) | Source |
+| Platform | Version | Production release (KST) | Source |
 | --- | --- | --- | --- |
 | Android | 2.0.0 | 2026-11-20 17:00 | Play Console production release history (read 2026-11-24) |
 | Android | 2.0.1 | 2026-11-24 13:39 | Play Console publishing overview ([GTM log](../../gtm/log.md)) |
 | iOS | 2.0.1 | 2026-11-21 (day only, from 00:00) | Apple lookup API release date ([GTM log](../../gtm/log.md)) |
 | iOS | 2.0.2 | 2026-11-24 (day only, from 00:00) | App Store install of 2.0.2 in the GA4 export at 00:08 KST on 2026-11-24, the version's first day there; the GTM log's 10:48 KST is the phased-release start, not availability |
 | iOS | 2.0.3 | 2026-11-25 00:05:47 | Apple lookup API `currentVersionReleaseDate` 2026-11-24T15:05:47Z (read 2026-11-27) |
-| iOS | 2.0.4 | not released | TestFlight builds (1) and (2); build 2 holds abandoned #3230 code and must not ship |
-
-**The private list.** It lives at `~/.config/todayweather/gtm/team-installations.txt`
-(mode 0600, outside Git, backed up as label `gtm-team-installations` by
-[`scripts/private-inputs.py`](private-inputs.md)). One installation per line:
-`user_pseudo_id`, device, owner, date added and evidence, separated by tabs;
-lines starting with `#` are comments. Never put an ID in Git, a PR or an issue.
-
-To add a device, find its installation in the export by what you know of it, for
-example its model, app version, install source and the days it was used, and
-check that exactly one installation matches:
-
-```sql
-SELECT user_pseudo_id, device.mobile_model_name, device.operating_system_version,
-  app_info.version, app_info.install_source, MIN(event_date) AS first_day, MAX(event_date) AS last_day
-FROM `PROJECT.DATASET.events_*`
-WHERE _TABLE_SUFFIX >= '20261001' AND app_info.id = 'net.wizardfactory.todayweather'
-  AND device.mobile_model_name = 'iPhone XR'
-GROUP BY 1, 2, 3, 4, 5 ORDER BY first_day
-```
-
-`app_info.install_source` is `manual_install` for sideloaded Android installs
-and for iOS installs outside the App Store (TestFlight, Xcode); store installs
-show `com.android.vending` or `iTunes`. It is evidence for one installation, not
-a rule: a real user can sideload an APK. A device's events reach the export
-about a day later, after its daily table is created. A reinstall or data reset gives
-the device a new pseudonym, so add the new one. Then take a new backup
-snapshot.
-
-**Passing the list.** Prefer a query parameter, which keeps the IDs out of the
-query text: with the `bq` CLI, `--parameter='team_installations:ARRAY<STRING>:["id1","id2"]'`
-(Google's documented array syntax; not run here, as this Mac has no `bq`). The
-BigQuery console's query parameters take no `ARRAY` values, so there replace
-`@team_installations` with a literal array, as for the dates. A literal stays in
-the job's query text, which project members with job access can read; the IDs
-are pseudonymous installation IDs of this project. This prints the literal from
-the file, and `ARRAY<STRING>[]` when it has no entry:
-
-```sh
-awk -F'\t' '!/^#/ && NF {printf "%s\x27%s\x27", (n++ ? ", " : "["), $1}
-  END {print (n ? "]" : "ARRAY<STRING>[]")}' ~/.config/todayweather/gtm/team-installations.txt
-```
-
-Both the literal and `ARRAY<STRING>[]` ran on the export on 2026-11-27.
+| iOS | 2.0.4 | not released | TestFlight builds only; builds (2) and later hold unmerged #3228 code and must not ship |
 
 eCPM and ARPDAU come from AdMob earnings, not from BigQuery: ARPDAU = AdMob
 estimated earnings / Firebase active users for the same date range and platform.
