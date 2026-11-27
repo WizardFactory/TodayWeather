@@ -1,0 +1,237 @@
+# Phone gfxinfo per batch (#3224): Galaxy S21+ SM-G996N, Android 15, 60 Hz, 2026-11-27, final candidate
+# Source: `dumpsys gfxinfo net.wizardfactory.todayweather.perf` after each batch; the app-wide statistics (first block). Zero histogram buckets omitted.
+# A-base-verify = master e3bcbe9a7, JIT only; B-after-verify = this change, JIT only; C-after-profile = this change with its packaged profile compiled (speed-profile).
+# br<round><a|b> = 2 warm-up cycles, then 4 cycles of Daily, Air, Locations, Hourly (16 switches); variants alternate A, B, C per round. first-final <n> = one cycle right after `cmd package compile --reset` (and the profile compile for C), no warm-up.
+# Long-frame counts in the evidence doc sum the HISTOGRAM buckets labelled 53 ms and above, 77 ms and above, and 101 ms and above.
+
+## A-base-verify-br1a
+Total frames rendered: 37
+Janky frames: 16 (43.24%)
+50th percentile: 42ms
+90th percentile: 93ms
+95th percentile: 105ms
+99th percentile: 117ms
+Number Slow UI thread: 16
+Number Frame deadline missed: 16
+HISTOGRAM: 5ms=4 6ms=1 9ms=1 14ms=1 16ms=2 19ms=1 24ms=1 28ms=1 32ms=1 34ms=2 36ms=1 40ms=2 42ms=3 44ms=1 46ms=2 48ms=1 53ms=3 57ms=1 73ms=1 77ms=1 81ms=2 93ms=1 97ms=1 105ms=1 117ms=1
+
+## A-base-verify-br1b
+Total frames rendered: 38
+Janky frames: 16 (42.11%)
+50th percentile: 32ms
+90th percentile: 85ms
+95th percentile: 93ms
+99th percentile: 105ms
+Number Slow UI thread: 16
+Number Frame deadline missed: 16
+HISTOGRAM: 5ms=4 8ms=1 10ms=1 12ms=1 13ms=1 14ms=1 20ms=1 23ms=1 26ms=1 27ms=1 28ms=1 29ms=2 31ms=1 32ms=3 34ms=1 36ms=2 40ms=2 42ms=2 44ms=2 53ms=1 61ms=1 69ms=2 85ms=2 89ms=1 93ms=1 105ms=1
+
+## A-base-verify-br2a
+Total frames rendered: 37
+Janky frames: 16 (43.24%)
+50th percentile: 38ms
+90th percentile: 93ms
+95th percentile: 113ms
+99th percentile: 121ms
+Number Slow UI thread: 16
+Number Frame deadline missed: 16
+HISTOGRAM: 5ms=4 10ms=1 12ms=1 13ms=1 14ms=1 16ms=1 21ms=1 25ms=1 29ms=1 31ms=1 34ms=1 36ms=2 38ms=3 40ms=1 42ms=3 44ms=1 46ms=1 53ms=3 57ms=1 65ms=1 77ms=2 85ms=1 93ms=1 109ms=1 113ms=1 121ms=1
+
+## A-base-verify-br2b
+Total frames rendered: 37
+Janky frames: 16 (43.24%)
+50th percentile: 32ms
+90th percentile: 93ms
+95th percentile: 117ms
+99th percentile: 121ms
+Number Slow UI thread: 16
+Number Frame deadline missed: 16
+HISTOGRAM: 5ms=4 7ms=1 8ms=1 11ms=1 15ms=1 17ms=1 19ms=2 22ms=1 24ms=1 26ms=3 27ms=1 32ms=2 34ms=1 38ms=1 40ms=1 42ms=1 44ms=1 46ms=2 48ms=2 57ms=2 65ms=1 69ms=1 77ms=1 93ms=1 113ms=1 117ms=1 121ms=1
+
+## B-after-verify-br1a
+Total frames rendered: 36
+Janky frames: 16 (44.44%)
+50th percentile: 36ms
+90th percentile: 77ms
+95th percentile: 85ms
+99th percentile: 97ms
+Number Slow UI thread: 16
+Number Frame deadline missed: 16
+HISTOGRAM: 5ms=3 6ms=1 8ms=1 10ms=1 12ms=1 15ms=1 24ms=1 26ms=1 30ms=1 31ms=2 32ms=2 34ms=2 36ms=3 38ms=1 40ms=2 44ms=1 46ms=1 53ms=3 65ms=1 69ms=2 73ms=1 77ms=2 85ms=1 97ms=1
+
+## B-after-verify-br1b
+Total frames rendered: 36
+Janky frames: 16 (44.44%)
+50th percentile: 29ms
+90th percentile: 61ms
+95th percentile: 65ms
+99th percentile: 77ms
+Number Slow UI thread: 16
+Number Frame deadline missed: 16
+HISTOGRAM: 5ms=3 6ms=1 13ms=2 14ms=1 16ms=1 17ms=1 19ms=2 21ms=2 25ms=2 26ms=2 27ms=1 29ms=1 30ms=1 32ms=1 36ms=3 38ms=1 46ms=1 48ms=1 53ms=3 57ms=1 61ms=3 65ms=1 77ms=1
+
+## B-after-verify-br2a
+Total frames rendered: 37
+Janky frames: 16 (43.24%)
+50th percentile: 32ms
+90th percentile: 65ms
+95th percentile: 73ms
+99th percentile: 77ms
+Number Slow UI thread: 16
+Number Frame deadline missed: 16
+HISTOGRAM: 5ms=4 8ms=1 11ms=1 12ms=1 15ms=1 18ms=1 19ms=1 21ms=1 22ms=1 23ms=1 26ms=1 27ms=1 28ms=1 30ms=1 31ms=1 32ms=1 36ms=1 38ms=2 40ms=3 48ms=3 57ms=2 61ms=2 65ms=2 69ms=1 73ms=1 77ms=1
+
+## B-after-verify-br2b
+Total frames rendered: 36
+Janky frames: 16 (44.44%)
+50th percentile: 34ms
+90th percentile: 65ms
+95th percentile: 65ms
+99th percentile: 69ms
+Number Slow UI thread: 16
+Number Frame deadline missed: 16
+HISTOGRAM: 5ms=2 6ms=1 8ms=1 10ms=1 12ms=1 14ms=1 17ms=1 20ms=2 24ms=1 25ms=2 27ms=1 29ms=2 30ms=2 34ms=2 36ms=1 38ms=1 40ms=2 44ms=1 46ms=1 48ms=1 53ms=3 61ms=2 65ms=3 69ms=1
+
+## C-after-profile-br1a
+Total frames rendered: 38
+Janky frames: 16 (42.11%)
+50th percentile: 34ms
+90th percentile: 69ms
+95th percentile: 77ms
+99th percentile: 81ms
+Number Slow UI thread: 16
+Number Frame deadline missed: 16
+HISTOGRAM: 5ms=3 6ms=2 7ms=1 9ms=1 10ms=1 11ms=1 18ms=2 21ms=2 23ms=1 26ms=1 30ms=1 31ms=2 32ms=1 34ms=2 36ms=2 38ms=1 40ms=2 44ms=1 48ms=1 53ms=2 57ms=2 65ms=1 69ms=2 73ms=1 77ms=1 81ms=1
+
+## C-after-profile-br1b
+Total frames rendered: 37
+Janky frames: 16 (43.24%)
+50th percentile: 30ms
+90th percentile: 61ms
+95th percentile: 65ms
+99th percentile: 69ms
+Number Slow UI thread: 16
+Number Frame deadline missed: 16
+HISTOGRAM: 5ms=2 6ms=2 7ms=2 10ms=1 11ms=1 13ms=2 15ms=1 19ms=1 20ms=1 22ms=1 23ms=2 24ms=1 26ms=1 30ms=1 31ms=2 32ms=1 36ms=1 38ms=1 40ms=1 42ms=1 46ms=2 48ms=1 57ms=3 61ms=2 65ms=2 69ms=1
+
+## C-after-profile-br2a
+Total frames rendered: 36
+Janky frames: 16 (44.44%)
+50th percentile: 34ms
+90th percentile: 69ms
+95th percentile: 77ms
+99th percentile: 85ms
+Number Slow UI thread: 16
+Number Frame deadline missed: 16
+HISTOGRAM: 5ms=1 6ms=3 8ms=1 10ms=1 12ms=1 16ms=1 22ms=1 23ms=1 26ms=1 27ms=1 28ms=1 31ms=1 32ms=4 34ms=1 36ms=1 38ms=1 40ms=1 42ms=1 44ms=1 48ms=3 53ms=2 61ms=1 65ms=1 69ms=2 73ms=1 77ms=1 85ms=1
+
+## C-after-profile-br2b
+Total frames rendered: 37
+Janky frames: 16 (43.24%)
+50th percentile: 28ms
+90th percentile: 61ms
+95th percentile: 65ms
+99th percentile: 65ms
+Number Slow UI thread: 16
+Number Frame deadline missed: 16
+HISTOGRAM: 5ms=4 7ms=1 15ms=1 17ms=3 18ms=2 19ms=2 21ms=1 25ms=2 26ms=2 28ms=1 29ms=1 30ms=1 31ms=2 32ms=1 34ms=1 36ms=1 44ms=1 48ms=1 53ms=1 57ms=3 61ms=3 65ms=2
+
+## A-base-verify-first1
+Total frames rendered: 9
+Janky frames: 4 (44.44%)
+50th percentile: 61ms
+90th percentile: 117ms
+95th percentile: 117ms
+99th percentile: 117ms
+Number Slow UI thread: 4
+Number Frame deadline missed: 4
+HISTOGRAM: 7ms=1 13ms=1 48ms=1 57ms=1 61ms=1 69ms=1 109ms=1 113ms=1 117ms=1
+
+## A-base-verify-first2
+Total frames rendered: 10
+Janky frames: 4 (40.00%)
+50th percentile: 53ms
+90th percentile: 150ms
+95th percentile: 150ms
+99th percentile: 150ms
+Number Slow UI thread: 4
+Number Frame deadline missed: 4
+HISTOGRAM: 5ms=1 12ms=2 48ms=1 53ms=2 61ms=1 105ms=1 109ms=1 150ms=1
+
+## A-base-verify-first3
+Total frames rendered: 10
+Janky frames: 4 (40.00%)
+50th percentile: 57ms
+90th percentile: 129ms
+95th percentile: 129ms
+99th percentile: 129ms
+Number Slow UI thread: 4
+Number Frame deadline missed: 4
+HISTOGRAM: 5ms=1 8ms=1 11ms=1 42ms=1 53ms=1 57ms=1 65ms=1 109ms=1 121ms=1 129ms=1
+
+## B-after-verify-first1
+Total frames rendered: 9
+Janky frames: 4 (44.44%)
+50th percentile: 48ms
+90th percentile: 113ms
+95th percentile: 113ms
+99th percentile: 113ms
+Number Slow UI thread: 4
+Number Frame deadline missed: 4
+HISTOGRAM: 5ms=1 16ms=1 48ms=3 53ms=1 89ms=2 113ms=1
+
+## B-after-verify-first2
+Total frames rendered: 9
+Janky frames: 4 (44.44%)
+50th percentile: 53ms
+90th percentile: 89ms
+95th percentile: 89ms
+99th percentile: 89ms
+Number Slow UI thread: 4
+Number Frame deadline missed: 4
+HISTOGRAM: 5ms=1 20ms=1 44ms=1 48ms=1 53ms=2 81ms=1 85ms=1 89ms=1
+
+## B-after-verify-first3
+Total frames rendered: 9
+Janky frames: 4 (44.44%)
+50th percentile: 48ms
+90th percentile: 101ms
+95th percentile: 101ms
+99th percentile: 101ms
+Number Slow UI thread: 4
+Number Frame deadline missed: 4
+HISTOGRAM: 5ms=1 19ms=1 46ms=1 48ms=2 65ms=1 89ms=2 101ms=1
+
+## C-after-profile-first1
+Total frames rendered: 9
+Janky frames: 4 (44.44%)
+50th percentile: 29ms
+90th percentile: 53ms
+95th percentile: 53ms
+99th percentile: 53ms
+Number Slow UI thread: 4
+Number Frame deadline missed: 4
+HISTOGRAM: 5ms=1 8ms=1 22ms=1 24ms=1 29ms=1 31ms=1 42ms=1 48ms=1 53ms=1
+
+## C-after-profile-first2
+Total frames rendered: 9
+Janky frames: 4 (44.44%)
+50th percentile: 29ms
+90th percentile: 53ms
+95th percentile: 53ms
+99th percentile: 53ms
+Number Slow UI thread: 4
+Number Frame deadline missed: 4
+HISTOGRAM: 5ms=1 10ms=1 11ms=1 15ms=1 29ms=1 32ms=1 42ms=1 48ms=1 53ms=1
+
+## C-after-profile-first3
+Total frames rendered: 10
+Janky frames: 4 (40.00%)
+50th percentile: 34ms
+90th percentile: 57ms
+95th percentile: 57ms
+99th percentile: 57ms
+Number Slow UI thread: 4
+Number Frame deadline missed: 4
+HISTOGRAM: 5ms=1 12ms=1 13ms=1 25ms=1 28ms=1 34ms=2 46ms=1 53ms=1 57ms=1
+

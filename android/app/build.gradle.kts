@@ -6,6 +6,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 // The Firebase configuration is a private input (README.md). Without it the app builds and runs
@@ -106,6 +107,15 @@ android {
     }
 }
 
+// The app's baseline profile (#3224): :baselineprofile generates it on a connected device by hand
+// (`./gradlew :app:generateBaselineProfile`, android/README.md) and the rules are kept in src/main/generated/baselineProfiles,
+// which every build merges with the libraries' profiles. Building never runs the generator.
+baselineProfile {
+    automaticGenerationDuringBuild = false
+    saveInSrc = true
+    mergeIntoMain = true
+}
+
 // Robolectric's Android runtimes (one per SDK level the tests name in @Config) are fetched by Gradle, kept in
 // android/.gradle/robolectric-runtimes, and read by the tests offline. Left to itself Robolectric downloads them
 // from Maven Central while the tests run, and a refused download fails every Robolectric class (IOException in
@@ -192,6 +202,8 @@ dependencies {
     implementation(libs.firebase.config)
     implementation(libs.firebase.crashlytics)
     implementation(libs.play.services.ads)
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
     implementation(libs.user.messaging.platform)
     implementation(libs.play.services.location)
     implementation(libs.places)

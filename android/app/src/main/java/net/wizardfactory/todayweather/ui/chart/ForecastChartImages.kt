@@ -1,5 +1,6 @@
 package net.wizardfactory.todayweather.ui.chart
 
+import android.app.ActivityManager
 import android.content.Context
 import android.util.LruCache
 import androidx.compose.runtime.Composable
@@ -15,12 +16,18 @@ import net.wizardfactory.todayweather.core.domain.chart.SvgNode
 
 internal val LocalForecastChartImages = staticCompositionLocalOf<ForecastChartImages?> { null }
 
-/** SVG and Daily detail icons shared across forecast visits. Missing paths are retained until eviction. */
+/**
+ * The activity's decoded asset images, shared across tabs and visits: chart SVG images, Daily detail icons and every image
+ * the screens draw through [rememberChartImages] (#3224). Missing paths are retained until eviction.
+ */
 internal class ForecastChartImages(
     maxBytes: Int = 4 * 1024 * 1024,
     private val load: (String) -> ImageBitmap?,
 ) {
-    constructor(context: Context) : this(load = { loadChartImage(context, it) })
+    constructor(context: Context) : this(
+        maxBytes = budgetBytes((context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager)?.memoryClass ?: 0),
+        load = { loadChartImage(context, it) },
+    )
 
     private class Entry(val bitmap: ImageBitmap?)
 
@@ -51,6 +58,13 @@ internal class ForecastChartImages(
         }
         scenes.forEach { scene -> scene.children.forEach(::collect) }
         return buildMap { images.forEach { (href, image) -> if (image != null) put(href, image) } }
+    }
+
+    companion object {
+        private const val MIB = 1024 * 1024
+
+        /** 1/16 of the app's memory class: a session's theme icons (240 px, about 300 KB decoded) fit without thrashing. */
+        fun budgetBytes(memoryClassMb: Int): Int = (memoryClassMb.toLong() * MIB / 16).coerceIn(4L * MIB, 16L * MIB).toInt()
     }
 }
 
