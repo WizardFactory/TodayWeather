@@ -387,7 +387,7 @@ The journeys (`baselineprofile/.../Journeys.kt`) close the access notice and add
 
 ## Private inputs
 
-Private inputs stay out of Git, docs and logs, as in the Cordova build (`npm run release:fetch`). Later sub-issues add them by name only:
+Private inputs stay out of Git, docs and logs, as in the Cordova build (`npm run release:fetch`). They live in `~/.config/todayweather/android/` on the release Mac, and every change to them is backed up to S3 in the same task ([private inputs](../docs/operations/private-inputs.md)). Later sub-issues add them by name only:
 
 - `app/google-services.json`: Firebase configuration for the existing project (push, analytics, Crashlytics, Remote Config). The build applies the Google services plugin only when the file exists; without it Firebase stays uninitialized and the app runs with analytics off.
 - `TW_SERVER_URL` and `TW_WEATHER_PHOTOS_URL` (environment or `android/private.properties`): the legacy server and the weather photo feed. Without them the app makes no requests to them; without the feed the photo theme shows no photo, as Cordova builds from the template configuration.
