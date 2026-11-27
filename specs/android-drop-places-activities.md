@@ -21,7 +21,7 @@ Consumes [intent](../intent/android-drop-places-activities.md) and issue #3235 (
 6. Before/after `assembleRelease` builds use identical environment inputs (with `TW_ADMOB_*` and `TW_PLACES_API_KEY_ANDROID`, without `google-services.json` so Crashlytics upload is not triggered) and compare APK bytes, dex/mapping class counts, and `aapt2 dump resources` counts.
 7. `android/tools/release/check_r8.py` passes on the resulting release APK and mapping file.
 8. `./gradlew assembleDebug test` passes cleanly, keeping `ResourceKeepTest` and `ListenerKeepTest` green.
-9. Emulator smoke (`run-production-start.sh` and `run-production-places.sh`) verifies live Places predictions on an emulator with `TW_PLACES_API_KEY_ANDROID`.
+9. Emulator smoke verifies live Places predictions with `TW_PLACES_API_KEY_ANDROID` on S01 (`run-production-start.sh`) and S02 Locations search (predictions with `powered by Google` and selecting a prediction to open its weather screen; `run-production-places.sh` is left untouched because `ProductionPlacesTest.kt:94` drifted on master in #3180 commit `9f002e901`).
 
 ## Non-goals
 
