@@ -76,8 +76,8 @@ open class TodayWeatherApp : Application() {
 
     /**
      * Usage analytics (#2894), on by default outside the opt-in regions (AK 2026-11-24), started by EarlyStartProvider
-     * before Firebase. Test-unit builds report `development` traffic; release builds `production` when Google Play
-     * installed them and `internal` otherwise (#3228, [TrafficType]).
+     * before Firebase. Test-unit builds report `development` traffic; release builds `internal` when the team sideloaded
+     * them and `production` otherwise (#3228, [TrafficType] lists the installers).
      */
     val analytics: Analytics by lazy {
         Analytics(analyticsSdk(), ConsentStore(this), TrafficType.of(BuildConfig.RELEASE_ADS) { TrafficType.installer(this) }, ::deviceRegion)
