@@ -34,10 +34,11 @@ WITH raw AS (
 ), prerelease AS (
   -- Team installations by rule: any installation that ran a listed version before its release (event time before the
   -- release time, or event date before the release day), in every daily table since the export began (2026-10-01),
-  -- whatever range the query reports: a later table can reveal a team installation for an earlier report.
+  -- whatever range the query reports: a later table can reveal a team installation for an earlier report. Daily
+  -- tables only (an eight-digit suffix), not streaming ones such as events_intraday_*.
   SELECT DISTINCT e.user_pseudo_id FROM `PROJECT.DATASET.events_*` e
   JOIN release_dates u ON u.platform = e.platform AND u.version = e.app_info.version
-  WHERE e._TABLE_SUFFIX >= '20261001'
+  WHERE e._TABLE_SUFFIX >= '20261001' AND REGEXP_CONTAINS(e._TABLE_SUFFIX, r'^[0-9]{8}$')
     AND e.app_info.id = 'net.wizardfactory.todayweather'
     AND (u.released_at IS NULL OR TIMESTAMP_MICROS(e.event_timestamp) < u.released_at
       OR PARSE_DATE('%Y%m%d', e.event_date) < DATE(u.released_at, 'Asia/Seoul'))

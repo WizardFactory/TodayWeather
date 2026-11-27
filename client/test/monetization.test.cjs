@@ -600,7 +600,7 @@ test('reporting queries exclude development, listed team and pre-release install
         assert.match(sql, /SELECT user_pseudo_id FROM raw WHERE traffic_type = 'development' OR debug_mode = 1/, file);
         assert.match(sql, /UNION DISTINCT SELECT id FROM UNNEST\(@team_installations\) AS id/, `${file} reads the private list`);
         assert.match(sql, /UNION DISTINCT SELECT user_pseudo_id FROM prerelease/, file);
-        assert.match(sql, /WHERE e\._TABLE_SUFFIX >= '20261001'\n/, `${file}: the rule reads every table since the export began, past the reported range`);
+        assert.match(sql, /WHERE e\._TABLE_SUFFIX >= '20261001' AND REGEXP_CONTAINS\(e\._TABLE_SUFFIX, r'\^\[0-9\]\{8\}\$'\)\n/, `${file}: every daily table since the export began, past the reported range, no streaming tables`);
         assert.match(sql, /u\.released_at IS NULL OR TIMESTAMP_MICROS\(e\.event_timestamp\) < u\.released_at\s+OR PARSE_DATE\('%Y%m%d', e\.event_date\) < DATE\(u\.released_at, 'Asia\/Seoul'\)/, file);
         assert.match(sql, /LEFT JOIN excluded x ON x\.user_pseudo_id = r\.user_pseudo_id\s+WHERE r\.user_pseudo_id IS NOT NULL AND x\.user_pseudo_id IS NULL/, `${file}: anti-join (BigQuery rejects NOT IN here)`);
         const list = sql.match(/release_dates AS \(([\s\S]*?)\n\), prerelease AS/);
