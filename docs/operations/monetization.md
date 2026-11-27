@@ -244,18 +244,21 @@ about a day later, after its daily table is created. A reinstall or data reset g
 the device a new pseudonym, so add the new one. Then take a new backup
 snapshot.
 
-**Passing the list.** In the BigQuery console, which has no parameter input,
-replace `@team_installations` with a literal array, as for the dates. This
-prints it from the file:
+**Passing the list.** Prefer a query parameter, which keeps the IDs out of the
+query text: with the `bq` CLI, `--parameter='team_installations:ARRAY<STRING>:["id1","id2"]'`
+(Google's documented array syntax; not run here, as this Mac has no `bq`). The
+BigQuery console's query parameters take no `ARRAY` values, so there replace
+`@team_installations` with a literal array, as for the dates. A literal stays in
+the job's query text, which project members with job access can read; the IDs
+are pseudonymous installation IDs of this project. This prints the literal from
+the file, and `ARRAY<STRING>[]` when it has no entry:
 
 ```sh
-awk -F'\t' '!/^#/ && NF {printf "%s\x27%s\x27", (n++ ? ", " : "["), $1} END {print "]"}' \
-  ~/.config/todayweather/gtm/team-installations.txt
+awk -F'\t' '!/^#/ && NF {printf "%s\x27%s\x27", (n++ ? ", " : "["), $1}
+  END {print (n ? "]" : "ARRAY<STRING>[]")}' ~/.config/todayweather/gtm/team-installations.txt
 ```
 
-An empty list is `ARRAY<STRING>[]`. Both forms ran on the export on 2026-11-27.
-With the `bq` CLI, pass `--parameter='team_installations:ARRAY<STRING>:["id1","id2"]'`
-(Google's documented array syntax; not run here, as this Mac has no `bq`).
+Both the literal and `ARRAY<STRING>[]` ran on the export on 2026-11-27.
 
 eCPM and ARPDAU come from AdMob earnings, not from BigQuery: ARPDAU = AdMob
 estimated earnings / Firebase active users for the same date range and platform.
