@@ -80,7 +80,7 @@ class ShareTest {
 
     private fun show(places: List<Place>) {
         memory = Memory(AppState(places = places, placeIndex = 0, units = UnitSettings.defaults("KR")))
-        repository = WeatherRepository("https://server.test.invalid", null, HttpGet { _, _ -> seoulBody }, io = Dispatchers.Unconfined)
+        repository = WeatherRepository("https://server.test.invalid", null, HttpGet { _, _ -> seoulBody }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
         rule.setContent {
             val state by memory.flow.collectAsState()

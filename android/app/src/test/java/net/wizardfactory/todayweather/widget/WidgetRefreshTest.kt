@@ -44,7 +44,7 @@ class WidgetRefreshTest {
 
             val calls = AtomicInteger()
             val repository = WeatherRepository("https://weather.invalid", null,
-                HttpGet { _, _ -> calls.incrementAndGet(); error("offline") }, io = Dispatchers.Unconfined)
+                HttpGet { _, _ -> calls.incrementAndGet(); error("offline") }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
             val renders = mutableListOf<Pair<Int, Boolean>>()
             suspend fun refresh(displayOnly: Boolean = false) = WidgetRefresh.refresh(app, displayOnly, repository) { context, widgetId ->
                 renders += widgetId to WidgetAccess.allowed(context)

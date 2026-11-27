@@ -95,6 +95,8 @@ class WeatherRepository(
     private val clock: () -> Long = System::currentTimeMillis,
     /** Where the file cache is read and written. */
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    /** Where JSON responses are parsed and converted. */
+    private val compute: CoroutineDispatcher = Dispatchers.Default,
     /** `weather_fetch`, as `getWeatherByGeoInfo` reports each request. */
     private val telemetry: Telemetry = Telemetry.NONE,
 ) {
@@ -199,11 +201,13 @@ class WeatherRepository(
         }
         // `$http` parses the body as `JSON.parse` does (the server answers with a JSON content type) and rejects it when it
         // cannot.
-        val parsed = body.mapCatching { NationSource.strictJson(it) }
+        val parsed = body.mapCatching { withContext(compute) { NationSource.strictJson(it) } }
+            .onFailure { if (it is CancellationException) throw it }
         fetched(if (parsed.isFailure) "network_error" else "success", started)
         // An answer to a request a later one replaced counts for nothing, a failure included.
         if (!latest(key, request)) return LoadResult.Superseded
-        val converted = parsed.mapCatching { WeatherConverter.convert(it) }
+        val converted = parsed.mapCatching { withContext(compute) { WeatherConverter.convert(it) } }
+            .onFailure { if (it is CancellationException) throw it }
         val city = converted.getOrNull() ?: return LoadResult.Failed(converted.exceptionOrNull() ?: body.exceptionOrNull(), network = body.isFailure,
             unconvertible = parsed.isSuccess)
         // One answer at a time is stored, and only while it is the latest of its place, so a slower write of an

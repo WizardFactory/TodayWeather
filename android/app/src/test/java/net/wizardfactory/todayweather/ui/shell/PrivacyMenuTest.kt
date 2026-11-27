@@ -86,7 +86,7 @@ class PrivacyMenuTest {
 
     private fun show(banner: Boolean = false, optIn: Boolean = false) {
         val memory = Memory(AppState(places = listOf(seoul), placeIndex = 0, units = UnitSettings.defaults("KR")))
-        val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { _, _ -> seoulBody }, io = Dispatchers.Unconfined)
+        val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { _, _ -> seoulBody }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
         val privacy = PrivacyActions(choice, { value -> chosen += value; if (saves) choice.value = value; saves }, optIn) { onUnavailable ->
             if (!formShows) onUnavailable()

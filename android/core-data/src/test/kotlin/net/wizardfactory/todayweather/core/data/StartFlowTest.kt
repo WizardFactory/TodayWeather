@@ -70,7 +70,8 @@ class StartFlowTest {
         val get = http ?: HttpGet { url, _ -> if ("/geocode/" in url) geocodeBody else seoulBody }
         val recording = HttpGet { url, h -> requests += url; get.get(url, h) }
         val telemetry = Telemetry { name, params -> if (name != "weather_fetch") events += "$name:${params.values.joinToString()}" }
-        val repository = WeatherRepository(base, null, recording, { testScheduler.currentTime }, StandardTestDispatcher(testScheduler))
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val repository = WeatherRepository(base, null, recording, { testScheduler.currentTime }, dispatcher, dispatcher)
         val updated = mutableListOf<Int>()
         val loading = mutableListOf<Boolean>()
         val chosen = mutableListOf<Unit>()

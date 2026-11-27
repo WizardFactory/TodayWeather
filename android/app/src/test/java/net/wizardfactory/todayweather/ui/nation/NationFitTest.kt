@@ -110,10 +110,11 @@ abstract class NationFitTest(private val lang: String) {
             override fun change(update: (AppState) -> AppState) { flow.value = update(flow.value) }
         }
         val repository = WeatherRepository("https://server.test.invalid", null,
-            HttpGet { _, _ -> File(inputs, "kma-seoul.json").readText() }, io = Dispatchers.Unconfined)
+            HttpGet { _, _ -> File(inputs, "kma-seoul.json").readText() }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf(lang) }, { null })
         val nation = NationLoads(NationSource("https://server.test.invalid", HttpGet { _, _ -> File(inputs, "nation.json").readText() },
-            HttpGet { _, _ -> File(inputs, "special.json").readText() }), scope, { memory.current().units }, { listOf(lang) }, { "Asia/Seoul" })
+            HttpGet { _, _ -> File(inputs, "special.json").readText() }, Dispatchers.Unconfined),
+            scope, { memory.current().units }, { listOf(lang) }, { "Asia/Seoul" }, Dispatchers.Unconfined)
         rule.setContent {
             val state by memory.flow.collectAsState()
             val entries by repository.weather.collectAsState()

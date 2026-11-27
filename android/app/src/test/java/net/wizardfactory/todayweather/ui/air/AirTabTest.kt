@@ -103,7 +103,7 @@ class AirTabTest {
                      index: Int = 1) {
         memory = Memory(AppState(places = places, placeIndex = index, units = UnitSettings.defaults("KR"), settings = Settings(startupPage = startupPage)))
         val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { url, _ -> requests += url; body },
-            io = Dispatchers.Unconfined)
+            io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
         // The activity's glyph, as MainActivity gives it to every weather tab.
         val glyph = LocationGlyph(rule.activity) { memory.current().let { s -> s.places.getOrNull(s.placeIndex)?.let(repository::invalidate) } }

@@ -5,11 +5,15 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -151,5 +155,39 @@ class NationSourceTest {
     fun theTimeoutsAreTheCordovaOnes() {
         assertEquals(20_000L, NationSource.NATION_TIMEOUT_MS) // _getHttp(url, 20000)
         assertEquals(3_000L, NationSource.SPECIAL_TIMEOUT_MS) // $http({timeout: 3000})
+    }
+
+    private class Manual : CoroutineDispatcher() {
+        private val tasks = ArrayDeque<Runnable>()
+        override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) { tasks += block }
+        fun pending() = tasks.isNotEmpty()
+        fun runAll() { while (tasks.isNotEmpty()) tasks.removeFirst().run() }
+    }
+
+    /** #3233 AC3: nationwide and special JSON parsing run on the injected compute dispatcher, not the caller's. */
+    @Test
+    fun nationAndSpecialParseOnTheComputeDispatcher() = runTest {
+        val compute = Manual()
+        val source = NationSource("https://server", Fake { nationBody }, Fake { specialBody }, compute)
+
+        val nationLoad = async { source.nation("KR", kr, listOf("ko-KR")) }
+        runCurrent()
+        assertTrue(nationLoad.isActive, "nation() must wait for parse on compute")
+        assertTrue(compute.pending(), "nation() parse must be queued on compute")
+        compute.runAll()
+        runCurrent()
+        assertFalse(compute.pending())
+        val nation = assertIs<PageLoad.Loaded<*>>(nationLoad.await()).value as net.wizardfactory.todayweather.core.model.NationResponse
+        assertEquals(15, nation.weather.size)
+        assertEquals(17, nation.air.size)
+
+        val specialLoad = async { source.special(listOf("ko-KR")) }
+        runCurrent()
+        assertTrue(specialLoad.isActive, "special() must wait for parse on compute")
+        assertTrue(compute.pending(), "special() parse must be queued on compute")
+        compute.runAll()
+        runCurrent()
+        assertFalse(compute.pending())
+        assertEquals(3, (assertIs<PageLoad.Loaded<*>>(specialLoad.await()).value as JsonArray).size)
     }
 }

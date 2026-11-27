@@ -2,15 +2,19 @@ package net.wizardfactory.todayweather.ui.nation
 
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import net.wizardfactory.todayweather.core.data.HttpGet
 import net.wizardfactory.todayweather.core.data.HttpStatusException
 import net.wizardfactory.todayweather.core.data.NationSource
 import net.wizardfactory.todayweather.core.storage.UnitSettings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -29,9 +33,11 @@ class NationLoadsTest {
     private val requests = mutableListOf<String>()
 
     private fun TestScope.loads(nation: suspend () -> String = { nationBody }, special: suspend () -> String = { specialBody },
-                                units: UnitSettings? = UnitSettings.defaults("KR"), language: String = "ko-KR") =
-        NationLoads(NationSource("https://server", HttpGet { url, _ -> requests += url; nation() }, HttpGet { url, _ -> requests += url; special() }),
-            this, { units }, { listOf(language) }, { "Asia/Seoul" })
+                                units: UnitSettings? = UnitSettings.defaults("KR"), language: String = "ko-KR",
+                                compute: CoroutineDispatcher = StandardTestDispatcher(testScheduler)) =
+        NationLoads(NationSource("https://server", HttpGet { url, _ -> requests += url; nation() },
+            HttpGet { url, _ -> requests += url; special() }, StandardTestDispatcher(testScheduler)),
+            this, { units }, { listOf(language) }, { "Asia/Seoul" }, compute)
 
     @Test
     fun aPageLoadsWhenItOpensAndDropsItsAnswerWhenItCloses() = runTest {
@@ -107,5 +113,28 @@ class NationLoadsTest {
         advanceUntilIdle()
         assertEquals(NationPageState.Nation(null), loads.pages.value[NationRoutes.NATION])
         assertTrue(requests.isEmpty())
+    }
+
+    private class Manual : CoroutineDispatcher() {
+        private val tasks = ArrayDeque<Runnable>()
+        override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) { tasks += block }
+        fun pending() = tasks.isNotEmpty()
+        fun runAll() { while (tasks.isNotEmpty()) tasks.removeFirst().run() }
+    }
+
+    /** #3233 AC3: Warnings.parse and WarningCards.cards run on the injected compute dispatcher while states stay on caller. */
+    @Test
+    fun warningCardsBuildOnTheComputeDispatcher() = runTest {
+        val compute = Manual()
+        val loads = loads(compute = compute)
+        loads.open(NationRoutes.WARNINGS)
+        runCurrent()
+        assertEquals(NationPageState.Loading, loads.pages.value[NationRoutes.WARNINGS])
+        assertTrue("warning card building must be queued on compute", compute.pending())
+        compute.runAll()
+        runCurrent()
+        assertFalse(compute.pending())
+        val page = loads.pages.value[NationRoutes.WARNINGS] as NationPageState.Warnings
+        assertEquals("기상특보 2026. 11. 8. 오전 12:00:00", page.cards.first().heading)
     }
 }
