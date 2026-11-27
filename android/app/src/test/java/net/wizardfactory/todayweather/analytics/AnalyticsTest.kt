@@ -652,6 +652,64 @@ class AnalyticsTest {
         }
     }
 
+    /** #3238 CODEX-R2-2: opt-out arriving during suite hand-back under KR default-on must clear collectionEnabled before SUPERSEDED so restart never restores collection. */
+    @Test
+    fun optOutDuringDelayedSuiteHandBackUnderKrDefaultPreventsRestartFromRestoringCollection() {
+        choices.edit().clear().commit()
+        collection.edit().clear().commit()
+        val suite = context.getSharedPreferences(CordovaMigration.SUITE, Context.MODE_PRIVATE)
+        suite.edit().clear().commit()
+        val store = ConsentStore(choices, collection)
+        val writer = HandBackWriter(suite) { store.storedChoice() }
+        writer.write(AppState(places = listOf(Place.currentPositionPlaceholder()), placeIndex = 0))
+
+        val enteredHandBack = CountDownLatch(1)
+        val releaseHandBack = CountDownLatch(1)
+        val sdk = Sdk()
+        val a = Analytics(sdk, store, "development", { "KR" }, onChoiceWritten = {
+            enteredHandBack.countDown()
+            assertTrue(releaseHandBack.await(5, TimeUnit.SECONDS))
+            writer.rewrite()
+        }).also { it.start() }
+        // KR default-on left collectionEnabled=true on disk with no stored choice yet.
+        assertTrue(collection.getBoolean(ConsentStore.ENABLED, false))
+        assertEquals(null, store.storedChoice())
+        sdk.calls.clear()
+
+        val gen1 = a.beginChoice(true)
+        val gen1Outcome = AtomicReference<Analytics.ChoiceOutcome>()
+        val optInThread = thread(name = "opt-in-codex-r2-2") {
+            gen1Outcome.set(a.commitChoice(true, gen1))
+        }
+        try {
+            assertTrue(enteredHandBack.await(5, TimeUnit.SECONDS), "opt-in must enter suite hand-back")
+            // User withdraws before suite commit finishes; process dies before gen2's commitChoice(false, gen2) can run.
+            a.beginChoice(false)
+            assertFalse(a.choice.value)
+            assertFalse(a.collecting.value)
+
+            releaseHandBack.countDown()
+            optInThread.join(5_000)
+            assertEquals(Analytics.ChoiceOutcome.SUPERSEDED, gen1Outcome.get())
+            assertFalse("collection true" in sdk.calls)
+            assertFalse(
+                collection.getBoolean(ConsentStore.ENABLED, true),
+                "superseded opt-in must clear collectionEnabled before returning SUPERSEDED",
+            )
+
+            // Simulate process restart in DE using only what reached disk before gen2 could run.
+            HandBackConsent.beforeStart(context)
+            val restartedSdk = Sdk()
+            val restarted = Analytics(restartedSdk, ConsentStore(choices, collection), "development") { "DE" }.also { it.start() }
+            assertFalse(restarted.choice.value, "restart must not restore collection after withdrawal superseded opt-in")
+            assertFalse(restarted.collecting.value)
+            assertFalse("collection true" in restartedSdk.calls)
+        } finally {
+            releaseHandBack.countDown()
+            optInThread.join(5_000)
+        }
+    }
+
     private class CountingContext(base: Context, private val fileName: String) : android.content.ContextWrapper(base) {
         var commits = 0
         override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences {

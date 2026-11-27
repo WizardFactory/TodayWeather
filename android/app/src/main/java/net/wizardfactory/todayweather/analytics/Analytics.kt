@@ -211,13 +211,14 @@ class Analytics(
             }
         }
         val saved = store.write(value)
-        if (!isCurrent(generation)) return ChoiceOutcome.SUPERSEDED
+        val wroteGrant = saved && value
+        if (!isCurrent(generation)) return superseded(wroteGrant)
         if (saved) {
             val handedBack = runCatching { onChoiceWritten() }.getOrElse { false }
-            if (!isCurrent(generation)) return ChoiceOutcome.SUPERSEDED
+            if (!isCurrent(generation)) return superseded(wroteGrant)
             if (!handedBack) {
                 if (value) {
-                    val superseded = synchronized(stateLock) {
+                    val supersededNow = synchronized(stateLock) {
                         if (choiceGeneration != generation) {
                             true
                         } else {
@@ -229,7 +230,7 @@ class Analytics(
                             false
                         }
                     }
-                    if (superseded) return ChoiceOutcome.SUPERSEDED
+                    if (supersededNow) return superseded(wroteGrant = true)
                     store.recordCollection(false)
                     store.write(false)
                     runCatching { onChoiceWritten() }
@@ -241,11 +242,16 @@ class Analytics(
             }
         }
         val collects = saved && value
-        synchronized(stateLock) {
-            if (choiceGeneration != generation) return ChoiceOutcome.SUPERSEDED
-            choiceFlow.value = collects
-            if (!collects) pendingScreen = null
+        val supersededBeforeApply = synchronized(stateLock) {
+            if (choiceGeneration != generation) {
+                true
+            } else {
+                choiceFlow.value = collects
+                if (!collects) pendingScreen = null
+                false
+            }
         }
+        if (supersededBeforeApply) return superseded(wroteGrant)
         // A grant that was not written keeps the stored choice, also when the SDK then fails (CODEX-3178-23).
         val applied = applyCollection(collects, storeOnFailure = saved || !value, generation = generation)
         when {
@@ -253,6 +259,16 @@ class Analytics(
             applied == ChoiceOutcome.APPLIED && saved -> ChoiceOutcome.APPLIED
             else -> ChoiceOutcome.FAILED
         }
+    }
+
+    /**
+     * When a newer choice supersedes an opt-in that already wrote `"true"` to the choice store, clear `collectionEnabled`
+     * before returning [ChoiceOutcome.SUPERSEDED] so a crash before the newer withdrawal reaches disk cannot restore
+     * collection on restart (for example when a prior default-on session left `collectionEnabled = true`).
+     */
+    private fun superseded(wroteGrant: Boolean): ChoiceOutcome {
+        if (wroteGrant) store.recordCollection(false)
+        return ChoiceOutcome.SUPERSEDED
     }
 
     /** An event of the schema with its own fields only; false when it is dropped or not sent. */
@@ -311,20 +327,25 @@ class Analytics(
         generation: Long? = null,
     ): ChoiceOutcome {
         try {
-            synchronized(stateLock) {
-                if (generation != null && choiceGeneration != generation) return ChoiceOutcome.SUPERSEDED
-                enabled = false
-                collectingFlow.value = false
-                lastScreen = null
-                sdk.setCollectionEnabled(false)
-                sdk.setConsent(value)
+            val supersededAtStart = synchronized(stateLock) {
+                if (generation != null && choiceGeneration != generation) {
+                    true
+                } else {
+                    enabled = false
+                    collectingFlow.value = false
+                    lastScreen = null
+                    sdk.setCollectionEnabled(false)
+                    sdk.setConsent(value)
+                    false
+                }
             }
+            if (supersededAtStart) return superseded(wroteGrant = value)
             if (!value) {
                 store.recordCollection(false)
                 return if (generation != null && !isCurrent(generation)) ChoiceOutcome.SUPERSEDED else ChoiceOutcome.APPLIED
             }
             check(store.recordCollection(true)) { "collection state not written" }
-            val superseded = synchronized(stateLock) {
+            val supersededAfterRecord = synchronized(stateLock) {
                 if (generation != null && choiceGeneration != generation) {
                     enabled = false
                     collectingFlow.value = false
@@ -339,13 +360,10 @@ class Analytics(
                     false
                 }
             }
-            if (superseded) {
-                store.recordCollection(false)
-                return ChoiceOutcome.SUPERSEDED
-            }
+            if (supersededAfterRecord) return superseded(wroteGrant = true)
             return ChoiceOutcome.APPLIED
         } catch (e: Exception) {
-            val superseded = synchronized(stateLock) {
+            val supersededOnError = synchronized(stateLock) {
                 if (generation != null && choiceGeneration != generation) {
                     true
                 } else {
@@ -357,7 +375,7 @@ class Analytics(
                     false
                 }
             }
-            if (superseded) return ChoiceOutcome.SUPERSEDED
+            if (supersededOnError) return superseded(wroteGrant = value)
             Log.w(TAG, "collection write_failed")
             store.recordCollection(false)
             if (storeOnFailure) {

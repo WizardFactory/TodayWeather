@@ -278,15 +278,15 @@ class WeatherRepositoryTest {
         assertIs<LoadResult.Loaded>(fgResult.get())
     }
 
-    /** #3238 CODEX-1: foreground load for the same key completing HTTP (paused on compute) during widget reservation must not be superseded. */
+    /** #3238 CODEX-1 / CODEX-R2-3: foreground load for the same key completing HTTP (paused on compute) during widget reservation must not be superseded. */
     @Test
     fun widgetSkipsWhenForegroundCompletesHttpForSameKeyDuringReservation() {
         val httpCalls = AtomicInteger(0)
-        val compute = Manual()
-        val fgCompletedHttp = CountDownLatch(1)
+        val firstParseQueued = CountDownLatch(1)
+        val compute = Manual(onEnqueue = { firstParseQueued.countDown() })
         val repo = WeatherRepository("https://server.test.invalid", null, { _, _ ->
-            val call = httpCalls.incrementAndGet()
-            if (call == 1) seoulBody else seoulBody
+            httpCalls.incrementAndGet()
+            seoulBody
         }, { now }, io = kotlinx.coroutines.Dispatchers.Unconfined, compute = compute)
         val enteredReserve = CountDownLatch(1)
         val releaseReserve = CountDownLatch(1)
@@ -308,13 +308,9 @@ class WeatherRepositoryTest {
                 fgResult.set(runBlocking { repo.load(seoul, units, listOf("ko"), force = true) })
             }
             // Wait until foreground finishes HTTP (clears inFlightLocations) and queues strictJson on Manual compute.
-            val deadline = System.currentTimeMillis() + 5_000
-            while ((!compute.pending() || repo.loading.value.isNotEmpty()) && System.currentTimeMillis() < deadline) {
-                Thread.sleep(10)
-            }
+            assertTrue(firstParseQueued.await(5, TimeUnit.SECONDS), "foreground parse must be queued on compute")
             assertTrue(compute.pending(), "foreground parse must be queued on compute")
             assertTrue(repo.loading.value.isEmpty(), "foreground HTTP must have completed and cleared inFlightLocations")
-            fgCompletedHttp.countDown()
 
             releaseReserve.countDown()
             widgetThread.join(5_000)
@@ -322,18 +318,15 @@ class WeatherRepositoryTest {
             assertEquals(1, httpCalls.get(), "widget must not send an extra HTTP request")
 
             // Drain foreground parse + convert on Manual compute; foreground must succeed, not be Superseded.
-            val drainDeadline = System.currentTimeMillis() + 5_000
-            while (fgResult.get() == null && System.currentTimeMillis() < drainDeadline) {
-                if (compute.pending()) compute.runFirst() else Thread.sleep(10)
-            }
+            assertTrue(compute.runNext(5_000), "foreground strictJson task must run")
+            assertTrue(compute.runNext(5_000), "foreground WeatherConverter.convert task must run")
             fgThread.join(5_000)
             assertIs<LoadResult.Loaded>(fgResult.get(), "foreground load must succeed and not be superseded")
         } finally {
             releaseReserve.countDown()
             widgetThread.join(5_000)
-            val cleanupDeadline = System.currentTimeMillis() + 2_000
-            while (fgThread?.isAlive == true && System.currentTimeMillis() < cleanupDeadline) {
-                if (compute.pending()) compute.runFirst() else Thread.sleep(10)
+            while (fgThread?.isAlive == true && compute.runNext(200)) {
+                // drain any remaining compute work cleanly
             }
             fgThread?.join(5_000)
         }
@@ -553,14 +546,51 @@ class WeatherRepositoryTest {
         cache.deleteRecursively()
     }
 
-    /** A dispatcher whose tasks run when the test says, in the order it chooses. */
-    private class Manual : kotlinx.coroutines.CoroutineDispatcher() {
+    /** A thread-safe dispatcher whose tasks run when the test says, in the order it chooses. */
+    private class Manual(private val onEnqueue: (() -> Unit)? = null) : kotlinx.coroutines.CoroutineDispatcher() {
+        private val lock = Object()
         private val tasks = ArrayDeque<Runnable>()
-        override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) { tasks += block }
-        fun pending() = tasks.isNotEmpty()
-        fun runFirst() = tasks.removeFirst().run()
-        fun runLast() = tasks.removeLast().run()
-        fun runAll() { while (tasks.isNotEmpty()) tasks.removeFirst().run() }
+
+        override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) {
+            synchronized(lock) {
+                tasks += block
+                lock.notifyAll()
+            }
+            onEnqueue?.invoke()
+        }
+
+        fun pending(): Boolean = synchronized(lock) { tasks.isNotEmpty() }
+
+        fun runFirst() {
+            val task = synchronized(lock) { tasks.removeFirst() }
+            task.run()
+        }
+
+        fun runLast() {
+            val task = synchronized(lock) { tasks.removeLast() }
+            task.run()
+        }
+
+        fun runNext(timeoutMs: Long): Boolean {
+            val deadline = System.currentTimeMillis() + timeoutMs
+            val task = synchronized(lock) {
+                while (tasks.isEmpty()) {
+                    val remaining = deadline - System.currentTimeMillis()
+                    if (remaining <= 0) return false
+                    lock.wait(remaining)
+                }
+                tasks.removeFirst()
+            }
+            task.run()
+            return true
+        }
+
+        fun runAll() {
+            while (true) {
+                val task = synchronized(lock) { if (tasks.isEmpty()) null else tasks.removeFirst() } ?: return
+                task.run()
+            }
+        }
     }
 
     /** #3233 AC1: JSON parsing and WeatherConverter.convert run on the injected compute dispatcher, not the caller's. */

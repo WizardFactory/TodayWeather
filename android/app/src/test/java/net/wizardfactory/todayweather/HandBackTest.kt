@@ -1,6 +1,7 @@
 package net.wizardfactory.todayweather
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Looper
 import androidx.datastore.core.DataStore
 import androidx.test.core.app.ApplicationProvider
@@ -20,6 +21,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import net.wizardfactory.todayweather.analytics.Analytics
 import net.wizardfactory.todayweather.analytics.AnalyticsSdk
 import net.wizardfactory.todayweather.analytics.ConsentStore
 import net.wizardfactory.todayweather.core.storage.AppState
@@ -267,6 +269,130 @@ class HandBackTest {
             assertEquals(5, marker()!!.generation)
         } finally {
             executor.shutdownNow()
+        }
+    }
+
+    /** #3238 CODEX-R2-1: a failed suite commit that mutated SharedPreferences memory must not make the next rewrite() return true. */
+    @Test
+    fun failedSuiteCommitUpdatesMemoryOnlyAndNextRewriteMustNotReportSuccess() {
+        val memorySuite = SplitMemoryDiskPrefs()
+        val choices = context.getSharedPreferences(ConsentStore.CHOICE_FILE, Context.MODE_PRIVATE)
+        val collection = context.getSharedPreferences(ConsentStore.COLLECTION_FILE, Context.MODE_PRIVATE)
+        choices.edit().clear().commit()
+        collection.edit().clear().commit()
+        val store = ConsentStore(choices, collection)
+        val writer = HandBackWriter(memorySuite) { store.storedChoice() }
+        val state = AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1)
+        store.write(false)
+        assertTrue(writer.write(state))
+        assertEquals("false", memorySuite.diskString(CordovaHandBack.CONSENT))
+
+        // Simulate listener/AppStateHolder trying to write while disk fails: memory updates, disk keeps "false".
+        memorySuite.failDisk = true
+        val sdk = object : AnalyticsSdk {
+            val calls = mutableListOf<String>()
+            override fun setCollectionEnabled(enabled: Boolean) { calls += "collection $enabled" }
+            override fun setConsent(analytics: Boolean) { calls += "consent $analytics" }
+            override fun logEvent(name: String, params: Map<String, Any>) {}
+        }
+        val analytics = Analytics(sdk, store, "development", { "DE" }, onChoiceWritten = {
+            // Listener failed first (updating memory only); rewrite() must NOT treat memory match as committed!
+            writer.rewrite()
+        }).also { it.start() }
+        sdk.calls.clear()
+
+        // First trigger a failed write on the listener path right after store.write(true) via a separate failing call:
+        val analyticsWithPriorFailedListener = Analytics(sdk, store, "development", { "DE" }, onChoiceWritten = {
+            assertFalse("first failing suite commit must return false", writer.rewrite())
+            writer.rewrite()
+        })
+        assertFalse(
+            "second rewrite() after a failed commit must retry disk commit and return false",
+            analyticsWithPriorFailedListener.setCollectionEnabled(true),
+        )
+        assertFalse(analyticsWithPriorFailedListener.choice.value)
+        assertFalse(analyticsWithPriorFailedListener.collecting.value)
+        assertFalse("collection true" in sdk.calls)
+        assertEquals("false", memorySuite.diskString(CordovaHandBack.CONSENT))
+
+        // Once disk recovers, rewrite() commits to disk and a restarted process reading disk keeps the grant.
+        memorySuite.failDisk = false
+        assertTrue(analytics.setCollectionEnabled(true))
+        assertEquals("true", memorySuite.diskString(CordovaHandBack.CONSENT))
+        val restartedDiskSuite = memorySuite.diskSnapshotPrefs()
+        assertEquals("true", restartedDiskSuite.getString(CordovaHandBack.CONSENT, null))
+        assertEquals("true", store.storedChoice())
+    }
+
+    /** #3238 CODEX-R2-1: rewrite() before first onSaved(initial) with an existing suite marker must use fallback state or fail safely. */
+    @Test
+    fun rewriteBeforeFirstHandBackWithExistingSuiteMarkerUsesFallbackStateOrFails() {
+        val state = AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1)
+        val store = ConsentStore(context)
+        store.write(false)
+        HandBackWriter(suite) { store.storedChoice() }.write(state)
+        assertEquals("false", suite.getString(CordovaHandBack.CONSENT, null))
+
+        // New process starts: suite already has native marker with "false", user grants before onSaved(initial) runs.
+        store.write(true)
+        val withoutFallback = HandBackWriter(suite) { store.storedChoice() }
+        assertFalse(
+            "rewrite() without any state snapshot must not return true when suite has an existing marker",
+            withoutFallback.rewrite(),
+        )
+        assertEquals("false", suite.getString(CordovaHandBack.CONSENT, null))
+
+        val withFallback = HandBackWriter(suite, { store.storedChoice() }, fallbackState = { state })
+        assertTrue(withFallback.rewrite())
+        assertEquals("true", suite.getString(CordovaHandBack.CONSENT, null))
+    }
+
+    /** SharedPreferences double matching Android SharedPreferencesImpl: commit() updates in-memory map even when disk write fails. */
+    private class SplitMemoryDiskPrefs : SharedPreferences {
+        private val memory = linkedMapOf<String, Any?>()
+        private val disk = linkedMapOf<String, Any?>()
+        var failDisk = false
+
+        fun diskString(key: String): String? = disk[key] as? String
+
+        fun diskSnapshotPrefs(): SharedPreferences = SplitMemoryDiskPrefs().also { copy ->
+            copy.memory.putAll(disk)
+            copy.disk.putAll(disk)
+        }
+
+        override fun getAll(): MutableMap<String, *> = HashMap(memory)
+        override fun getString(key: String, defValue: String?): String? = if (memory.containsKey(key)) memory[key] as? String else defValue
+        override fun getStringSet(key: String, defValues: MutableSet<String>?): MutableSet<String>? = defValues
+        override fun getInt(key: String, defValue: Int): Int = (memory[key] as? Int) ?: defValue
+        override fun getLong(key: String, defValue: Long): Long = (memory[key] as? Long) ?: defValue
+        override fun getFloat(key: String, defValue: Float): Float = (memory[key] as? Float) ?: defValue
+        override fun getBoolean(key: String, defValue: Boolean): Boolean = (memory[key] as? Boolean) ?: defValue
+        override fun contains(key: String): Boolean = memory.containsKey(key)
+        override fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) {}
+        override fun unregisterOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) {}
+
+        override fun edit(): SharedPreferences.Editor = object : SharedPreferences.Editor {
+            private val updates = linkedMapOf<String, Any?>()
+            private var clearAll = false
+            override fun putString(key: String, value: String?) = apply { updates[key] = value }
+            override fun putStringSet(key: String, values: MutableSet<String>?) = apply { updates[key] = values }
+            override fun putInt(key: String, value: Int) = apply { updates[key] = value }
+            override fun putLong(key: String, value: Long) = apply { updates[key] = value }
+            override fun putFloat(key: String, value: Float) = apply { updates[key] = value }
+            override fun putBoolean(key: String, value: Boolean) = apply { updates[key] = value }
+            override fun remove(key: String) = apply { updates[key] = null }
+            override fun clear() = apply { clearAll = true }
+            override fun apply() { commit() }
+            override fun commit(): Boolean {
+                if (clearAll) memory.clear()
+                for ((k, v) in updates) {
+                    if (v == null) memory.remove(k) else memory[k] = v
+                }
+                if (failDisk) return false
+                disk.clear()
+                disk.putAll(memory)
+                return true
+            }
         }
     }
 
