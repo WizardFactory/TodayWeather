@@ -178,9 +178,16 @@ The queries drop all events of a team installation, on every date, by two signal
 
 - **`traffic_type=internal`.** It is sent by Release builds with real ad units
   (debug builds and test units send `development`). On Android, the app is tagged
-  `internal` when the installer that `PackageManager.getInstallSourceInfo()`
-  reports is not Google Play (`com.android.vending`), or when there is none, as
-  with `adb install` or a file manager. A failed read gives `production`. On iOS,
+  `internal` only for the team's sideload paths, by the installer that
+  `PackageManager.getInstallSourceInfo()` reports: none (`adb install -r` on the
+  API 36 emulator recorded none), `com.android.shell`, or a package installer
+  (`com.android.packageinstaller`, `com.google.android.packageinstaller`; an APK
+  opened from Downloads on the emulator recorded the latter). Google Play and
+  every other installer give `production`, because real users arrive through them
+  too: a phone moved with Samsung Smart Switch (believed to report
+  `com.sec.android.easyMover`; not verified on a device), Galaxy Store or another
+  store. An `internal` tag would drop them on every date. A failed read gives
+  `production`. On iOS,
   the app is tagged `internal` when its bundle carries `embedded.mobileprovision`
   (Xcode, ad hoc, enterprise; Apple strips it from store downloads), or when the
   App Store receipt is TestFlight's `sandboxReceipt`. The receipt name comes from
@@ -206,7 +213,9 @@ Known limitations, accepted:
   who ran a version before its production release are excluded too. The open
   test window is short (AK, 2026-11-27).
 - A team phone running a store build from Play or the App Store sends
-  `production`, and after the release it cannot be told from a real user.
+  `production`, and after the release it cannot be told from a real user. So does
+  a team device that installed a released build through another installer
+  outside the Android allowlist.
 - Older native builds (Android 2.0.0 and 2.0.1, iOS 2.0.1 to 2.0.3, TestFlight
   2.0.4 (1) and (2)) send no `internal`. Before their release the release-date
   rule covers them; after it, sideloaded or TestFlight copies of those versions

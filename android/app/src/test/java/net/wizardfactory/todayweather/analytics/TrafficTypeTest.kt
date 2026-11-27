@@ -10,9 +10,9 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * `traffic_type` of the analytics events (#3228): `development` for builds with Google's test units, else `production`
- * for installs from Google Play and `internal` for any other installer or none (sideloaded release builds). A failed
- * read keeps `production`.
+ * `traffic_type` of the analytics events (#3228): `development` for builds with Google's test units, else `internal`
+ * for the team's sideload installers (none, the shell, a package installer) and `production` for Play and any other
+ * installer. A failed read keeps `production`.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -27,12 +27,24 @@ class TrafficTypeTest {
         assertEquals("development", TrafficType.of(releaseAds = false) { error("not read") })
     }
 
+    /** The team's own sideload paths: `adb install` (no installer, or the shell) and a file opened in a package installer. */
     @Test
-    fun releaseBuildsFollowTheInstaller() {
-        assertEquals("production", TrafficType.of(releaseAds = true) { TrafficType.PLAY_STORE })
-        assertEquals("internal", TrafficType.of(releaseAds = true) { "com.sec.android.app.samsungapps" })
-        assertEquals("internal", TrafficType.of(releaseAds = true) { "com.google.android.packageinstaller" })
-        assertEquals("internal", TrafficType.of(releaseAds = true) { null })
+    fun teamInstallersAreInternal() {
+        for (installer in listOf(null, "com.android.shell", "com.android.packageinstaller", "com.google.android.packageinstaller")) {
+            assertEquals("internal", TrafficType.of(releaseAds = true) { installer }, "installer $installer")
+        }
+    }
+
+    /**
+     * Play, and every other installer: real users reach the app through them too (a phone moved with Samsung Smart Switch,
+     * Galaxy Store, another store), and an `internal` tag would drop them from the reports on every date.
+     */
+    @Test
+    fun storesAndDeviceTransferAreProduction() {
+        for (installer in listOf(TrafficType.PLAY_STORE, "com.sec.android.easyMover", "com.sec.android.app.samsungapps",
+            "com.example.store")) {
+            assertEquals("production", TrafficType.of(releaseAds = true) { installer }, "installer $installer")
+        }
     }
 
     @Test

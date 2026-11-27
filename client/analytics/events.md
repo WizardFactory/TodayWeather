@@ -5,9 +5,10 @@ Only the allowlist in `service.monetization.js` is emitted. Custom events carry
 means debug mode or Google test-ad-unit configuration. Firebase native automatic
 events do not carry these custom fields; exclude developer installations/builds
 in downstream queries, not just individual custom events. The native 2.x apps
-also send `internal` (#3228): a Release build installed by an installer other
-than Google Play (Android), or carrying a provisioning profile or TestFlight's
-receipt (iOS). The Cordova builds send `development` or `production` only. The
+also send `internal` (#3228): a Release build installed by the team's sideload
+paths (Android: no installer, the shell or a package installer; other stores and
+device transfer stay `production`), or carrying a provisioning profile or
+TestFlight's receipt (iOS). The Cordova builds send `development` or `production` only. The
 queries also exclude installations that ran a version before its release
 ([team installations](../../docs/operations/monetization.md#team-installations-3228)).
 
