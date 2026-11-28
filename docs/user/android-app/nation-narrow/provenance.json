@@ -1,0 +1,19 @@
+{
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3247",
+  "captured_at_kst": "2026-11-28",
+  "environment": "tw_api36_fold API 36, offline, en-KR, 0.85 font scale, 416×701 dp app window in split screen",
+  "capture": "WindowFitDeviceTest, split-offline-NATIONAL_WEATHER-display.png, original whole-display captures",
+  "before": {
+    "base": "a43ca729139f6cf0f3faf51530d5ec829e74bbd5",
+    "apk_sha256": "d02d4041c89b1efaacb3750b7626883448d73171a49399daf212f8f5694012c6",
+    "image": "screenshots/split-before.png",
+    "image_sha256": "5a12861f71db7942eae01a0a14baa2aec71cad7aa9e11126c915a61514e58794"
+  },
+  "after": {
+    "source": "android/app/src/main/java/net/wizardfactory/todayweather/ui/nation/NationScreens.kt",
+    "source_sha256": "3a8f5f9af6fbb84d1ae17e07bfbb319e300720a057e0f6fb9b8148bc610d8a02",
+    "apk_sha256": "d0fd2af9eee19d3ab0a7e048a3170de30d32a4602a1571498e9e5a55a6cde612",
+    "image": "screenshots/split-after.png",
+    "image_sha256": "d0cda4b36542df3896c146a42ad7c4fd6871f0838f2884341127670d99108da7"
+  }
+}

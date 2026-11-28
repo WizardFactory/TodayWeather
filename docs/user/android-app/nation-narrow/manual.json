@@ -1,0 +1,13 @@
+{
+  "title": "Nationwide weather in a narrow Android window",
+  "scenario": "Open TodayWeather in Korea on a folded phone or in split screen. This example shows an offline map in an English (Korea) app window at a 0.85 system font scale.",
+  "steps": [
+    {
+      "title": "Read the available map modes",
+      "instruction": "Open the menu and choose National Weather. Read the labels above the map. Tap Wind direction/Wind speed to show both measurements for each city when data is available.",
+      "screenshot": "screenshots/split-after.png",
+      "caption": "The three mode labels in the right-hand app pane.",
+      "expected": "The full label stays visible and can wrap when the window is narrow. The offline example shows city names."
+    }
+  ]
+}

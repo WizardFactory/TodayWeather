@@ -35,6 +35,8 @@ The pull-to-refresh page keeps its 19 November capture with sample Seoul weather
 
 [Read the current-temperature supplement](current-temperature/manual.pdf) for the updated fractional reading in the forecast header. Its [editable source](current-temperature/manual.json) uses a Korean Seoul fixture rendered with the native Android Compose screen under Robolectric SDK 34.
 
+[Read the nationwide weather supplement](nation-narrow/manual.pdf) to see how the full mode names wrap in a narrow window. The [editable source](nation-narrow/manual.json) uses the [split-screen capture](nation-narrow/provenance.json) from #3247.
+
 ## Refresh the selected place
 
 On 시간별날씨 (Hourly), 일별날씨 (Daily) or 대기정보 (Air), scroll to the top.
