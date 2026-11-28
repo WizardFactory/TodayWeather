@@ -110,6 +110,7 @@ import net.wizardfactory.todayweather.ui.nation.NationScreen
 import net.wizardfactory.todayweather.ui.settings.SettingsRoutes
 import net.wizardfactory.todayweather.ui.settings.SettingsScreen
 import net.wizardfactory.todayweather.ui.shell.AnalyticsPopup
+import net.wizardfactory.todayweather.ui.shell.AnalyticsWithdrawalProgress
 import net.wizardfactory.todayweather.ui.shell.IonicAlert
 import net.wizardfactory.todayweather.ui.shell.IonicPopup
 import net.wizardfactory.todayweather.ui.shell.MenuRow
@@ -194,6 +195,7 @@ class MainActivity : ComponentActivity() {
             saveFailure = app.analyticsChoices.saveFailure,
             consumeFailure = app.analyticsChoices::consumeFailure,
             onPopupOpened = app.analyticsChoices::onPopupOpened,
+            savingWithdrawal = app.analyticsChoices.savingWithdrawal,
         ) { onUnavailable ->
             opened.consent.openPrivacyOptions(this, ::refreshNativeEligibility, onUnavailable)
         }
@@ -420,7 +422,8 @@ fun AppContent(
     var analyticsPopup by rememberSaveable { mutableStateOf(false) }
     var privacyAlert by rememberSaveable { mutableStateOf<Int?>(null) }
     val saveFailure by (privacy?.saveFailure ?: remember { MutableStateFlow(null) }).collectAsState()
-    val activeSaveFailure = if (analyticsPopup) null else saveFailure
+    val savingWithdrawal by (privacy?.savingWithdrawal ?: remember { MutableStateFlow(false) }).collectAsState()
+    val activeSaveFailure = if (analyticsPopup || savingWithdrawal) null else saveFailure
     val analyticsChoice by (privacy?.choice ?: remember { MutableStateFlow(false) }).collectAsState()
     val applies by session.applies.collectAsState()
     val locating by session.locating.collectAsState()
@@ -520,7 +523,7 @@ fun AppContent(
     val screen = pages.lastOrNull()?.let(::screenName) ?: "tab.${navigation.selected.state}"
     LaunchedEffect(screen) { onScreen(screen) }
     val tabContentVisible = pages.isEmpty() && !navigation.menuOpen && !retry && !startPopup &&
-        positionRetry == null && !about && !intro && !analyticsPopup && privacyAlert == null && activeSaveFailure == null && foregroundMessages.isEmpty()
+        positionRetry == null && !about && !intro && !analyticsPopup && !savingWithdrawal && privacyAlert == null && activeSaveFailure == null && foregroundMessages.isEmpty()
     val selected = navigation.selected
     var forecastRead by remember(selected, state.placeIndex, tabContentVisible) { mutableStateOf(false) }
     LaunchedEffect(selected, tabContentVisible) { if (tabContentVisible) onVisit(selected) }
@@ -647,7 +650,9 @@ fun AppContent(
                         foregroundMessages.removeAt(0)
                     }), onBack = { foregroundMessages.removeAt(0) })
                 }
-                if (analyticsPopup) {
+                if (savingWithdrawal) {
+                    AnalyticsWithdrawalProgress()
+                } else if (analyticsPopup) {
                     // `chooseAnalytics`: back closes it without a choice.
                     fun choose(value: Boolean) {
                         analyticsPopup = false

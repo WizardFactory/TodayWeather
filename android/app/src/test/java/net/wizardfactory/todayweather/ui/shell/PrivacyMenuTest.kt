@@ -9,6 +9,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -105,17 +107,23 @@ class PrivacyMenuTest {
             saveFailure = controller.saveFailure,
             consumeFailure = controller::consumeFailure,
             onPopupOpened = controller::onPopupOpened,
+            savingWithdrawal = controller.savingWithdrawal,
         ) { onUnavailable ->
             if (!formShows) onUnavailable()
         }
     }
 
-    private fun show(banner: Boolean = false, optIn: Boolean = false) {
+    private fun show(
+        banner: Boolean = false,
+        optIn: Boolean = false,
+        waitForSave: suspend () -> Unit = {},
+    ) {
         val memory = Memory(AppState(places = listOf(seoul), placeIndex = 0, units = UnitSettings.defaults("KR")))
         val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { _, _ -> seoulBody }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
         val privacy = controllerPrivacy(optIn = optIn) { value, _ ->
             chosen += value
+            waitForSave()
             if (saves) {
                 choice.value = value
                 Analytics.ChoiceOutcome.APPLIED
@@ -274,6 +282,33 @@ class PrivacyMenuTest {
         inPopup("확인").performClick()
         rule.waitForIdle()
         assertFalse(popupShown())
+    }
+
+    @Test
+    fun aWithdrawalShowsProgressUntilTheChoiceIsSaved() {
+        val release = CompletableDeferred<Unit>()
+        choice.value = true
+        show(waitForSave = { release.await() })
+        openMenu()
+        tapRow(MenuRow.ANALYTICS)
+        inPopup("끄기").performClick()
+        rule.waitForIdle()
+
+        val progress = rule.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo) and
+                hasAnyAncestor(hasTestTag(PopupTags.POPUP)),
+            useUnmergedTree = true,
+        )
+        progress.assertExists()
+        back()
+        progress.assertExists()
+        assertEquals(listOf(false), chosen)
+
+        release.complete(Unit)
+        rule.waitForIdle()
+        progress.assertDoesNotExist()
+        assertFalse(popupShown())
+        inRow(MenuRow.ANALYTICS, "이용 통계 · 꺼짐").assertExists()
     }
 
     /** #3238 AC2: popup closes while async setAnalytics runs off-main, then shows LOC_PRIVACY_SAVE_FAILED on false. */

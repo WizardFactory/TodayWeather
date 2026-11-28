@@ -49,22 +49,28 @@ class AnalyticsChoiceController(
     private var suppressedUpToRequestId = 0L
     private val failureFlow = MutableStateFlow<PrivacySaveFailure?>(null)
 
+    private val withdrawalPending = MutableStateFlow(false)
+
     val saveFailure: StateFlow<PrivacySaveFailure?> = failureFlow.asStateFlow()
+    /** Collection stops at the tap. Keep the UI pending until the background writer finishes. */
+    val savingWithdrawal: StateFlow<Boolean> = withdrawalPending.asStateFlow()
 
     fun submit(value: Boolean) {
         val id = beginChoice(value)
         synchronized(lock) {
-            if (id > latestRequestId) latestRequestId = id
+            if (id <= latestRequestId) return
+            latestRequestId = id
+            withdrawalPending.value = !value
             failureFlow.value = null
         }
         scope.launch(writer) {
             val outcome = commitChoice(value, id)
-            if (outcome == Analytics.ChoiceOutcome.FAILED) {
-                synchronized(lock) {
-                    if (id == latestRequestId && id > suppressedUpToRequestId) {
-                        failureFlow.value = PrivacySaveFailure(id, failureMessageRes)
-                    }
+            synchronized(lock) {
+                if (id != latestRequestId) return@synchronized
+                if (outcome == Analytics.ChoiceOutcome.FAILED && id > suppressedUpToRequestId) {
+                    failureFlow.value = PrivacySaveFailure(id, failureMessageRes)
                 }
+                withdrawalPending.value = false
             }
         }
     }
@@ -98,6 +104,8 @@ class PrivacyActions(
     val consumeFailure: (Long) -> Unit = {},
     /** Suppresses any earlier in-flight save failure when the user reopens the analytics popup. */
     val onPopupOpened: () -> Unit = {},
+    /** Keeps a withdrawal visibly pending until its background save finishes. */
+    val savingWithdrawal: StateFlow<Boolean> = MutableStateFlow(false),
     /** 광고 개인정보 선택; the argument runs when no form can open (`LOC_AD_PRIVACY_UNAVAILABLE`). */
     val openAdPrivacy: (onUnavailable: () -> Unit) -> Unit,
 )

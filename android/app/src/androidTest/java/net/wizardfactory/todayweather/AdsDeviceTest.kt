@@ -2,6 +2,8 @@ package net.wizardfactory.todayweather
 
 import android.graphics.Bitmap
 import android.os.SystemClock
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -14,6 +16,10 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.launch
+import net.wizardfactory.todayweather.analytics.ConsentStore
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.ui.forecast.RETRY_DIALOG
 import net.wizardfactory.todayweather.ui.forecast.ForecastTags
@@ -171,6 +177,50 @@ class AdsDeviceTest {
         }
         capture("opted-in")
         Thread.sleep(3_000)
+    }
+
+    @Test
+    fun aWithdrawalShowsProgressWhileTheWriterIsBusy() {
+        assumeTrue("needs -e ads withdrawal", TestRunner.args.getString("ads") == "withdrawal")
+        rule.closeStartChoice()
+        rule.waitUntil(30_000) { app.appState.current() != null }
+        rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
+        val analyticsRow = rule.onNodeWithTag(ShellTags.row(MenuRow.ANALYTICS))
+        analyticsRow.performScrollTo().performClick()
+        fun popupButton(text: Int) = rule.onNode(
+            hasText(rule.activity.getString(text)) and hasAnyAncestor(hasTestTag(PopupTags.POPUP)),
+            useUnmergedTree = true,
+        )
+        popupButton(R.string.analytics_consent_allow).performClick()
+        rule.waitUntil(5_000) { app.analytics.collecting.value }
+
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val blocker = app.appScope.launch(app.analyticsWriter) {
+            entered.countDown()
+            release.await(20, TimeUnit.SECONDS)
+        }
+        assertTrue("the background writer must be held", entered.await(5, TimeUnit.SECONDS))
+        try {
+            analyticsRow.performClick()
+            popupButton(R.string.analytics_consent_deny).performClick()
+            rule.waitForIdle()
+            assertFalse(app.analytics.collecting.value)
+            assertEquals("true", ConsentStore(app).storedChoice())
+            rule.onNode(
+                SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo) and
+                    hasAnyAncestor(hasTestTag(PopupTags.POPUP)),
+                useUnmergedTree = true,
+            ).assertIsDisplayed()
+            capture("analytics-withdrawal-pending")
+        } finally {
+            release.countDown()
+            blocker.cancel()
+        }
+        rule.waitUntil(5_000) { !app.analyticsChoices.savingWithdrawal.value }
+        assertEquals("false", ConsentStore(app).storedChoice())
+        assertFalse(app.analytics.collecting.value)
+        capture("analytics-withdrawal-saved")
     }
 
     private fun capture(name: String) {
