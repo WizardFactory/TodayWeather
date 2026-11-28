@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -64,7 +63,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
@@ -75,7 +73,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -88,7 +85,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 import kotlin.math.max
-import kotlin.math.roundToInt
 import net.wizardfactory.todayweather.R
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.domain.shell.Theme
@@ -599,30 +595,15 @@ internal fun LineText(text: String, style: TextStyle, modifier: Modifier = Modif
 /** [LineText] of styled text, such as [net.wizardfactory.todayweather.ui.text.chromeRuns]' font runs. */
 @Composable
 internal fun LineText(text: AnnotatedString, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style, maxLines: Int = 1) {
-    val measurer = rememberTextMeasurer()
-    val reference = if (baselineOf.fontFamily == null) AnnotatedString("x") else text
-    val line = remember(baselineOf, reference, measurer) { measurer.measure(reference, baselineOf) }
-    Text(text, modifier.layout { measurable, constraints ->
-        val placeable = measurable.measure(constraints)
-        // Lines of a set height keep it; a line of the font's own height is as tall as one in the style's own font,
-        // so a taller fallback line centers as a Latin one.
-        val height = if (style.lineHeight.isSpecified) placeable.height else line.size.height
-        layout(placeable.width, height) { placeable.place(0, line.firstBaseline.roundToInt() - placeable[FirstBaseline]) }
-    }, maxLines = maxLines, overflow = TextOverflow.Ellipsis, style = style)
+    ShellLine(text, style, modifier, baselineOf, maxLines, outline = null)
 }
 
-/** [text] in [style] with the photo theme's [outline]: four 0.5 dp diagonal shadows (`text-shadow`). */
+/** The text matches the width of its box when the header aligns it across the whole row. */
 @Composable
 internal fun OutlinedText(text: String, style: TextStyle, outline: Color?, modifier: Modifier = Modifier, maxLines: Int = 1, fill: Boolean = false) {
-    // [fill]: the text takes the whole width, so its alignment applies (centered lines of the weather header).
-    val width = if (fill) Modifier.fillMaxWidth() else Modifier
     Box(modifier) {
-        if (outline != null) {
-            for ((dx, dy) in listOf(-0.5f to -0.5f, 0.5f to -0.5f, -0.5f to 0.5f, 0.5f to 0.5f)) {
-                LineText(text, style.copy(color = outline), width.offset(dx.dp, dy.dp), maxLines = maxLines)
-            }
-        }
-        LineText(text, style, width, maxLines = maxLines)
+        ShellLine(AnnotatedString(text), style, if (fill) Modifier.fillMaxWidth() else Modifier,
+            style, maxLines, outline)
     }
 }
 

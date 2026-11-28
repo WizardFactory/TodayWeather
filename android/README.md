@@ -84,6 +84,8 @@ ANDROID_SERIAL=emulator-5570 tools/large-screen/run-shell-fit.sh [out-dir]   # a
 
 It takes the emulator offline while the app is installed and resets the display size, rotation, device state and navigation mode on every exit. The upgrade test below covers the launch continuity.
 
+Photo headers draw their four half-dp shadows from the visible text layout. Icon lines use their own baseline, and other lines share a cache of reference font metrics within the activity. Forecast summaries and air advice wrap at the available width and position the platform paragraph’s lines on the fixed CSS baselines. The air face uses its inline placeholder for positioning and can extend past its line when the system font is small.
+
 ## Weather pages (AN-08)
 
 Hourly (S03) and Daily (S04), from `tab-forecast.html`, `tab-dailyforecast.html`, ForecastCtrl, TabCtrl, WeatherUtil and WeatherInfo (#2887):

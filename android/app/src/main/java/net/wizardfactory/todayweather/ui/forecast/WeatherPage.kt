@@ -27,6 +27,9 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -55,13 +58,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.text.withStyle
@@ -100,6 +104,9 @@ import net.wizardfactory.todayweather.ui.shell.FixedLine
 import net.wizardfactory.todayweather.ui.shell.Icon
 import net.wizardfactory.todayweather.ui.shell.LineText
 import net.wizardfactory.todayweather.ui.shell.OutlinedText
+import net.wizardfactory.todayweather.ui.shell.HeaderParagraph
+import net.wizardfactory.todayweather.ui.shell.outlineOffsets
+import net.wizardfactory.todayweather.ui.shell.referenceLine
 import net.wizardfactory.todayweather.ui.shell.line
 import net.wizardfactory.todayweather.ui.text.CssMetrics
 import net.wizardfactory.todayweather.ui.text.CssText
@@ -253,9 +260,7 @@ private fun MainBox(page: ForecastPage, metrics: ChartMetrics, theme: Theme, col
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         val hero = page.hero ?: return@Column
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Outlined(colors.headerOutline) { color, offset ->
-                Temperature(hero.temperature, metrics.bigFontSize, color ?: colors.headerText, offset)
-            }
+            Temperature(hero.temperature, metrics.bigFontSize, colors.headerText, colors.headerOutline)
             ThemeImage(hero.sky, theme, metrics.bigImageSize.dp)
         }
         if (hero.rankedSummary) {
@@ -283,21 +288,37 @@ internal fun temperatureNumber(value: String, size: Double): AnnotatedString = b
  * (`vertical-align: super`) without making the line taller, as in the WebView.
  */
 @Composable
-private fun Temperature(value: String, size: Double, color: Color, modifier: Modifier) {
+internal fun Temperature(value: String, size: Double, color: Color, outline: Color?) {
     val style = plain(size.sp, color, FontWeight.Light)
+    val layers = if (outline != null) remember { TemperatureLayers() } else null
+    val modifier = if (outline == null || layers == null) Modifier else Modifier.drawBehind {
+        // The CSS temperature uses absolute offsets. Both shadows sit behind both foreground runs.
+        outlineOffsets(relative = false) { x, y ->
+            layers.number?.let { drawText(it, outline, Offset(x, y)) }
+            layers.degree?.let { drawText(it, outline, layers.degreeOrigin + Offset(x, y)) }
+        }
+    }
     Layout(content = {
-        Text(temperatureNumber(value, size), style = style)
-        Text("˚", style = style.copy(fontSize = (size / 2).sp))
+        Text(temperatureNumber(value, size), style = style, onTextLayout = { layers?.number = it })
+        Text("˚", style = style.copy(fontSize = (size / 2).sp), onTextLayout = layers?.let { runs -> { layout -> runs.degree = layout } })
     }, modifier = modifier) { (number, sign), constraints ->
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val n = number.measure(loose)
         val s = sign.measure(loose)
         val raise = (size / 3).sp.toPx()
+        val degreeTop = (n[FirstBaseline] - raise - s[FirstBaseline]).roundToInt()
+        layers?.degreeOrigin = Offset(n.width.toFloat(), degreeTop.toFloat())
         layout(n.width + s.width, n.height) {
             n.place(0, 0)
-            s.place(n.width, (n[FirstBaseline] - raise - s[FirstBaseline]).roundToInt())
+            s.place(n.width, degreeTop)
         }
     }
+}
+
+private class TemperatureLayers {
+    var number by mutableStateOf<TextLayoutResult?>(null)
+    var degree by mutableStateOf<TextLayoutResult?>(null)
+    var degreeOrigin by mutableStateOf(Offset.Zero)
 }
 
 /**
@@ -306,23 +327,11 @@ private fun Temperature(value: String, size: Double, color: Color, modifier: Mod
  */
 @Composable
 internal fun Summary(text: String, colors: ForecastColors, modifier: Modifier) {
-    val measurer = rememberTextMeasurer()
     val style = line(21.sp, TextUnit.Unspecified, colors.headerText).copy(textMotion = TextMotion.Animated)
-    BoxWithConstraints(modifier.fillMaxWidth()) {
-        val width = constraints.maxWidth
-        val lines = remember(text, style, width, measurer) {
-            val layout = measurer.measure(text, style, constraints = androidx.compose.ui.unit.Constraints(maxWidth = width))
-            (0 until layout.lineCount).map { text.substring(layout.getLineStart(it), layout.getLineEnd(it, visibleEnd = true)) }
-        }
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            for (line in lines) {
-                // The glyphs may reach past the 24 sp line, as in CSS: the text keeps its own height, centered on it.
-                FixedLine(with(LocalDensity.current) { 24.sp.toDp() }) {
-                    OutlinedText(line, style, colors.headerOutline, Modifier.wrapContentHeight(unbounded = true))
-                }
-            }
-        }
-    }
+    val reference = referenceLine(AnnotatedString("x"), style)
+    val height = with(LocalDensity.current) { 24.sp.roundToPx() }
+    val baseline = reference.firstBaseline.roundToInt() + ((height - reference.size.height) / 2f).roundToInt()
+    HeaderParagraph(AnnotatedString(text), style, modifier, height, baseline, colors.headerOutline)
 }
 
 /**
@@ -631,19 +640,6 @@ internal fun glyphStyle(size: TextUnit, color: Color, family: FontFamily) = plai
 /** `box-shadow: 0 1px 1px rgba(0, 0, 0, .1)` under a card. */
 internal fun Modifier.cardShadow() = drawBehind {
     drawRect(Color(0x14000000), Offset(0f, size.height), Size(size.width, 1.dp.toPx()))
-}
-
-/** [content] with the photo theme's [outline] around it (four 0.5 dp diagonal copies, `text-shadow`). */
-@Composable
-private fun Outlined(outline: Color?, content: @Composable (Color?, Modifier) -> Unit) {
-    Box {
-        if (outline != null) {
-            for ((dx, dy) in listOf(-0.5f to -0.5f, 0.5f to -0.5f, -0.5f to 0.5f, 0.5f to 0.5f)) {
-                content(outline, Modifier.layout { m, c -> val p = m.measure(c); layout(p.width, p.height) { p.place(dx.dp.roundToPx(), dy.dp.roundToPx()) } })
-            }
-        }
-        content(null, Modifier)
-    }
 }
 
 /** Ionic's swipe on the header block: a horizontal fling of at least 0.4 dp/ms; left shows the next place. */

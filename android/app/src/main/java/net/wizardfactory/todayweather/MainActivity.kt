@@ -40,6 +40,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -101,6 +102,7 @@ import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.chart.ForecastChartImages
 import net.wizardfactory.todayweather.ui.chart.LocalForecastChartImages
+import net.wizardfactory.todayweather.ui.shell.LocalLineMeasurer
 import net.wizardfactory.todayweather.ui.chart.LocalPreparedCharts
 import net.wizardfactory.todayweather.ui.chart.PreparedChartCache
 import net.wizardfactory.todayweather.ui.forecast.ForecastCharts
@@ -210,7 +212,8 @@ class MainActivity : ComponentActivity() {
             val link by opened.links.requests.collectAsState()
             // The start page closed in this app open: the tabs open on Hourly (`close()`).
             var afterStart by rememberSaveable { mutableStateOf(false) }
-            state?.let { s ->
+            val s = state ?: return@setContent
+            CompositionLocalProvider(LocalLineMeasurer provides rememberTextMeasurer(cacheSize = 64)) {
                 if (s.startShows && previewPlace == null) {
                     LaunchedEffect(Unit) {
                         afterStart = true
@@ -219,7 +222,7 @@ class MainActivity : ComponentActivity() {
                     StartScreen(opened.start, app.places, { app.towns.await() }, onExit = ::finish,
                         openAppSettings = { AndroidLocationAccess.openAppSettings(this) },
                         openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) })
-                    return@let
+                    return@CompositionLocalProvider
                 }
                 val entries by app.weather.weather.collectAsState()
                 val loading by app.weather.loading.collectAsState()

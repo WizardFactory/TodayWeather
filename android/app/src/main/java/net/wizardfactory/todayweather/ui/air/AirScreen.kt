@@ -34,7 +34,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
@@ -45,7 +44,7 @@ import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
+import net.wizardfactory.todayweather.ui.shell.HeaderParagraph
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.text.style.TextOverflow
@@ -237,10 +236,9 @@ private fun MainBox(main: AirMain, metrics: ChartMetrics, theme: Theme, colors: 
  * it: the first font's ascent (a rounded-down descent borrowing a pixel) plus half the leading, rounded down.
  */
 @Composable
-private fun GradeLine(main: AirMain, color: Color, text: Color) {
+internal fun GradeLine(main: AirMain, color: Color, text: Color) {
     val density = LocalDensity.current
     val face = "face"
-    val faceStart = if (main.lead.isNotEmpty()) main.lead.length + 1 else 0
     val annotated = remember(main) {
         buildAnnotatedString {
             if (main.lead.isNotEmpty()) append(main.lead + " ")
@@ -250,7 +248,6 @@ private fun GradeLine(main: AirMain, color: Color, text: Color) {
     }
     // Unhinted advances, as the weather pages' text: the WebView's widths.
     val style = line(21.sp, TextUnit.Unspecified, text).copy(textMotion = TextMotion.Animated)
-    val measurer = rememberTextMeasurer()
     val lineHeight = with(density) { 24.sp.roundToPx() }
     val font = remember(density) { CssMetrics.line(AnnotatedString("x"), style, style, density, borrow = true) }
     val baseline = font.ascent + Math.floorDiv(lineHeight - font.ascent - font.descent, 2)
@@ -258,27 +255,10 @@ private fun GradeLine(main: AirMain, color: Color, text: Color) {
     // own, possibly nonlinear, conversion). It stands on the baseline in the text and is moved down to the line's top.
     val size = with(density) { 24.dp.toSp() }
     val placeholder = Placeholder(size, size, PlaceholderVerticalAlign.AboveBaseline)
-    val inline = mapOf(face to InlineTextContent(placeholder) {
-        Box(Modifier.layout { measurable, constraints ->
-            val p = measurable.measure(constraints)
-            layout(p.width, p.height) { p.place(0, p.height - baseline) }
-        }) { Icon { Text(main.glyph, style = glyphStyle(24.sp, color, Glyphs.materialIcons)) } }
-    })
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val width = constraints.maxWidth
-        val lines = remember(annotated, style, width, measurer, placeholder) {
-            val layout = measurer.measure(annotated, style, constraints = Constraints(maxWidth = width),
-                placeholders = listOf(AnnotatedString.Range(placeholder, faceStart, faceStart + main.glyph.length)))
-            (0 until layout.lineCount).map { layout.getLineStart(it) to layout.getLineEnd(it, visibleEnd = true) }
-        }
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            for ((start, end) in lines) {
-                Text(annotated.subSequence(start, end), Modifier.layout { measurable, constraints ->
-                    val placeable = measurable.measure(constraints)
-                    layout(placeable.width, lineHeight) { placeable.place(0, baseline - placeable[FirstBaseline]) }
-                }, style = style, inlineContent = inline, maxLines = 1)
-            }
-        }
+    val inline = mapOf(face to InlineTextContent(placeholder) {})
+    val faceStart = if (main.lead.isEmpty()) 0 else main.lead.length + 1
+    HeaderParagraph(annotated, style, Modifier, lineHeight, baseline, inline = inline, faceStart = faceStart) {
+        Icon { Text(main.glyph, style = glyphStyle(24.sp, color, Glyphs.materialIcons)) }
     }
 }
 
