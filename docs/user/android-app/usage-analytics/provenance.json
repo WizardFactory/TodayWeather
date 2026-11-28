@@ -7,17 +7,17 @@
     "font_for_pdf": "Arial Unicode TTF, not distributed"
   },
   "manual_sha256": "06b08c113144d7d8b7a138ee0a95d7b7f49283498ca7e4e4e8c5b07669944976",
-  "pdf_sha256": "658fef21348c23919005a69e9bbd452799ab02cb09ac328a879ebd12e1f83faa",
+  "pdf_sha256": "0679dbfde1be8720dc5a2f51f70ca870345522a25478110764bc45aeb7db51a3",
   "screenshots": {
     "analytics-withdrawal-pending.png": {
-      "sha256": "8df9dec29a48e7f4c0dd2244a9c843cf9cd8f2bebe8262b56337415235f437a5",
+      "sha256": "adec6eb19ae9dab9d399ecfc18d182761e8d904704606d3e2749dea0c6a439be",
       "size": [
         1080,
         2400
       ]
     },
     "analytics-withdrawal-saved.png": {
-      "sha256": "143c53c8da95320c9b69bac5f854c9ba844837dff6479f860315496ce2cce495",
+      "sha256": "64a66ea52881d8d69783daeb41ad57c6f84c8e35bead12c2c61738bc8453f1d0",
       "size": [
         1080,
         2400
@@ -25,11 +25,11 @@
     }
   },
   "sources": {
-    "android/app/src/main/java/net/wizardfactory/todayweather/Handoff.kt": "b6a004ff672edcccad1cec4b9520cc4fb1d5c8b3704327abd6a6a58306f037bd",
+    "android/app/src/main/java/net/wizardfactory/todayweather/Handoff.kt": "f8e35d8a5c84329366bda6d92b27df93640527296103a484b05f1fc284b14293",
     "android/app/src/main/java/net/wizardfactory/todayweather/MainActivity.kt": "5dfd514e53712b0ba5ed41e5f7c4a59ce84a93ff59994528d9c2e4c55e591d89",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/AnalyticsPopup.kt": "0697a795663f328387d019238c25918110f0a98e560409f079946bc64af59761",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Popup.kt": "b9902e4bae319182e85063f5f1859a69677e4a359aa73f16664b9d38ec17b034",
     "android/app/src/main/java/net/wizardfactory/todayweather/analytics/Analytics.kt": "a7cf691c7aec7a4de9c9a3995e8980f6a3cfbbc2ae80a377499e1bc0dc39dff8",
-    "android/app/src/androidTest/java/net/wizardfactory/todayweather/AdsDeviceTest.kt": "064f20a26dc045857d8e6d74ac94ad1db9ada4d3489f51c51ecf1c7f00e94415"
+    "android/app/src/androidTest/java/net/wizardfactory/todayweather/AdsDeviceTest.kt": "fd45d88e856a1bac5eaeb7c97b62e5503dd116ebd75f13b776cc4cf194294948"
   }
 }

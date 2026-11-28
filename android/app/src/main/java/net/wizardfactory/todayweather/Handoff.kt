@@ -5,7 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Browser
+import android.util.Log
 import android.webkit.WebSettings
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,13 +66,22 @@ class AnalyticsChoiceController(
             failureFlow.value = null
         }
         scope.launch(writer) {
-            val outcome = commitChoice(value, id)
-            synchronized(lock) {
-                if (id != latestRequestId) return@synchronized
-                if (outcome == Analytics.ChoiceOutcome.FAILED && id > suppressedUpToRequestId) {
-                    failureFlow.value = PrivacySaveFailure(id, failureMessageRes)
+            var failed = false
+            try {
+                failed = commitChoice(value, id) == Analytics.ChoiceOutcome.FAILED
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                failed = true
+                Log.w("TwAnalytics", "choice persistence failed")
+            } finally {
+                synchronized(lock) {
+                    if (id != latestRequestId) return@synchronized
+                    if (failed && id > suppressedUpToRequestId) {
+                        failureFlow.value = PrivacySaveFailure(id, failureMessageRes)
+                    }
+                    withdrawalPending.value = false
                 }
-                withdrawalPending.value = false
             }
         }
     }

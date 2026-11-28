@@ -225,9 +225,20 @@ class AdsDeviceTest {
             blocker.cancel()
         }
         rule.waitUntil(5_000) { !app.analyticsChoices.savingWithdrawal.value }
+        rule.waitForIdle()
+        assertEquals(null, app.analyticsChoices.saveFailure.value)
+        rule.onNodeWithTag(PopupTags.POPUP).assertDoesNotExist()
         assertEquals("false", ConsentStore(app).storedChoice())
         assertFalse(app.analytics.collecting.value)
         capture("analytics-withdrawal-saved")
+    }
+
+    @Test
+    fun aSavedWithdrawalRemainsOffInANewProcess() {
+        assumeTrue("needs -e ads withdrawal-restart after the withdrawal test", TestRunner.args.getString("ads") == "withdrawal-restart")
+        assertEquals("false", ConsentStore(app).storedChoice())
+        assertFalse(app.analytics.choice.value)
+        assertFalse(app.analytics.collecting.value)
     }
 
     private fun capture(name: String) {

@@ -26,6 +26,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -91,13 +92,14 @@ class PrivacyMenuTest {
 
     private fun controllerPrivacy(
         optIn: Boolean = false,
+        saveScope: CoroutineScope = scope,
         commit: suspend (Boolean, Long) -> Analytics.ChoiceOutcome,
     ): PrivacyActions {
         var nextId = 0L
         val controller = AnalyticsChoiceController(
             beginChoice = { ++nextId },
             commitChoice = commit,
-            scope = scope,
+            scope = saveScope,
             writer = Dispatchers.Main.immediate,
         )
         return PrivacyActions(
@@ -117,11 +119,12 @@ class PrivacyMenuTest {
         banner: Boolean = false,
         optIn: Boolean = false,
         waitForSave: suspend () -> Unit = {},
+        saveScope: CoroutineScope = scope,
     ) {
         val memory = Memory(AppState(places = listOf(seoul), placeIndex = 0, units = UnitSettings.defaults("KR")))
         val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { _, _ -> seoulBody }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
-        val privacy = controllerPrivacy(optIn = optIn) { value, _ ->
+        val privacy = controllerPrivacy(optIn = optIn, saveScope = saveScope) { value, _ ->
             chosen += value
             waitForSave()
             if (saves) {
@@ -309,6 +312,31 @@ class PrivacyMenuTest {
         progress.assertDoesNotExist()
         assertFalse(popupShown())
         inRow(MenuRow.ANALYTICS, "이용 통계 · 꺼짐").assertExists()
+    }
+
+    @Test
+    fun aWithdrawalWriteExceptionClosesProgressAndShowsTheFailure() {
+        val release = CompletableDeferred<Unit>()
+        val uncaught = mutableListOf<Throwable>()
+        choice.value = true
+        show(
+            waitForSave = { release.await(); error("preference editor failed") },
+            saveScope = CoroutineScope(scope.coroutineContext + CoroutineExceptionHandler { _, failure -> uncaught += failure }),
+        )
+        openMenu()
+        tapRow(MenuRow.ANALYTICS)
+        inPopup("끄기").performClick()
+        rule.waitForIdle()
+        assertTrue(popupShown())
+
+        release.complete(Unit)
+        rule.waitForIdle()
+        inPopup("TodayWeather").assertExists()
+        rule.onNodeWithText("개인정보 설정을 완전히 적용하지 못했습니다. 다시 시도해 주세요.").assertExists()
+        assertTrue(uncaught.isEmpty())
+        inPopup("확인").performClick()
+        rule.waitForIdle()
+        assertFalse(popupShown())
     }
 
     /** #3238 AC2: popup closes while async setAnalytics runs off-main, then shows LOC_PRIVACY_SAVE_FAILED on false. */
