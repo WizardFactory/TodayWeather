@@ -13,6 +13,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
@@ -183,8 +185,13 @@ class AdsDeviceTest {
     fun aWithdrawalShowsProgressWhileTheWriterIsBusy() {
         assumeTrue("needs -e ads withdrawal", TestRunner.args.getString("ads") == "withdrawal")
         rule.closeStartChoice()
+        ScreenFitWalk(rule).seed()
         rule.waitUntil(30_000) { app.appState.current() != null }
         rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
+        rule.runOnIdle {
+            val window = rule.activity.window
+            WindowCompat.getInsetsController(window, window.decorView).hide(WindowInsetsCompat.Type.ime())
+        }
         val analyticsRow = rule.onNodeWithTag(ShellTags.row(MenuRow.ANALYTICS))
         analyticsRow.performScrollTo().performClick()
         fun popupButton(text: Int) = rule.onNode(

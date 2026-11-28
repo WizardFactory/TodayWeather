@@ -1,0 +1,20 @@
+{
+  "title": "TodayWeather for Android · Withdraw usage analytics",
+  "scenario": "An Android device in an opt-in region, with usage analytics previously allowed. The screenshots show the app in English.",
+  "steps": [
+    {
+      "title": "Withdraw permission",
+      "instruction": "Open the side menu, select Usage analytics, and choose Decline / withdraw.",
+      "screenshot": "analytics-withdrawal-pending.png",
+      "caption": "The Usage analytics dialog shows progress while the app saves your choice.",
+      "expected": "Collection stops immediately. Wait for the progress dialog to close."
+    },
+    {
+      "title": "Confirm the saved choice",
+      "instruction": "Check the Usage analytics row in the side menu after the progress dialog closes.",
+      "screenshot": "analytics-withdrawal-saved.png",
+      "caption": "The row shows Off after the withdrawal is saved.",
+      "expected": "Usage analytics stays off after a restart. If the app shows a save error, repeat the withdrawal."
+    }
+  ]
+}
