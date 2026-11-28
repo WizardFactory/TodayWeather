@@ -101,7 +101,7 @@ abstract class ForecastFitTest(private val lang: String) {
             override fun change(update: (AppState) -> AppState) { flow.value = update(flow.value) }
         }
         val repository = WeatherRepository("https://server.test.invalid", null,
-            HttpGet { url, _ -> if ("51.51" in url) File(inputs, "vc-london.json").readText() else pollenFixture() }, io = Dispatchers.Unconfined)
+            HttpGet { url, _ -> if ("51.51" in url) File(inputs, "vc-london.json").readText() else pollenFixture() }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf(lang) }, { null })
         rule.setContent {
             val state by memory.flow.collectAsState()

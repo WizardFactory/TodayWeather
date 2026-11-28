@@ -15,8 +15,19 @@ import net.wizardfactory.todayweather.core.storage.CordovaMigration
  * one; a state whose texts the suite already holds under a native marker is not written again. A key the plugin stored
  * with its JSON-type flag loses the flag, as the plugin does when it stores a string.
  */
-class HandBackWriter(private val suite: SharedPreferences, private val consent: () -> String?) {
+class HandBackWriter(
+    private val suite: SharedPreferences,
+    private val consent: () -> String?,
+    private val fallbackState: () -> AppState?,
+) {
+    constructor(suite: SharedPreferences, consent: () -> String?) : this(suite, consent, { null })
     private var last: AppState? = null
+
+    /**
+     * Tracks whether the last suite `commit()` failed. Android's `SharedPreferencesImpl` updates its in-memory map
+     * even when `commit()` returns false, so after a failed write the next call must not skip `commit()` via [unchanged].
+     */
+    private var lastCommitFailed = false
 
     /**
      * Held here: SharedPreferences keeps its listeners only weakly. Nothing reads the field, so R8 would remove it and the
@@ -33,7 +44,7 @@ class HandBackWriter(private val suite: SharedPreferences, private val consent: 
         val texts = CordovaHandBack.texts(state, consent())
         val stored = runCatching { suite.getString(CordovaHandBack.MARKER, null) }.getOrNull()
         val current = CordovaHandBack.parse(stored)
-        val unchanged = current != null && current.writer == CordovaHandBack.NATIVE && current.complete &&
+        val unchanged = !lastCommitFailed && current != null && current.writer == CordovaHandBack.NATIVE && current.complete &&
             texts.all { (key, text) -> runCatching { suite.getString(key, null) }.getOrNull() == text && !suite.contains("_${key}_type") }
         if (unchanged) return true
         val editor = suite.edit()
@@ -42,12 +53,24 @@ class HandBackWriter(private val suite: SharedPreferences, private val consent: 
             editor.remove("_${key}_type")
         }
         editor.putString(CordovaHandBack.MARKER, CordovaHandBack.marker(CordovaHandBack.nextGeneration(stored), CordovaHandBack.NATIVE))
-        return editor.commit().also { if (!it) Log.w(TAG, "hand-back write failed") }
+        val ok = editor.commit()
+        lastCommitFailed = !ok
+        if (!ok) Log.w(TAG, "hand-back write failed")
+        return ok
     }
 
-    /** Hands the last saved state back again after a consent change; nothing before the first saved state. */
+    /**
+     * Hands the last saved state back again after a consent change. Before the first [write], falls back to
+     * [fallbackState]; if no state snapshot exists yet, returns true only when the suite has no hand-back marker that
+     * [HandBackConsent] would enforce on the next start.
+     */
     @Synchronized
-    fun rewrite(): Boolean = last?.let(::write) ?: true
+    fun rewrite(): Boolean {
+        val state = last ?: fallbackState()
+        if (state != null) return write(state)
+        val stored = runCatching { suite.getString(CordovaHandBack.MARKER, null) }.getOrNull()
+        return CordovaHandBack.parse(stored) == null
+    }
 
     /**
      * Calls [rewrite] through [schedule] after every write of the analytics choice in [choices] (ConsentStore's file),
@@ -64,9 +87,11 @@ class HandBackWriter(private val suite: SharedPreferences, private val consent: 
     companion object {
         private const val TAG = "TwHandBack"
 
-        fun of(context: Context) = HandBackWriter(context.getSharedPreferences(CordovaMigration.SUITE, Context.MODE_PRIVATE)) {
-            ConsentStore(context).storedChoice()
-        }
+        fun of(context: Context, fallbackState: () -> AppState? = { null }) = HandBackWriter(
+            context.getSharedPreferences(CordovaMigration.SUITE, Context.MODE_PRIVATE),
+            { ConsentStore(context).storedChoice() },
+            fallbackState,
+        )
     }
 }
 
@@ -76,7 +101,8 @@ class HandBackWriter(private val suite: SharedPreferences, private val consent: 
  * made there holds, also when that build could not read the hand-back and so did not claim the state, and a failed
  * mirror there (which removes the choice) withdraws. Before anything was handed over, the grant stands; a grant made
  * there is not carried over, as the first migration carries none. Runs before the choice applies ([EarlyStartProvider]);
- * each write of the choice is handed back at once ([HandBackWriter.watchConsent]), so a grant here is in the suite first.
+ * user choice saves commit the suite hand-back on the serialized background analytics writer before returning success,
+ * while [HandBackWriter.watchConsent] schedules a single background executor off the main thread for any other writes.
  *
  * Without a choice here the region default applies (analytics default-on, 2026-11-24) and nothing is adopted: the suite
  * is backed up while this app's choice is not, so a suite choice cannot tell a fallback build's withdrawal on this

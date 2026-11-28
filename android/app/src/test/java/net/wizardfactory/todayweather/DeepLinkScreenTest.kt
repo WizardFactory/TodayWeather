@@ -110,7 +110,7 @@ abstract class DeepLinkScreens {
             cordovaExtras = mapOf("startVersion" to JsonPrimitive(1))))
         preview = LinkPreview(memory)
         val http = HttpGet { _, _ -> seoulBody }
-        val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined)
+        val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, preview, { listOf("ko-KR") }, { null })
         opener = LinkOpener(memory.flow, preview, openPlace = { session.openPlace(it.toDouble()) },
             reload = { session.reload(WeatherSession.Sender.DEEPLINK) })

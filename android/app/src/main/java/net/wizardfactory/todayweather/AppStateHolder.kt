@@ -50,6 +50,10 @@ class AppStateHolder(
     /** The state; null until the migration has finished. */
     val state: StateFlow<AppState?> = flow.asStateFlow()
 
+    /** The latest state persisted to DataStore (set before [state] publishes), for hand-back fallback. */
+    val savedState: AppState?
+        get() = synchronized(lock) { saved }
+
     /** The store for the process's other writers: reads give the saved state, updates are saved in turn. */
     val dataStore: DataStore<AppState> = object : DataStore<AppState> {
         override val data: Flow<AppState> get() = store.data

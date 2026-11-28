@@ -116,7 +116,7 @@ class SettingsTest {
                 requests += url
                 if (failing) throw net.wizardfactory.todayweather.core.data.HttpStatusException(500)
                 if ("temperatureUnit=F" in url) seoulF else seoulC
-            }, io = Dispatchers.Unconfined)
+            }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { feedNow })
         val settings = SettingsActions(memory, session) { pushes += memory.current().units }
         val handoffs = MenuHandoffs(openSystem = { opened += it }, sendFeedback = { feedback++ })

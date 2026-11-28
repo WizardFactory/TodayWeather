@@ -243,7 +243,7 @@ class PlacesScreenshotTest {
                 else -> File(inputs, "kma-seoul.json").readText()
             }
         }
-        val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined)
+        val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
         rule.setContent {
             val state by memory.flow.collectAsState()

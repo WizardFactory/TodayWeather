@@ -56,11 +56,12 @@ class SettingsActionsTest {
         val requests = mutableListOf<String>()
         val state = Memory(AppState(places = listOf(seoul, london), placeIndex = 0, units = UnitSettings.defaults("KR"),
             settings = Settings(refreshInterval = interval)), log)
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = WeatherRepository("https://server.test.invalid", null, { url, _ ->
             requests += url
             log += "load ${url.substringAfter("/coord/")}"
             if (fail()) throw HttpStatusException(500) else seoulBody
-        }, { testScheduler.currentTime }, StandardTestDispatcher(testScheduler))
+        }, { testScheduler.currentTime }, dispatcher, dispatcher)
         val session = WeatherSession(repository, backgroundScope, state, { listOf("ko-KR") }, { null })
         val actions = SettingsActions(state, session) { log += "Push.updateUnits ${unitsJson(state.value.units)}" }
         session.reload(WeatherSession.Sender.INIT)

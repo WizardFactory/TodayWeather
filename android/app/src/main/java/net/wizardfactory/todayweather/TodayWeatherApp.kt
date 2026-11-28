@@ -17,6 +17,8 @@ import android.content.res.Resources
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import java.io.File
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
@@ -55,6 +57,14 @@ import net.wizardfactory.todayweather.search.PlaceSearch
 open class TodayWeatherApp : Application() {
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    /** Serializes usage analytics choice writes off the main thread so commits never block UI or reorder. */
+    internal val analyticsWriter = Dispatchers.IO.limitedParallelism(1)
+
+    /** Single background thread for consent hand-back commits, preserving write order off the main looper. */
+    private val handBackExecutor: ExecutorService by lazy {
+        Executors.newSingleThreadExecutor { task -> Thread(task, "tw-handback").apply { isDaemon = true } }
+    }
+
     open fun serverUrl(): String = BuildConfig.SERVER_URL
     open fun weatherPhotosUrl(): String = BuildConfig.WEATHER_PHOTOS_URL
     open fun tokenSource(): TokenSource = FirebaseTokenSource(this)
@@ -78,7 +88,18 @@ open class TodayWeatherApp : Application() {
      * before Firebase. Test-unit builds report `development` traffic, release builds `production`, as the Cordova builds did.
      */
     val analytics: Analytics by lazy {
-        Analytics(analyticsSdk(), ConsentStore(this), if (BuildConfig.RELEASE_ADS) "production" else "development", ::deviceRegion)
+        Analytics(
+            analyticsSdk(),
+            ConsentStore(this),
+            if (BuildConfig.RELEASE_ADS) "production" else "development",
+            ::deviceRegion,
+            onChoiceWritten = { handBack.rewrite() },
+        )
+    }
+
+    /** App-scoped controller serializing usage analytics choices off Main and preserving save failures across Activity recreations. */
+    val analyticsChoices: AnalyticsChoiceController by lazy {
+        AnalyticsChoiceController(analytics, appScope, analyticsWriter)
     }
 
     /**
@@ -133,14 +154,18 @@ open class TodayWeatherApp : Application() {
     /** The weather photo feed of the photo theme, loaded once per process (AN-08 chooses each place's photo). */
     val photos: WeatherPhotoFeed by lazy { WeatherPhotoFeed(weatherPhotosUrl(), appScope) }
 
+    @Volatile private var appStateHolder: AppStateHolder? = null
+
     /**
      * The saved state as the screens see it, once the migration has finished; the only writer of the store after it.
      * Every saved state is handed back to the Cordova suite for a fallback build (AN-17).
      */
-    val appState: AppStateHolder by lazy { AppStateHolder(AppStateStore.get(this), appScope, migration, onSaved = handBack::write) }
+    val appState: AppStateHolder by lazy {
+        AppStateHolder(AppStateStore.get(this), appScope, migration, onSaved = handBack::write).also { appStateHolder = it }
+    }
 
     /** The rollback hand-back ([HandBackWriter]); each write of the analytics choice hands the last saved state back again. */
-    val handBack: HandBackWriter by lazy { HandBackWriter.of(this) }
+    val handBack: HandBackWriter by lazy { HandBackWriter.of(this) { appStateHolder?.savedState } }
 
     /** Each place's weather, cached in files so a cold start shows the last weather while it loads (#2887). */
     val weather: WeatherRepository by lazy {
@@ -186,7 +211,9 @@ open class TodayWeatherApp : Application() {
         super.onCreate()
         migration.start()
         NotificationChannels.ensure(this)
-        // At once, on the writer's thread: the start keeps a grant only while the suite says so (HandBackConsent).
-        handBack.watchConsent(getSharedPreferences(ConsentStore.CHOICE_FILE, MODE_PRIVATE)) { it() }
+        // User choice saves commit the suite hand-back on analyticsWriter before returning success;
+        // keep the listener on one background thread so any other writes to the choice file still hand
+        // back off Main in order (HandBackConsent).
+        handBack.watchConsent(getSharedPreferences(ConsentStore.CHOICE_FILE, MODE_PRIVATE)) { handBackExecutor.execute(it) }
     }
 }

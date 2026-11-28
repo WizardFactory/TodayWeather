@@ -73,7 +73,7 @@ class PopupBoundsTest {
             override fun current() = state
             override fun change(update: (AppState) -> AppState) = Unit
         }
-        val repository = WeatherRepository("https://fixture.invalid", null, HttpGet { _, _ -> error("No request expected") }, io = Dispatchers.Unconfined)
+        val repository = WeatherRepository("https://fixture.invalid", null, HttpGet { _, _ -> error("No request expected") }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
         rule.setContent {
             val host = WeatherTabHost(forecastTexts(rule.activity), PhotoLoader(rule.activity), {}, {}, {}, {})

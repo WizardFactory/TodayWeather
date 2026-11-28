@@ -6,6 +6,7 @@ import TWDomain
 protocol ForecastNativeInventory: AnyObject {
     var enabled: Bool { get }
     var generation: Int { get }
+    var availability: Int { get }
     func assignCreative(to tab: ShellTab) -> ForecastCreative?
     func assignedCreative(for tab: ShellTab) -> ForecastCreative?
 }
@@ -21,6 +22,7 @@ final class ForecastNativeCache {
     private let now: () -> ContinuousClock.Instant
     private var assigned: [ShellTab: Entry] = [:]
     @ObservationIgnored private var spare: Entry?
+    private(set) var availability = 0
 
     init(now: @escaping () -> ContinuousClock.Instant = { .now }) {
         self.now = now
@@ -28,6 +30,7 @@ final class ForecastNativeCache {
 
     func store(_ creative: ForecastCreative) {
         spare = Entry(creative: creative, loadedAt: now())
+        availability += 1
     }
 
     func assignCreative(to tab: ShellTab) -> ForecastCreative? {
@@ -131,6 +134,7 @@ final class ForecastNativeAds: NSObject, ForecastNativeInventory, NativeAdLoader
     }
 
     var hasFreshCreative: Bool { cache.hasSpare }
+    var availability: Int { cache.availability }
 
     func assignedCreative(for tab: ShellTab) -> ForecastCreative? { cache.assignedCreative(for: tab) }
 
@@ -185,7 +189,7 @@ struct ForecastNativeVisitHost: ViewModifier {
         content.environment(\.nativePlacement, placement)
             .onAppear { placement.resume() }
             .onDisappear { placement.suspend() }
-            .onChange(of: ads?.generation) { placement.discardCreative() }
+            .onChange(of: ads?.generation) { placement.discardStaleCreative(ads) }
     }
 }
 
@@ -199,9 +203,11 @@ final class ForecastNativePlacement {
     private var hasClaim = false
 
     func reached(_ ads: (any ForecastNativeInventory)?, tab: ShellTab) {
+        discardStaleCreative(ads)
         guard visit.decision == nil else { return }
-        let creative = ads?.assignCreative(to: tab)
-        guard visit.reached(hasCreative: creative?.claim(for: self) == true), let ads else { return }
+        guard let ads, ads.enabled, let creative = ads.assignCreative(to: tab),
+              creative.claim(for: self) else { return }
+        _ = visit.reached(hasCreative: true)
         owner = ads
         generation = ads.generation
         self.tab = tab
@@ -226,8 +232,12 @@ final class ForecastNativePlacement {
         hasClaim = creative.claim(for: self)
     }
 
-    func discardCreative() {
+    func discardStaleCreative(_ ads: (any ForecastNativeInventory)?) {
+        guard let generation, owner !== ads || generation != ads?.generation else { return }
         suspend()
+        visit = NativeAdVisit()
+        owner = nil
+        self.generation = nil
         selectedCreative = nil
         tab = nil
     }
@@ -235,11 +245,25 @@ final class ForecastNativePlacement {
 
 /// A zero-height marker can measure where an omitted slot would have appeared without reserving margins.
 struct ForecastNativeSlot: View {
+    private struct InventorySignal: Equatable {
+        let inventory: ObjectIdentifier
+        let enabled: Bool
+        let generation: Int
+        let availability: Int
+    }
+
     let tab: ShellTab
     let theme: Theme
     @Environment(\.forecastNativeAds) private var ads
     @Environment(\.locale) private var locale
     @Environment(\.nativePlacement) private var placement
+    @State private var isReached = false
+
+    private var signal: InventorySignal? {
+        guard let ads else { return nil }
+        return InventorySignal(inventory: ObjectIdentifier(ads), enabled: ads.enabled,
+                               generation: ads.generation, availability: ads.availability)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -248,6 +272,7 @@ struct ForecastNativeSlot: View {
                     guard let viewport = geometry.bounds(of: .scrollView(axis: .vertical)) else { return false }
                     return viewport.maxY >= 0
                 } action: { reached in
+                    isReached = reached
                     if reached { placement?.reached(ads, tab: tab) }
                 }
             if let creative = placement?.creative(for: ads) {
@@ -257,6 +282,9 @@ struct ForecastNativeSlot: View {
                     .padding(.vertical, stacked ? 12 : 6)
                     .accessibilityIdentifier("native-ad-\(tab.rawValue)")
             }
+        }
+        .onChange(of: signal) {
+            if isReached { placement?.reached(ads, tab: tab) }
         }
     }
 }

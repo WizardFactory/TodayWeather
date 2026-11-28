@@ -95,6 +95,8 @@ class WeatherRepository(
     private val clock: () -> Long = System::currentTimeMillis,
     /** Where the file cache is read and written. */
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    /** Where JSON responses are parsed and converted. */
+    private val compute: CoroutineDispatcher = Dispatchers.Default,
     /** `weather_fetch`, as `getWeatherByGeoInfo` reports each request. */
     private val telemetry: Telemetry = Telemetry.NONE,
 ) {
@@ -102,6 +104,7 @@ class WeatherRepository(
     private val running = MutableStateFlow<Set<String>>(emptySet())
     private val loadTimes = HashMap<String, Long>()
     private val latestRequest = HashMap<String, Long>()
+    private val locationStartGeneration = HashMap<String, Long>()
     private val inFlightLocations = HashMap<String, String>()
     private var requests = 0L
     private val commits = Mutex()
@@ -175,12 +178,31 @@ class WeatherRepository(
         }
         val key = key(place)
         val location = locationKey(place)
+        val generationBefore = if (reserveWidgetAttempt != null) {
+            val snapshot = synchronized(this) {
+                if (key in inFlightLocations || location in inFlightLocations.values) return LoadResult.Skipped
+                latestRequest[key] to locationStartGeneration[location]
+            }
+            if (!reserveWidgetAttempt()) return LoadResult.Skipped
+            snapshot
+        } else {
+            null
+        }
         val request = synchronized(this) {
-            if (reserveWidgetAttempt != null &&
-                (key in inFlightLocations || location in inFlightLocations.values || !reserveWidgetAttempt())) return LoadResult.Skipped
+            if (reserveWidgetAttempt != null) {
+                val (keyGenBefore, locGenBefore) = generationBefore!!
+                if (key in inFlightLocations || location in inFlightLocations.values ||
+                    latestRequest[key] != keyGenBefore || locationStartGeneration[location] != locGenBefore
+                ) {
+                    return LoadResult.Skipped
+                }
+            }
             inFlightLocations[key] = location
             running.update { it + key }
-            (++requests).also { latestRequest[key] = it }
+            (++requests).also {
+                latestRequest[key] = it
+                locationStartGeneration[location] = it
+            }
         }
         val headers = mapOf("Accept-Language" to WeatherRequests.acceptLanguage(languages))
         val body = try {
@@ -199,11 +221,14 @@ class WeatherRepository(
         }
         // `$http` parses the body as `JSON.parse` does (the server answers with a JSON content type) and rejects it when it
         // cannot.
-        val parsed = body.mapCatching { NationSource.strictJson(it) }
+        val parsed = body.mapCatching { withContext(compute) { NationSource.strictJson(it) } }
+            .onFailure { if (it is CancellationException) throw it }
         fetched(if (parsed.isFailure) "network_error" else "success", started)
         // An answer to a request a later one replaced counts for nothing, a failure included.
         if (!latest(key, request)) return LoadResult.Superseded
-        val converted = parsed.mapCatching { WeatherConverter.convert(it) }
+        val converted = parsed.mapCatching { withContext(compute) { WeatherConverter.convert(it) } }
+            .onFailure { if (it is CancellationException) throw it }
+        if (!latest(key, request)) return LoadResult.Superseded
         val city = converted.getOrNull() ?: return LoadResult.Failed(converted.exceptionOrNull() ?: body.exceptionOrNull(), network = body.isFailure,
             unconvertible = parsed.isSuccess)
         // One answer at a time is stored, and only while it is the latest of its place, so a slower write of an

@@ -1,5 +1,9 @@
 package net.wizardfactory.todayweather.core.data
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -27,6 +31,8 @@ class NationSource(
     private val baseUrl: String,
     private val nationHttp: HttpGet = OkHttpGet(NATION_TIMEOUT_MS),
     private val specialHttp: HttpGet = OkHttpGet(SPECIAL_TIMEOUT_MS),
+    /** Where JSON responses are parsed. */
+    private val compute: CoroutineDispatcher = Dispatchers.Default,
 ) {
     /**
      * `getNationWeather(region)`: `_getHttp(url, 20000)`, so up to three attempts 2 s apart; the first to settle
@@ -38,7 +44,11 @@ class NationSource(
         val url = nationUrl(baseUrl, region, units)
         val headers = mapOf("Accept-Language" to WeatherRequests.acceptLanguage(languages))
         val body = firstSettled(WeatherPhotoFeed.ATTEMPTS, WeatherPhotoFeed.ATTEMPT_GAP_MS) { nationHttp.get(url, headers) }
-        return body.mapCatching { NationResponse(strictJson(it) as? JsonObject ?: throw IllegalArgumentException("not an object")) }
+        return body.mapCatching {
+            withContext(compute) {
+                NationResponse(strictJson(it) as? JsonObject ?: throw IllegalArgumentException("not an object"))
+            }
+        }.onFailure { if (it is CancellationException) throw it }
             .fold({ PageLoad.Loaded(it) }, { PageLoad.Failed(it) })
     }
 
@@ -51,8 +61,9 @@ class NationSource(
         val headers = mapOf("Accept-Language" to WeatherRequests.acceptLanguage(languages))
         return try {
             val body = specialHttp.get(specialUrl(baseUrl), headers)
-            PageLoad.Loaded(runCatching { strictJson(body) }.getOrDefault(JsonNull))
-        } catch (e: kotlinx.coroutines.CancellationException) {
+            val parsed = withContext(compute) { runCatching { strictJson(body) }.getOrDefault(JsonNull) }
+            PageLoad.Loaded(parsed)
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             PageLoad.Failed(e)

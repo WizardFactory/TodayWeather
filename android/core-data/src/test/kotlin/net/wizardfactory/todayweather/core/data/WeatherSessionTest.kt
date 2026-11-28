@@ -52,8 +52,9 @@ class WeatherSessionTest {
         val state = Memory(AppState(places = listOf(current, london), placeIndex = index, units = UnitSettings.defaults("KR"),
             settings = Settings(refreshInterval = interval)))
         val get = http ?: HttpGet { url, _ -> if ("51.51" in url) londonBody else seoulBody }
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = WeatherRepository("https://server.test.invalid", null, { url, h -> requests += url; get.get(url, h) },
-            { testScheduler.currentTime }, StandardTestDispatcher(testScheduler))
+            { testScheduler.currentTime }, dispatcher, dispatcher)
         val session = WeatherSession(repository, backgroundScope, state, { listOf("ko-KR") }, { photos }) { 0.5 }
         return Setup(state, session, requests)
     }
@@ -290,8 +291,9 @@ class WeatherSessionTest {
         var photos: WeatherPhotos? = null
         val requests = mutableListOf<String>()
         val state = Memory(AppState(places = listOf(current, london), placeIndex = 0, units = UnitSettings.defaults("KR")))
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val repository = WeatherRepository("https://server.test.invalid", null, { url, _ -> requests += url; seoulBody },
-            { testScheduler.currentTime }, StandardTestDispatcher(testScheduler))
+            { testScheduler.currentTime }, dispatcher, dispatcher)
         var feedLoads = 0
         val session = WeatherSession(repository, backgroundScope, state, { listOf("ko") }, { photos }, { feedLoads++ }) { 0.5 }
         session.reload(WeatherSession.Sender.INIT)

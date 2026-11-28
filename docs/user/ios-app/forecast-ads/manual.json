@@ -24,11 +24,18 @@
       "expected": "The grade, guidance and hourly AQI remain together above the card."
     },
     {
+      "title": "Saved places while an ad loads",
+      "instruction": "Open Saved Places and stay at the end of the list while the ad loads.",
+      "screenshot": "search-loading.png",
+      "caption": "The saved places are visible while the ad loads.",
+      "expected": "The list has no reserved ad space while it waits."
+    },
+    {
       "title": "Saved places",
-      "instruction": "Tap 즐겨찾기 and scroll to the end of the saved locations. Enter edit or search mode to manage your places.",
+      "instruction": "Stay on Saved Places. To manage your locations, enter edit or search mode.",
       "screenshot": "search.png",
-      "caption": "A stacked ad card appears after the final visible saved place.",
-      "expected": "Search, results and editing show only place controls and content."
+      "caption": "The loaded ad appears after the final visible saved place.",
+      "expected": "The ad can appear without switching tabs. Search and editing show only place controls and content."
     },
     {
       "title": "Anchored banner",

@@ -288,7 +288,7 @@ class AlarmsScreenshotTest {
         val region = if (intro && matrixSize != null && matrixLang == "en-US") "US" else "KR"
         val memory = Memory(AppState(places = places, placeIndex = 1, units = UnitSettings.defaults(region), settings = Settings(theme = theme), push = push).closeStart().copy(placeIndex = 1))
         val http = HttpGet { _, _ -> File(inputs, "kma-seoul.json").readText() }
-        val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined)
+        val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
         val alarms = AlarmsHost { s, openSettings -> AlarmPage(memory, access, post = {}, openSettings = openSettings, scope = s) }
         val alertIntro = object : AlertIntro {

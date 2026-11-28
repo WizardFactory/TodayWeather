@@ -89,15 +89,15 @@ class NationTest {
 
     private fun show(restoration: StateRestorationTester? = null) {
         val memory = Memory(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1, units = UnitSettings.defaults("KR")))
-        val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { url, _ -> requests += url; seoulBody }, io = Dispatchers.Unconfined)
+        val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { url, _ -> requests += url; seoulBody }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
         val source = NationSource("https://server.test.invalid", HttpGet { url, _ ->
             requests += url
             late?.await()
             if (failing) throw HttpStatusException(500)
             nationBody
-        }, HttpGet { url, _ -> requests += url; specialBody })
-        val nation = NationLoads(source, scope, { memory.current().units }, { listOf("ko-KR") }, { "Asia/Seoul" })
+        }, HttpGet { url, _ -> requests += url; specialBody }, Dispatchers.Unconfined)
+        val nation = NationLoads(source, scope, { memory.current().units }, { listOf("ko-KR") }, { "Asia/Seoul" }, Dispatchers.Unconfined)
         val setContent: (@androidx.compose.runtime.Composable () -> Unit) -> Unit = restoration?.let { r -> { r.setContent(it) } } ?: { rule.setContent(it) }
         setContent {
             val state by memory.state.collectAsState()

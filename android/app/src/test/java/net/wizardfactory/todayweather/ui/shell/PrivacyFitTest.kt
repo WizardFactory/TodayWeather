@@ -131,10 +131,10 @@ class PrivacyFitTest {
             override fun current() = flow.value
             override fun change(update: (AppState) -> AppState) { flow.value = update(flow.value) }
         }
-        val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { _, _ -> seoulBody }, io = Dispatchers.Unconfined)
+        val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { _, _ -> seoulBody }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
         val chosen = mutableListOf<Boolean>()
-        val privacy = PrivacyActions(MutableStateFlow(false), { chosen += it; true }, optIn) {}
+        val privacy = PrivacyActions(MutableStateFlow(false), { chosen += it }, optIn) {}
         rule.setContent {
             val state by memory.flow.collectAsState()
             val entries by repository.weather.collectAsState()

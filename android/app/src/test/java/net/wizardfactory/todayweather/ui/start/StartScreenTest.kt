@@ -136,7 +136,7 @@ class StartScreenTest {
     private fun start(device: Device, weather: suspend () -> String = { seoulBody }, predictions: List<Prediction> = emptyList()) {
         memory = Memory(AppState(places = listOf(Place.currentPositionPlaceholder()), placeIndex = -1, units = UnitSettings.defaults("KR")))
         val get = http(weather)
-        val repository = WeatherRepository("https://server.test.invalid", null, get, io = Dispatchers.Unconfined)
+        val repository = WeatherRepository("https://server.test.invalid", null, get, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val telemetry = Telemetry { name, params -> events += "$name:${params.values.joinToString()}" }
         val flow = StartFlow(memory, repository, GeocodeClient("https://server.test.invalid", get), device, { listOf("ko-KR") }, telemetry)
         val page = StartPage(flow, scope)
@@ -353,7 +353,7 @@ class StartScreenTest {
     /** The weather pages with [places] after S01 (`startVersion` stored), over [device]. */
     private fun tabs(places: List<Place>, index: Int, device: Device): WeatherSession {
         memory = Memory(AppState(places = places, placeIndex = index, units = UnitSettings.defaults("KR")).closeStart().copy(placeIndex = index))
-        val repository = WeatherRepository("https://server.test.invalid", null, http(), io = Dispatchers.Unconfined)
+        val repository = WeatherRepository("https://server.test.invalid", null, http(), io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null }, location = device)
         rule.setContent {
             val state by memory.flow.collectAsState()

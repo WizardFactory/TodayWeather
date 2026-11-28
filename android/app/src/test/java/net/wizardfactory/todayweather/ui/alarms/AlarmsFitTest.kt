@@ -106,7 +106,7 @@ abstract class AlarmsFitTest(private val lang: String) {
             override fun change(update: (AppState) -> AppState) { flow.value = update(flow.value) }
         }
         val repository = WeatherRepository("https://server.test.invalid", null,
-            HttpGet { _, _ -> File(inputs, "kma-seoul.json").readText() }, io = Dispatchers.Unconfined)
+            HttpGet { _, _ -> File(inputs, "kma-seoul.json").readText() }, io = Dispatchers.Unconfined, compute = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf(lang) }, { null })
         var granted = true
         val permission = object : NotificationAccess {

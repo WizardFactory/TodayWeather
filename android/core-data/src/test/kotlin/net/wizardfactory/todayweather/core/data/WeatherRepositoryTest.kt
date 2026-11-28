@@ -2,7 +2,11 @@ package net.wizardfactory.todayweather.core.data
 
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -14,6 +18,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -45,7 +51,8 @@ class WeatherRepositoryTest {
 
     private fun currentOf(entry: WeatherEntry?) = entry!!.weather["currentWeather"]!!.jsonObject
 
-    private fun repository(http: HttpGet, cache: File? = null) = WeatherRepository("https://server.test.invalid", cache, http, { now })
+    private fun TestScope.repository(http: HttpGet, cache: File? = null) =
+        WeatherRepository("https://server.test.invalid", cache, http, { now }, compute = StandardTestDispatcher(testScheduler))
 
     @Test
     fun datedSummaryKeepsItsRequestWhenReopeningOffline() = runTest {
@@ -192,6 +199,176 @@ class WeatherRepositoryTest {
         assertEquals(1, calls)
     }
 
+    /** #3238 AC1: reserveWidgetAttempt runs outside WeatherRepository's monitor so canLoad does not block on it. */
+    @Test
+    fun canLoadReturnsWhileReserveWidgetAttemptIsBlocked() {
+        val repo = WeatherRepository("https://server.test.invalid", null, { _, _ -> seoulBody }, { now })
+        val enteredReserve = CountDownLatch(1)
+        val releaseReserve = CountDownLatch(1)
+        val widgetResult = AtomicReference<LoadResult>()
+        val widgetThread = thread(name = "widget-reserve-test") {
+            widgetResult.set(runBlocking {
+                repo.loadFromWidget(seoul, units, listOf("ko")) {
+                    enteredReserve.countDown()
+                    releaseReserve.await(5, TimeUnit.SECONDS)
+                    false
+                }
+            })
+        }
+        try {
+            assertTrue(enteredReserve.await(5, TimeUnit.SECONDS), "widget load must enter reserveWidgetAttempt")
+            val canLoadDone = CountDownLatch(1)
+            val canLoadResult = AtomicReference<Boolean>()
+            val mainProbe = thread(name = "main-canload-probe") {
+                canLoadResult.set(repo.canLoad(seoul))
+                canLoadDone.countDown()
+            }
+            assertTrue(canLoadDone.await(500, TimeUnit.MILLISECONDS), "canLoad must return while reserveWidgetAttempt blocks")
+            assertEquals(true, canLoadResult.get())
+            mainProbe.join(1_000)
+        } finally {
+            releaseReserve.countDown()
+            widgetThread.join(5_000)
+        }
+        assertEquals(LoadResult.Skipped, widgetResult.get())
+    }
+
+    /** #3238 AC1: a foreground request starting while widget reservation runs causes the widget load to return Skipped. */
+    @Test
+    fun widgetSkipsWhenForegroundRequestStartsDuringReservation() {
+        val httpCalls = AtomicInteger(0)
+        val fgEnteredHttp = CountDownLatch(1)
+        val releaseFgHttp = CountDownLatch(1)
+        val repo = WeatherRepository("https://server.test.invalid", null, { _, _ ->
+            httpCalls.incrementAndGet()
+            fgEnteredHttp.countDown()
+            assertTrue(releaseFgHttp.await(5, TimeUnit.SECONDS))
+            seoulBody
+        }, { now })
+        val enteredReserve = CountDownLatch(1)
+        val releaseReserve = CountDownLatch(1)
+        val widgetResult = AtomicReference<LoadResult>()
+        val fgResult = AtomicReference<LoadResult>()
+        val widgetThread = thread(name = "widget-race-test") {
+            widgetResult.set(runBlocking {
+                repo.loadFromWidget(seoul.copy(currentPosition = true), units, listOf("ko")) {
+                    enteredReserve.countDown()
+                    releaseReserve.await(5, TimeUnit.SECONDS)
+                    true
+                }
+            })
+        }
+        var fgThread: Thread? = null
+        try {
+            assertTrue(enteredReserve.await(5, TimeUnit.SECONDS), "widget load must enter reserveWidgetAttempt")
+            fgThread = thread(name = "fg-race-test") {
+                fgResult.set(runBlocking { repo.load(seoul, units, listOf("ko"), force = true) })
+            }
+            assertTrue(fgEnteredHttp.await(500, TimeUnit.MILLISECONDS), "foreground load must start without waiting for reserveWidgetAttempt")
+            releaseReserve.countDown()
+            widgetThread.join(5_000)
+            assertEquals(LoadResult.Skipped, widgetResult.get(), "widget must re-check in-flight state and skip")
+            assertEquals(1, httpCalls.get(), "widget must not send an extra HTTP request")
+        } finally {
+            releaseReserve.countDown()
+            releaseFgHttp.countDown()
+            widgetThread.join(5_000)
+            fgThread?.join(5_000)
+        }
+        assertIs<LoadResult.Loaded>(fgResult.get())
+    }
+
+    /** #3238 CODEX-1 / CODEX-R2-3: foreground load for the same key completing HTTP (paused on compute) during widget reservation must not be superseded. */
+    @Test
+    fun widgetSkipsWhenForegroundCompletesHttpForSameKeyDuringReservation() {
+        val httpCalls = AtomicInteger(0)
+        val firstParseQueued = CountDownLatch(1)
+        val compute = Manual(onEnqueue = { firstParseQueued.countDown() })
+        val repo = WeatherRepository("https://server.test.invalid", null, { _, _ ->
+            httpCalls.incrementAndGet()
+            seoulBody
+        }, { now }, io = kotlinx.coroutines.Dispatchers.Unconfined, compute = compute)
+        val enteredReserve = CountDownLatch(1)
+        val releaseReserve = CountDownLatch(1)
+        val widgetResult = AtomicReference<LoadResult>()
+        val fgResult = AtomicReference<LoadResult>()
+        val widgetThread = thread(name = "widget-same-key-race") {
+            widgetResult.set(runBlocking {
+                repo.loadFromWidget(seoul, units, listOf("ko")) {
+                    enteredReserve.countDown()
+                    releaseReserve.await(5, TimeUnit.SECONDS)
+                    true
+                }
+            })
+        }
+        var fgThread: Thread? = null
+        try {
+            assertTrue(enteredReserve.await(5, TimeUnit.SECONDS), "widget load must enter reserveWidgetAttempt")
+            fgThread = thread(name = "fg-same-key-race") {
+                fgResult.set(runBlocking { repo.load(seoul, units, listOf("ko"), force = true) })
+            }
+            // Wait until foreground finishes HTTP (clears inFlightLocations) and queues strictJson on Manual compute.
+            assertTrue(firstParseQueued.await(5, TimeUnit.SECONDS), "foreground parse must be queued on compute")
+            assertTrue(compute.pending(), "foreground parse must be queued on compute")
+            assertTrue(repo.loading.value.isEmpty(), "foreground HTTP must have completed and cleared inFlightLocations")
+
+            releaseReserve.countDown()
+            widgetThread.join(5_000)
+            assertEquals(LoadResult.Skipped, widgetResult.get(), "widget must skip when foreground already started for the same key")
+            assertEquals(1, httpCalls.get(), "widget must not send an extra HTTP request")
+
+            // Drain foreground parse + convert on Manual compute; foreground must succeed, not be Superseded.
+            assertTrue(compute.runNext(5_000), "foreground strictJson task must run")
+            assertTrue(compute.runNext(5_000), "foreground WeatherConverter.convert task must run")
+            fgThread.join(5_000)
+            assertIs<LoadResult.Loaded>(fgResult.get(), "foreground load must succeed and not be superseded")
+        } finally {
+            releaseReserve.countDown()
+            widgetThread.join(5_000)
+            while (fgThread?.isAlive == true && compute.runNext(200)) {
+                // drain any remaining compute work cleanly
+            }
+            fgThread?.join(5_000)
+        }
+    }
+
+    /** #3238 CODEX-1: foreground load for a different key at the same location completing during widget reservation causes widget to skip. */
+    @Test
+    fun widgetSkipsWhenForegroundCompletesForSameLocationDifferentKeyDuringReservation() {
+        val httpCalls = AtomicInteger(0)
+        val repo = WeatherRepository("https://server.test.invalid", null, { _, _ ->
+            httpCalls.incrementAndGet()
+            seoulBody
+        }, { now })
+        val enteredReserve = CountDownLatch(1)
+        val releaseReserve = CountDownLatch(1)
+        val widgetResult = AtomicReference<LoadResult>()
+        val widgetThread = thread(name = "widget-same-loc-race") {
+            widgetResult.set(runBlocking {
+                repo.loadFromWidget(seoul.copy(currentPosition = true), units, listOf("ko")) {
+                    enteredReserve.countDown()
+                    releaseReserve.await(5, TimeUnit.SECONDS)
+                    true
+                }
+            })
+        }
+        try {
+            assertTrue(enteredReserve.await(5, TimeUnit.SECONDS), "widget load must enter reserveWidgetAttempt")
+            // Foreground loads the saved place at identical coordinates (different key, same location) and finishes completely.
+            val fgLoaded = runBlocking { repo.load(seoul, units, listOf("ko"), force = true) }
+            assertIs<LoadResult.Loaded>(fgLoaded)
+            assertTrue(repo.loading.value.isEmpty(), "foreground load finished and cleared inFlightLocations")
+
+            releaseReserve.countDown()
+            widgetThread.join(5_000)
+            assertEquals(LoadResult.Skipped, widgetResult.get(), "widget must skip when same location already loaded during reservation")
+            assertEquals(1, httpCalls.get(), "widget must not send an extra HTTP request")
+        } finally {
+            releaseReserve.countDown()
+            widgetThread.join(5_000)
+        }
+    }
+
     @Test
     fun widgetsShareOnlyMatchingCoordinatesAndCanReadLegacyCurrentCaches() = runTest {
         val dir = Files.createTempDirectory("widget-weather").toFile()
@@ -318,8 +495,9 @@ class WeatherRepositoryTest {
         val first = CompletableDeferred<String>()
         var call = 0
         // The cache runs on the test's scheduler, so no time passes and the older request makes one attempt only.
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val repo = WeatherRepository("https://server.test.invalid", null, { _, _ -> if (++call == 1) first.await() else seoulBody },
-            { now }, kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+            { now }, dispatcher, dispatcher)
         val older = async { repo.load(seoul, units, listOf("ko"), force = true) }
         runCurrent()
         assertIs<LoadResult.Loaded>(repo.load(seoul, units, listOf("ko"), force = true))
@@ -341,8 +519,9 @@ class WeatherRepositoryTest {
         val newer = Json.parseToJsonElement(seoulBody).jsonObject
             .let { JsonObject(it + ("current" to JsonObject(it["current"]!!.jsonObject + ("t1h" to kotlinx.serialization.json.JsonPrimitive(-5))))) }
             .toString()
+        val compute = StandardTestDispatcher(testScheduler)
         var call = 0
-        val repo = WeatherRepository("https://server.test.invalid", cache, { _, _ -> if (++call == 1) seoulBody else newer }, { now }, io)
+        val repo = WeatherRepository("https://server.test.invalid", cache, { _, _ -> if (++call == 1) seoulBody else newer }, { now }, io, compute)
         val older = async { repo.load(seoul, units, listOf("ko"), force = true) }
         runCurrent()
         io.runAll() // the older answer reads the cache, then queues its write
@@ -356,7 +535,7 @@ class WeatherRepositoryTest {
         assertIs<LoadResult.Loaded>(later.await())
         older.await()
         assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
-        val restarted = WeatherRepository("https://server.test.invalid", cache, { _, _ -> error("no request") }, { now }, io)
+        val restarted = WeatherRepository("https://server.test.invalid", cache, { _, _ -> error("no request") }, { now }, io, compute)
         val fromCache = async { restarted.cached(seoul) }
         runCurrent()
         while (io.pending()) {
@@ -367,13 +546,196 @@ class WeatherRepositoryTest {
         cache.deleteRecursively()
     }
 
-    /** A dispatcher whose tasks run when the test says, in the order it chooses. */
-    private class Manual : kotlinx.coroutines.CoroutineDispatcher() {
+    /** A thread-safe dispatcher whose tasks run when the test says, in the order it chooses. */
+    private class Manual(private val onEnqueue: (() -> Unit)? = null) : kotlinx.coroutines.CoroutineDispatcher() {
+        private val lock = Object()
         private val tasks = ArrayDeque<Runnable>()
-        override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) { tasks += block }
-        fun pending() = tasks.isNotEmpty()
-        fun runLast() = tasks.removeLast().run()
-        fun runAll() { while (tasks.isNotEmpty()) tasks.removeFirst().run() }
+
+        override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) {
+            synchronized(lock) {
+                tasks += block
+                lock.notifyAll()
+            }
+            onEnqueue?.invoke()
+        }
+
+        fun pending(): Boolean = synchronized(lock) { tasks.isNotEmpty() }
+
+        fun runFirst() {
+            val task = synchronized(lock) { tasks.removeFirst() }
+            task.run()
+        }
+
+        fun runLast() {
+            val task = synchronized(lock) { tasks.removeLast() }
+            task.run()
+        }
+
+        fun runNext(timeoutMs: Long): Boolean {
+            val deadline = System.currentTimeMillis() + timeoutMs
+            val task = synchronized(lock) {
+                while (tasks.isEmpty()) {
+                    val remaining = deadline - System.currentTimeMillis()
+                    if (remaining <= 0) return false
+                    lock.wait(remaining)
+                }
+                tasks.removeFirst()
+            }
+            task.run()
+            return true
+        }
+
+        fun runAll() {
+            while (true) {
+                val task = synchronized(lock) { if (tasks.isEmpty()) null else tasks.removeFirst() } ?: return
+                task.run()
+            }
+        }
+    }
+
+    /** #3233 AC1: JSON parsing and WeatherConverter.convert run on the injected compute dispatcher, not the caller's. */
+    @Test
+    fun parseAndConvertRunOnTheComputeDispatcher() = runTest {
+        val compute = Manual()
+        var fetched = 0
+        val telemetry = Telemetry { name, _ -> if (name == "weather_fetch") fetched++ }
+        val repo = WeatherRepository("https://server.test.invalid", null, { _, _ -> seoulBody }, { now },
+            StandardTestDispatcher(testScheduler), compute, telemetry)
+        val load = async { repo.load(seoul, units, listOf("ko"), force = true) }
+        runCurrent()
+        assertTrue(load.isActive, "load must wait for strictJson on compute")
+        assertTrue(compute.pending(), "strictJson must be queued on compute")
+        assertEquals(0, fetched, "telemetry must wait until strictJson finishes")
+
+        compute.runFirst()
+        runCurrent()
+        assertEquals(1, fetched, "telemetry runs on caller dispatcher after strictJson")
+        assertTrue(load.isActive, "load must wait for WeatherConverter.convert on compute")
+        assertTrue(compute.pending(), "WeatherConverter.convert must be queued on compute")
+
+        compute.runFirst()
+        runCurrent()
+        assertFalse(compute.pending())
+        val result = assertIs<LoadResult.Loaded>(load.await())
+        assertEquals(currentOf(WeatherEntry(converted(seoulBody), 0)), currentOf(result.entry))
+    }
+
+    /** #3233 AC2: a newer request finishing while an older request is queued on compute supersedes the older one and preserves memory and cache. */
+    @Test
+    fun aNewerRequestSupersedesAnOlderOneQueuedOnCompute() = runTest {
+        val cache = Files.createTempDirectory("weather-compute-supersede").toFile()
+        try {
+            val io = StandardTestDispatcher(testScheduler)
+            val compute = Manual()
+            val newer = Json.parseToJsonElement(seoulBody).jsonObject
+                .let { JsonObject(it + ("current" to JsonObject(it["current"]!!.jsonObject + ("t1h" to JsonPrimitive(-5))))) }
+                .toString()
+            var call = 0
+            val repo = WeatherRepository("https://server.test.invalid", cache, { _, _ -> if (++call == 1) seoulBody else newer },
+                { now }, io, compute)
+
+            val older = async { repo.load(seoul, units, listOf("ko"), force = true) }
+            runCurrent()
+            assertTrue(older.isActive && compute.pending(), "older strictJson queued on compute")
+            // Advance older past strictJson (and the first latest() check) so its convert is queued on compute.
+            compute.runFirst()
+            runCurrent()
+            assertTrue(older.isActive && compute.pending(), "older convert queued on compute")
+
+            // Newer request arrives and completes both parse and convert on compute before older's convert runs.
+            val later = async { repo.load(seoul, units, listOf("ko"), force = true) }
+            runCurrent()
+            assertTrue(later.isActive && compute.pending(), "newer strictJson queued on compute")
+            compute.runLast()
+            runCurrent()
+            assertTrue(later.isActive && compute.pending(), "newer convert queued on compute")
+            compute.runLast()
+            runCurrent()
+            assertIs<LoadResult.Loaded>(later.await())
+            assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
+
+            // Now older's convert runs; commits.withLock sees it is no longer latest and returns Superseded.
+            assertTrue(compute.pending(), "older convert still queued")
+            compute.runFirst()
+            runCurrent()
+            assertEquals(LoadResult.Superseded, older.await())
+            assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
+
+            val restarted = WeatherRepository("https://server.test.invalid", cache, { _, _ -> error("no request") },
+                { now }, io, io)
+            assertEquals("-5", currentOf(restarted.cached(seoul))["t1h"]!!.jsonPrimitive.content,
+                "disk cache keeps the newer answer")
+        } finally {
+            cache.deleteRecursively()
+        }
+    }
+
+    /** #3233 CODEX-1: a superseded off-main strictJson failure returns Superseded and leaves memory and cache intact. */
+    @Test
+    fun aSupersededStrictJsonFailureOnComputeIsSuperseded() = runTest {
+        assertSupersededComputeFailure(olderBody = "{not-json", advancePastStrictJson = false)
+    }
+
+    /** #3233 CODEX-1: a superseded off-main WeatherConverter.convert null result returns Superseded and leaves memory and cache intact. */
+    @Test
+    fun aSupersededConvertNullOnComputeIsSuperseded() = runTest {
+        assertSupersededComputeFailure(olderBody = "{}", advancePastStrictJson = true)
+    }
+
+    /** #3233 CODEX-1: a superseded off-main WeatherConverter.convert exception returns Superseded and leaves memory and cache intact. */
+    @Test
+    fun aSupersededConvertExceptionOnComputeIsSuperseded() = runTest {
+        assertSupersededComputeFailure(olderBody = "null", advancePastStrictJson = true)
+    }
+
+    private suspend fun TestScope.assertSupersededComputeFailure(olderBody: String, advancePastStrictJson: Boolean) {
+        val cache = Files.createTempDirectory("weather-compute-fail-supersede").toFile()
+        try {
+            val io = StandardTestDispatcher(testScheduler)
+            val compute = Manual()
+            val newer = Json.parseToJsonElement(seoulBody).jsonObject
+                .let { JsonObject(it + ("current" to JsonObject(it["current"]!!.jsonObject + ("t1h" to JsonPrimitive(-5))))) }
+                .toString()
+            var call = 0
+            val repo = WeatherRepository("https://server.test.invalid", cache, { _, _ -> if (++call == 1) olderBody else newer },
+                { now }, io, compute)
+
+            val older = async { repo.load(seoul, units, listOf("ko"), force = true) }
+            runCurrent()
+            assertTrue(older.isActive && compute.pending(), "older strictJson queued on compute")
+            if (advancePastStrictJson) {
+                compute.runFirst()
+                runCurrent()
+                assertTrue(older.isActive && compute.pending(), "older convert queued on compute")
+            }
+
+            // Newer request arrives and completes both parse and convert on compute before older's pending compute task runs.
+            val later = async { repo.load(seoul, units, listOf("ko"), force = true) }
+            runCurrent()
+            assertTrue(later.isActive && compute.pending(), "newer strictJson queued on compute")
+            compute.runLast()
+            runCurrent()
+            assertTrue(later.isActive && compute.pending(), "newer convert queued on compute")
+            compute.runLast()
+            runCurrent()
+            assertIs<LoadResult.Loaded>(later.await())
+            assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
+
+            // Older's queued compute failure runs after supersession and must return Superseded, leaving memory and cache intact.
+            assertTrue(compute.pending(), "older compute task still queued")
+            compute.runFirst()
+            runCurrent()
+            assertFalse(compute.pending())
+            assertEquals(LoadResult.Superseded, older.await())
+            assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
+
+            val restarted = WeatherRepository("https://server.test.invalid", cache, { _, _ -> error("no request") },
+                { now }, io, io)
+            assertEquals("-5", currentOf(restarted.cached(seoul))["t1h"]!!.jsonPrimitive.content,
+                "disk cache keeps the newer answer")
+        } finally {
+            cache.deleteRecursively()
+        }
     }
 
     /** A02 (kept): `updateCity` replaces a field only when the response has a truthy value for it. */

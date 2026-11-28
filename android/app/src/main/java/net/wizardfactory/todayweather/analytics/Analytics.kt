@@ -111,15 +111,40 @@ class Analytics(
     private val trafficType: String,
     /** The device region at the start (`TodayWeatherApp.deviceRegion`); null or empty when unknown. */
     private val region: () -> String?,
+    /**
+     * Commits the choice to the Cordova hand-back suite on the caller's serialized background writer before
+     * enabling collection or returning success; defaults to a no-op when no suite is wired.
+     */
+    private val onChoiceWritten: () -> Boolean,
 ) {
+    constructor(
+        sdk: AnalyticsSdk,
+        store: ConsentStore,
+        trafficType: String,
+        region: () -> String?,
+    ) : this(sdk, store, trafficType, region, { true })
+
+    enum class ChoiceOutcome { APPLIED, SUPERSEDED, FAILED }
+
+    /** Serializes [start], [setCollectionEnabled], and [commitChoice] so consent transitions never interleave. */
+    private val transitionLock = Any()
+
+    /** Guards in-memory state, [choiceGeneration], and SDK calls; never held across SharedPreferences commits. */
+    private val stateLock = Any()
+
     private val choiceFlow = MutableStateFlow(false)
+    private val collectingFlow = MutableStateFlow(false)
     private var enabled = false
     private var started = false
     private var lastScreen: String? = null
     private var pendingScreen: String? = null
+    private var choiceGeneration = 0L
 
     /** Whether it collects, as the menu row shows it (켜짐 or 꺼짐). */
     val choice: StateFlow<Boolean> = choiceFlow.asStateFlow()
+
+    /** Whether the SDK is currently enabled and ready to log events. */
+    val collecting: StateFlow<Boolean> = collectingFlow.asStateFlow()
 
     /** The start's region keeps the opt-in (the popup asks for consent); false where usage analytics is on by default. */
     @Volatile
@@ -131,46 +156,143 @@ class Analytics(
      * region's default. A failure while applying the default leaves everything off and stores nothing, so the next
      * start applies it again.
      */
-    @Synchronized
     fun start() {
-        if (started) return
-        started = true
-        val stored = store.startChoice()
-        val region = runCatching { region() }.getOrNull()
-        optInRegion = !AnalyticsDefault.onByDefault(region)
-        choiceFlow.value = AnalyticsDefault.collects(stored, region)
-        applyCollection(choiceFlow.value, storeOnFailure = stored != null)
+        synchronized(transitionLock) {
+            if (started) return
+            started = true
+            val stored = store.startChoice()
+            val region = runCatching { region() }.getOrNull()
+            optInRegion = !AnalyticsDefault.onByDefault(region)
+            val collects = AnalyticsDefault.collects(stored, region)
+            synchronized(stateLock) {
+                choiceFlow.value = collects
+            }
+            applyCollection(collects, storeOnFailure = stored != null, generation = null)
+        }
+    }
+
+    /**
+     * Registers a new user choice generation under [stateLock] only (no [transitionLock], no disk I/O).
+     * A withdrawal stops collection and the SDK immediately so no further events are logged while
+     * [commitChoice] waits its turn on the background writer.
+     */
+    fun beginChoice(value: Boolean): Long = synchronized(stateLock) {
+        val generation = ++choiceGeneration
+        if (!value) {
+            enabled = false
+            collectingFlow.value = false
+            choiceFlow.value = false
+            pendingScreen = null
+            stopSdk()
+        }
+        generation
     }
 
     /**
      * The choice of the dialog (`setCollectionEnabled`): collection stops at once (a withdrawal also turns the SDK off
-     * and denies every consent type before any file is written), the choice is written, then applied. False when it
-     * could not be fully applied (`LOC_PRIVACY_SAVE_FAILED`); the choice is then off.
+     * and denies every consent type before any file is written), the choice and suite hand-back are written, then
+     * applied. False when it could not be fully applied (`LOC_PRIVACY_SAVE_FAILED`); the choice is then off.
      */
-    @Synchronized
-    fun setCollectionEnabled(value: Boolean): Boolean {
-        enabled = false
-        pendingScreen = null
-        if (!value) stopSdk()
+    fun setCollectionEnabled(value: Boolean): Boolean = commitChoice(value, beginChoice(value)) == ChoiceOutcome.APPLIED
+
+    /**
+     * Persists and applies the choice registered by [beginChoice] under [transitionLock].
+     * Commits the Cordova hand-back ([onChoiceWritten]) before enabling the SDK or returning [ChoiceOutcome.APPLIED],
+     * and aborts without enabling collection if a newer [beginChoice] supersedes [generation].
+     */
+    fun commitChoice(value: Boolean, generation: Long): ChoiceOutcome = synchronized(transitionLock) {
+        synchronized(stateLock) {
+            if (choiceGeneration != generation) return ChoiceOutcome.SUPERSEDED
+            enabled = false
+            collectingFlow.value = false
+            pendingScreen = null
+            if (!value) {
+                choiceFlow.value = false
+            }
+        }
         val saved = store.write(value)
-        choiceFlow.value = saved && value
+        val wroteGrant = saved && value
+        if (!isCurrent(generation)) return superseded(wroteGrant)
+        if (saved) {
+            val handedBack = runCatching { onChoiceWritten() }.getOrElse { false }
+            if (!isCurrent(generation)) return superseded(wroteGrant)
+            if (!handedBack) {
+                if (value) {
+                    val supersededNow = synchronized(stateLock) {
+                        if (choiceGeneration != generation) {
+                            true
+                        } else {
+                            enabled = false
+                            collectingFlow.value = false
+                            choiceFlow.value = false
+                            pendingScreen = null
+                            stopSdk()
+                            false
+                        }
+                    }
+                    if (supersededNow) return superseded(wroteGrant = true)
+                    store.recordCollection(false)
+                    store.write(false)
+                    runCatching { onChoiceWritten() }
+                    return ChoiceOutcome.FAILED
+                } else {
+                    val outcome = applyCollection(false, storeOnFailure = false, generation = generation)
+                    return if (outcome == ChoiceOutcome.SUPERSEDED) ChoiceOutcome.SUPERSEDED else ChoiceOutcome.FAILED
+                }
+            }
+        }
+        val collects = saved && value
+        val supersededBeforeApply = synchronized(stateLock) {
+            if (choiceGeneration != generation) {
+                true
+            } else {
+                choiceFlow.value = collects
+                if (!collects) pendingScreen = null
+                false
+            }
+        }
+        if (supersededBeforeApply) return superseded(wroteGrant)
         // A grant that was not written keeps the stored choice, also when the SDK then fails (CODEX-3178-23).
-        return applyCollection(choiceFlow.value, storeOnFailure = saved || !value) && saved
+        val applied = applyCollection(collects, storeOnFailure = saved || !value, generation = generation)
+        when {
+            applied == ChoiceOutcome.SUPERSEDED -> ChoiceOutcome.SUPERSEDED
+            applied == ChoiceOutcome.APPLIED && saved -> ChoiceOutcome.APPLIED
+            else -> ChoiceOutcome.FAILED
+        }
+    }
+
+    /**
+     * When a newer choice supersedes an opt-in that already wrote `"true"` to the choice store, clear `collectionEnabled`
+     * before returning [ChoiceOutcome.SUPERSEDED] so a crash before the newer withdrawal reaches disk cannot restore
+     * collection on restart (for example when a prior default-on session left `collectionEnabled = true`).
+     */
+    private fun superseded(wroteGrant: Boolean): ChoiceOutcome {
+        if (wroteGrant) store.recordCollection(false)
+        return ChoiceOutcome.SUPERSEDED
     }
 
     /** An event of the schema with its own fields only; false when it is dropped or not sent. */
-    @Synchronized
-    fun track(name: String, params: Map<String, Any?>): Boolean {
+    fun track(name: String, params: Map<String, Any?>): Boolean = synchronized(stateLock) {
         val safe = AnalyticsSchema.validate(name, params) ?: return false
-        return emit(name, safe)
+        emit(name, safe)
     }
 
     /**
      * A route shown (`$stateChangeSuccess`): only while collecting, only the fixed names, not the same one twice in a row.
      * The latest one before collection is enabled is sent once it is.
      */
-    @Synchronized
-    fun screen(name: String) {
+    fun screen(name: String) = synchronized(stateLock) {
+        screenLocked(name)
+    }
+
+    /** An app open: a new Cordova page, whose first screen counts again. */
+    fun onOpened() = synchronized(stateLock) {
+        lastScreen = null
+    }
+
+    private fun isCurrent(generation: Long): Boolean = synchronized(stateLock) { choiceGeneration == generation }
+
+    private fun screenLocked(name: String) {
         if (!choiceFlow.value) {
             pendingScreen = null
             return
@@ -181,12 +303,6 @@ class Analytics(
             lastScreen = name
             pendingScreen = null
         }
-    }
-
-    /** An app open: a new Cordova page, whose first screen counts again. */
-    @Synchronized
-    fun onOpened() {
-        lastScreen = null
     }
 
     private fun emit(name: String, params: Map<String, Any>): Boolean {
@@ -201,31 +317,72 @@ class Analytics(
     }
 
     /**
-     * Collection off and the consent mode first, then the collection state; when collecting, the state is recorded before
-     * the SDK collects. Any failure turns the SDK off and denies every consent type before it writes anything, and, for a
-     * stored or chosen value ([storeOnFailure]), then writes a withdrawal.
+     * Collection off and the consent mode first, then the collection state; when collecting, the state is recorded once
+     * before the SDK collects (no intermediate false write). Any failure turns the SDK off and denies every consent type
+     * before it writes anything, and, for a stored or chosen value ([storeOnFailure]), then writes a withdrawal.
      */
-    private fun applyCollection(value: Boolean, storeOnFailure: Boolean = true): Boolean {
-        enabled = false
-        lastScreen = null
+    private fun applyCollection(
+        value: Boolean,
+        storeOnFailure: Boolean = true,
+        generation: Long? = null,
+    ): ChoiceOutcome {
         try {
-            sdk.setCollectionEnabled(false)
-            sdk.setConsent(value)
-            store.recordCollection(false)
-            if (!value) return true
+            val supersededAtStart = synchronized(stateLock) {
+                if (generation != null && choiceGeneration != generation) {
+                    true
+                } else {
+                    enabled = false
+                    collectingFlow.value = false
+                    lastScreen = null
+                    sdk.setCollectionEnabled(false)
+                    sdk.setConsent(value)
+                    false
+                }
+            }
+            if (supersededAtStart) return superseded(wroteGrant = value)
+            if (!value) {
+                store.recordCollection(false)
+                return if (generation != null && !isCurrent(generation)) ChoiceOutcome.SUPERSEDED else ChoiceOutcome.APPLIED
+            }
             check(store.recordCollection(true)) { "collection state not written" }
-            sdk.setCollectionEnabled(true)
-            enabled = true
-            pendingScreen?.let(::screen)
-            return true
+            val supersededAfterRecord = synchronized(stateLock) {
+                if (generation != null && choiceGeneration != generation) {
+                    enabled = false
+                    collectingFlow.value = false
+                    pendingScreen = null
+                    stopSdk()
+                    true
+                } else {
+                    sdk.setCollectionEnabled(true)
+                    enabled = true
+                    collectingFlow.value = true
+                    pendingScreen?.let(::screenLocked)
+                    false
+                }
+            }
+            if (supersededAfterRecord) return superseded(wroteGrant = true)
+            return ChoiceOutcome.APPLIED
         } catch (e: Exception) {
-            stopSdk()
-            choiceFlow.value = false
-            pendingScreen = null
+            val supersededOnError = synchronized(stateLock) {
+                if (generation != null && choiceGeneration != generation) {
+                    true
+                } else {
+                    enabled = false
+                    collectingFlow.value = false
+                    stopSdk()
+                    choiceFlow.value = false
+                    pendingScreen = null
+                    false
+                }
+            }
+            if (supersededOnError) return superseded(wroteGrant = value)
             Log.w(TAG, "collection write_failed")
             store.recordCollection(false)
-            if (storeOnFailure) store.write(false)
-            return false
+            if (storeOnFailure) {
+                store.write(false)
+                runCatching { onChoiceWritten() }
+            }
+            return ChoiceOutcome.FAILED
         }
     }
 
