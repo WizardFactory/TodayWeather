@@ -14,10 +14,11 @@
     "air.png": "d1980daab8c6c88285318283b6208cb91a4bc487bce21a6cf93242255bcb5f63",
     "dailyforecast.png": "17f75756519bd2ae32243902dea633ecddd73940f53bd8f9740bab12a74bf546",
     "forecast.png": "99614e7b86fd253c7db1866c610a9bee054919a9faa45004e76bd6fc01253ef8",
-    "manual.json": "a5bb4f1e5f6f9e161db698ae71a7c24a62abd4e36ce1514bec20abcb9e6dd224",
-    "manual.pdf": "1563f333c07a1573b86e4a1d84c7f65e245ad0b732a02e0ba3ac7a552cdea449",
-    "search.png": "abe6473cf945382f236dcb58c7fb93f525ac2c8761c185482d941a7c3766e1be",
-    "banner.png": "36d243834e163d30623addc2ec015f84d8416ca748f177f8020d8553bceb02f9"
+    "manual.json": "108914f45c76adf2ce1576a0e1dd6d9d4e8cd434ccad8be730573153cb5485d1",
+    "manual.pdf": "3d4acfdd3826052ebeaa061950962e3a83deee42b7516270c098540816703641",
+    "search.png": "aa1c4c9243afdb0748499ef109f365e01b7e26342ad2431372fb5118bbf102ea",
+    "banner.png": "36d243834e163d30623addc2ec015f84d8416ca748f177f8020d8553bceb02f9",
+    "search-loading.png": "3c46f243612ea841d9ea0f4097d22ac18a37d410a2794c540b75130294ebcad0"
   },
   "banner_capture": {
     "capture_date": "2026-11-26",
@@ -27,5 +28,12 @@
     "files": {
       "banner.png": "36d243834e163d30623addc2ec015f84d8416ca748f177f8020d8553bceb02f9"
     }
+  },
+  "saved_places_late_fill_capture": {
+    "capture_date": "2026-11-28",
+    "source_base": "357103731a8a394b21e29e9555f9df3a9875c336",
+    "test": "HostedShellTests.NativeAdScreenTests.captureTheFourTestAdPlacements; TEST_RUNNER_TW_NATIVE_CAPTURE=1",
+    "capture_environment": "iOS 26.5 simulator; app-hosted Saved Places screen, Korean locale, 393 × 798 pt.",
+    "sequence": "The local fixture starts empty. Both Saved Places captures use the same tab and scroll position. No navigation or scrolling occurs before the creative appears."
   }
 }
