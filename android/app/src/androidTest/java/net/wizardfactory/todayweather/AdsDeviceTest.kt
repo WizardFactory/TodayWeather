@@ -157,6 +157,7 @@ class AdsDeviceTest {
     fun anOptInStartsCollection() {
         assumeTrue("needs -e ads optin", TestRunner.args.getString("ads") == "optin")
         rule.closeStartChoice()
+        ScreenFitWalk(rule).seed()
         rule.waitUntil(30_000) { app.appState.current() != null }
         assertFalse(app.analytics.choice.value)
         rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
