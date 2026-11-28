@@ -7,7 +7,7 @@
       "instruction": "Open the menu and choose National Weather. Read the labels above the map. Tap Wind direction/Wind speed to show both measurements for each city when data is available.",
       "screenshot": "screenshots/split-after.png",
       "caption": "The three mode labels in the right-hand app pane.",
-      "expected": "The full label stays visible and can wrap when the window is narrow. The offline example shows city names."
+      "expected": "The full label stays visible at the system text size. It can wrap in split screen or on a portrait phone in full screen. The offline example shows city names."
     }
   ]
 }
