@@ -45,6 +45,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
@@ -54,10 +55,12 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -162,34 +165,20 @@ private fun NationAir(page: NationPageState.Nation?, units: UnitSettings) {
     }
 }
 
-/**
- * `.button-bar.nation-bar`: three `button-dark button-outline` buttons sharing the width, 34 dp tall, in a #444 outline
- * with 4 dp outer corners, each later button's left border dividing it from the one before. The text is bold 15 sp #444
- * on a 32 dp line, centered between 16 dp paddings, on one line that ends with an ellipsis when it does not fit
- * (`.button-bar > .button`: the English "Wind direction/Wind speed"). While a button is pressed it turns #444 with white
- * text (`.activated`).
- */
+/** Three equal-width buttons retain the original single line and padding wherever the full label fits. */
 @Composable
 private fun ModeBar(labels: List<String>, onMode: (Int) -> Unit) {
     val dark = Color(0xFF444444)
-    Layout(content = {
-        labels.forEachIndexed { i, label ->
-            val shape = RoundedCornerShape(topStart = if (i == 0) 4.dp else 0.dp, bottomStart = if (i == 0) 4.dp else 0.dp,
-                topEnd = if (i == labels.lastIndex) 4.dp else 0.dp, bottomEnd = if (i == labels.lastIndex) 4.dp else 0.dp)
-            val press = remember { MutableInteractionSource() }
-            val pressed by press.collectIsPressedAsState()
-            Box(Modifier.background(if (pressed) dark else Color.Transparent, shape)
-                .drawBehind { if (i > 0) drawRect(dark, size = Size(1.dp.toPx(), size.height)) }
-                .clickable(press, indication = null) { onMode(i) }.testTag(NationTags.mode(i))
-                .padding(start = 17.dp, end = if (i == labels.lastIndex) 17.dp else 16.dp), contentAlignment = Alignment.Center) {
-                FixedLine(32.dp) {
-                    LineText(label, line(15.sp, 32.sp, if (pressed) Color.White else dark, FontWeight.Bold).copy(textMotion = TextMotion.Animated))
-                }
-            }
-        }
-    }, Modifier.fillMaxWidth().height(34.dp).border(1.dp, dark, RoundedCornerShape(4.dp))) { measurables, constraints ->
-        // Flex shares what the borders (1 dp left on each, 1 dp right on the last) and paddings (16 dp each side) leave;
-        // Chrome puts each button's edges on the device pixel nearest their fractional position.
+    val shape = RoundedCornerShape(4.dp)
+    val style = line(15.sp, 32.sp, dark, FontWeight.Bold).copy(textMotion = TextMotion.Animated)
+    val wrappedStyle = style.copy(
+        lineHeight = TextUnit.Unspecified,
+        lineHeightStyle = null,
+        textAlign = TextAlign.Center,
+    )
+    val measurer = rememberTextMeasurer()
+    SubcomposeLayout(Modifier.fillMaxWidth().border(1.dp, dark, shape)) { constraints ->
+        // Keep the original pixel snapping, including the additional right border on the last button.
         val width = constraints.maxWidth.toFloat()
         val share = (width - (labels.size + 1) * 1.dp.toPx() - labels.size * 32.dp.toPx()) / labels.size
         var x = 0f
@@ -197,9 +186,49 @@ private fun ModeBar(labels: List<String>, onMode: (Int) -> Unit) {
             val w = share + 32.dp.toPx() + 1.dp.toPx() * (if (i == labels.lastIndex) 2 else 1)
             Math.round(x).also { x += w }
         } + Math.round(x)
-        val height = 34.dp.roundToPx()
-        val placeables = measurables.mapIndexed { i, m -> m.measure(Constraints.fixed(edges[i + 1] - edges[i], height)) }
-        layout(constraints.maxWidth, height) { placeables.forEachIndexed { i, p -> p.place(edges[i], 0) } }
+        val widths = labels.indices.map { edges[it + 1] - edges[it] }
+        val standardPadding = 16.dp
+        val verticalPadding = 2.dp
+        var barHeight = 34.dp.roundToPx()
+        val buttonContent = labels.mapIndexed { i, label ->
+            val endBorder = if (i == labels.lastIndex) 1.dp else 0.dp
+            val labelWidth = measurer.measure(label, style, maxLines = 1, softWrap = false).size.width
+            val standardWidth = widths[i] - (standardPadding + 1.dp).roundToPx() - (standardPadding + endBorder).roundToPx()
+            val inset = if (labelWidth <= standardWidth) standardPadding else 4.dp
+            val start = inset + 1.dp
+            val end = inset + endBorder
+            val available = (widths[i] - start.roundToPx() - end.roundToPx()).coerceAtLeast(0)
+            val wrap = labelWidth > available
+            // Allow a break between slash-separated terms, even on Android versions that keep them together.
+            val wrappedLabel = if (wrap) label.replace("/", "/\u200B") else label
+            if (wrap) {
+                // Wrap at the system font size so the full mode name stays readable in narrow windows.
+                val textHeight = measurer.measure(wrappedLabel, wrappedStyle, constraints = Constraints(maxWidth = available)).size.height
+                barHeight = maxOf(barHeight, textHeight + 2 * verticalPadding.roundToPx())
+            }
+
+            @Composable {
+                val buttonShape = RoundedCornerShape(topStart = if (i == 0) 4.dp else 0.dp, bottomStart = if (i == 0) 4.dp else 0.dp,
+                    topEnd = if (i == labels.lastIndex) 4.dp else 0.dp, bottomEnd = if (i == labels.lastIndex) 4.dp else 0.dp)
+                val press = remember { MutableInteractionSource() }
+                val pressed by press.collectIsPressedAsState()
+                val color = if (pressed) Color.White else dark
+                Box(Modifier.background(if (pressed) dark else Color.Transparent, buttonShape)
+                    .drawBehind { if (i > 0) drawRect(dark, size = Size(1.dp.toPx(), size.height)) }
+                    .clickable(press, indication = null) { onMode(i) }.testTag(NationTags.mode(i))
+                    .padding(start = start, end = end), contentAlignment = Alignment.Center) {
+                    if (wrap) {
+                        Text(wrappedLabel, Modifier.padding(vertical = verticalPadding), style = wrappedStyle.copy(color = color))
+                    } else {
+                        FixedLine(32.dp) { LineText(label, style.copy(color = color)) }
+                    }
+                }
+            }
+        }
+        val placeables = buttonContent.mapIndexed { i, content ->
+            subcompose(i, content).single().measure(Constraints.fixed(widths[i], barHeight))
+        }
+        layout(constraints.maxWidth, barHeight) { placeables.forEachIndexed { i, p -> p.place(edges[i], 0) } }
     }
 }
 

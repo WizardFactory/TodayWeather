@@ -27,6 +27,7 @@ The recorded requests show what the native app must send:
 ## Tests
 
 - `NationScreenshotTest` (app, Robolectric native graphics, SDK 34): every page, state and card against the PNGs, rendered at 384 dp and density 2 with the same answers. Each comparison passes within the tolerance recorded for it (`ImageDiff`). Renders and difference overlays go to `app/build/nation-compare/`.
+- For #3247, the historical and four-width English S10 captures compare from each map's top because the native mode bar can wrap and move the map down. The recorded Cordova images and tolerances stay in place. `NationFitTest` and `WindowFitDeviceTest` verify the native mode labels.
 - `NationGeometryTest`: the labels relative to the map, the mode buttons, the tabs (also scrolled to CO), the cards' tops and heights and the loading box against the recorded rects, within 0.5 dp.
 - `NationPagesTest` (core-domain) compares every label's name, icon and values and every card's parts with the JSON. `NationSourceTest` (core-data) compares the requests with `ko-KR/requests.json`.
 - CI runs the JVM tests in both Android jobs. The job with `client/` also runs [`tools/emulator/check-sources.mjs`](../emulator/check-sources.mjs), which fails when a source of the three pages in `client/www` no longer matches the one in `provenance.json`.

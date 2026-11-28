@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
+import kotlin.math.roundToInt
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.double
@@ -137,7 +138,7 @@ class NationScreenshotTest {
     @Config(qualifiers = "en-rKR-w384dp-h4400dp-xhdpi")
     @Test fun english() = checked {
         page(NationRoutes.NATION, nation)
-        compare("en-KR/nation-weather")
+        compareWeatherMap("en-KR/nation-weather")
         page(NationRoutes.NATION_AIR, nation)
         compare("en-KR/nation-air-pm2.5")
         page(NationRoutes.WARNINGS, warnings("en-KR"))
@@ -149,7 +150,7 @@ class NationScreenshotTest {
         matrixSize = size
         matrixLang = lang
         page(NationRoutes.NATION, nation)
-        compare("$lang/nation-weather")
+        if (lang == "ko-KR") compare("$lang/nation-weather") else compareWeatherMap("$lang/nation-weather")
         page(NationRoutes.NATION_AIR, nation)
         compare("$lang/nation-air-pm2.5")
         page(NationRoutes.WARNINGS, warnings(lang))
@@ -250,8 +251,20 @@ class NationScreenshotTest {
         compareImage(name, rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels(), crop)
     }
 
-    private fun compareImage(name: String, native: Pixels, crop: Boolean) {
-        val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
+    /** #3247: English mode names can wrap, shifting the map down. Compare from each map's top. */
+    private fun compareWeatherMap(name: String) {
+        val root = rule.onNodeWithTag(ROOT)
+        val nativeMap = rule.onNodeWithTag(NationTags.MAP).fetchSemanticsNode()
+        val nativeTop = (nativeMap.positionInRoot.y - root.fetchSemanticsNode().positionInRoot.y).roundToInt()
+        val native = root.captureToImage().asAndroidBitmap().toPixels()
+        val reference = Json.parseToJsonElement(File(references, "$name.json").readText()).jsonObject
+        val referenceTop = (reference["map"]!!.jsonObject["rect"]!!.jsonObject.num("y") * rule.density.density).roundToInt()
+        compareImage(name, native.crop(0, nativeTop, native.width, native.height - nativeTop), crop = true, referenceTop)
+    }
+
+    private fun compareImage(name: String, native: Pixels, crop: Boolean, referenceTop: Int = 0) {
+        val reference = ImageIO.read(File(references, "$name.png")).toPixels()
+        val cordova = reference.crop(0, referenceTop, reference.width, reference.height - referenceTop)
         val shown = if (crop) native.crop(0, 0, native.width, minOf(native.height, cordova.height)) else native
         val diff = ImageDiff.of(shown, cordova)
         val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
