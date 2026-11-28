@@ -2,6 +2,7 @@ package net.wizardfactory.todayweather.ads
 
 import android.app.Activity
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.SystemClock
 import androidx.annotation.MainThread
 import com.google.android.gms.ads.AdError
@@ -30,16 +31,8 @@ class ForecastInterstitial internal constructor(
     constructor(activity: Activity, unitId: String, track: (String, Map<String, Any?>) -> Boolean, chance: () -> Int) :
         this(activity, unitId, track, adMobRequest(activity, unitId), Random.Default::nextDouble, chance = chance)
     private val prefs = activity.getSharedPreferences(preferenceFile, Context.MODE_PRIVATE)
-    private val visits = ForecastVisits(
-        load = {
-            ForecastAdDay(prefs.getLong("day", Long.MIN_VALUE), prefs.getBoolean("hourly", false),
-                prefs.getBoolean("daily", false), prefs.getBoolean("spent", false))
-        },
-        save = { day ->
-            // commit() is intentional: a process death after show must not reopen the allowance.
-            prefs.edit().putLong("day", day.date).putBoolean("hourly", day.hourly)
-                .putBoolean("daily", day.daily).putBoolean("spent", day.spent).commit()
-        },
+    private val visits = forecastVisits(
+        prefs = prefs,
         today = {
             val calendar = GregorianCalendar()
             calendar.get(Calendar.YEAR) * 1000L + calendar.get(Calendar.DAY_OF_YEAR)
@@ -167,6 +160,36 @@ class ForecastInterstitial internal constructor(
         const val MAX_AGE_MS = 55 * 60_000L
         const val MIN_REQUEST_INTERVAL_MS = 60_000L
     }
+}
+
+internal fun forecastVisits(
+    prefs: SharedPreferences,
+    today: () -> Long,
+    draw: () -> Double,
+    chance: () -> Int,
+): ForecastVisits {
+    fun write(day: ForecastAdDay) = prefs.edit()
+        .putLong("day", day.date)
+        .putBoolean("hourly", day.hourly)
+        .putBoolean("daily", day.daily)
+        .putBoolean("spent", day.spent)
+    return ForecastVisits(
+        load = {
+            ForecastAdDay(prefs.getLong("day", Long.MIN_VALUE), prefs.getBoolean("hourly", false),
+                prefs.getBoolean("daily", false), prefs.getBoolean("spent", false))
+        },
+        save = { day ->
+            // commit() is intentional: a process death after show must not reopen the allowance.
+            write(day).commit()
+        },
+        today = today,
+        draw = draw,
+        chance = chance,
+        saveAsync = { day ->
+            // apply() is safe for "seen": a lost flag only delays an ad and preserves first-visit protection.
+            write(day).apply()
+        },
+    )
 }
 
 /** A ready SDK creative or its deterministic device-test counterpart. */

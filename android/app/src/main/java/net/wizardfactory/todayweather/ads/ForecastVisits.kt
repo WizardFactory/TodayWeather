@@ -17,6 +17,8 @@ internal class ForecastVisits(
     private val draw: () -> Double,
     /** The current `tw_interstitial_chance` percentage, read on every draw. */
     private val chance: () -> Int,
+    /** Best-effort async save for [visible] only; durable transitions always use [save]. */
+    private val saveAsync: (ForecastAdDay) -> Unit = { save(it) },
 ) {
     fun visible(tab: Tab) {
         val day = current() ?: return
@@ -25,7 +27,7 @@ internal class ForecastVisits(
             Tab.DAILY -> day.copy(daily = true)
             else -> return
         }
-        if (day != visited) save(visited)
+        if (day != visited) saveAsync(visited)
     }
 
     /** Caller has a ready ad for one deliberate navigation. A durable reservation precedes every show. */

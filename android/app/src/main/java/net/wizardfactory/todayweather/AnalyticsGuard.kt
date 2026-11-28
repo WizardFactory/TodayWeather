@@ -26,7 +26,15 @@ object AnalyticsGuard {
      * firebase-analytics 23.x; the upgrade test checks the result).
      */
     fun beforeFirebase(context: Context) {
-        context.getSharedPreferences(MEASUREMENT_PREFS, Context.MODE_PRIVATE).edit()
+        val prefs = context.getSharedPreferences(MEASUREMENT_PREFS, Context.MODE_PRIVATE)
+        val alreadyOff = runCatching {
+            prefs.contains("measurement_enabled_from_api") &&
+                !prefs.getBoolean("measurement_enabled_from_api", true) &&
+                prefs.contains("measurement_enabled") &&
+                !prefs.getBoolean("measurement_enabled", true)
+        }.getOrDefault(false)
+        if (alreadyOff) return
+        prefs.edit()
             .putBoolean("measurement_enabled_from_api", false)
             .putBoolean("measurement_enabled", false)
             .commit()

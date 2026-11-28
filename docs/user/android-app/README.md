@@ -15,6 +15,7 @@ hourly/daily charts, air quality and stations, saved places, alarms, units,
 startup/refresh settings, themes, nationwide information, privacy, sharing and exit.
 The app screens are Korean; the instructions are English with Korean control labels.
 The [home-screen widget guide](widgets/README.md) covers configuration, resizing, the five-day visit interval and recovery.
+The [usage analytics supplement](usage-analytics/manual.pdf) shows the withdrawal progress dialog and how to confirm the saved choice. See the [editable source](usage-analytics/manual.json) and [capture record](usage-analytics/provenance.json).
 The [older Cordova app manual](../cordova-app/README.md) describes version 1.1.1.
 
 All 45 journey screenshots were captured from the running native app **without ads**: 40 on

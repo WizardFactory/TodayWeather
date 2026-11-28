@@ -3,9 +3,20 @@ package net.wizardfactory.todayweather.analytics
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import net.wizardfactory.todayweather.AnalyticsGuard
+import net.wizardfactory.todayweather.HandBackConsent
+import net.wizardfactory.todayweather.HandBackWriter
+import net.wizardfactory.todayweather.core.storage.AppState
+import net.wizardfactory.todayweather.core.storage.CordovaHandBack
+import net.wizardfactory.todayweather.core.storage.CordovaMigration
+import net.wizardfactory.todayweather.core.storage.Place
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -406,6 +417,319 @@ class AnalyticsTest {
         assertTrue(a.track("ad_lifecycle", mapOf("action" to "show", "ad_format" to "banner")))
     }
 
+    /** #3238 AC4: a cold start with stored "collecting" state writes collectionEnabled once (true), not false-then-true. */
+    @Test
+    fun coldStartWithStoredCollectingStateWritesCollectionOnceWithoutIntermediateFalse() {
+        for ((region, storedChoice) in listOf("DE" to "true", "KR" to null)) {
+            choices.edit().apply {
+                if (storedChoice != null) putString(ConsentStore.KEY, storedChoice) else remove(ConsentStore.KEY)
+            }.commit()
+            collection.edit().putBoolean(ConsentStore.ENABLED, true).commit()
+            collection.recordedBooleans.clear()
+
+            val sdk = Sdk()
+            val a = analytics(sdk, region)
+            assertTrue(a.choice.value, "collecting in $region")
+            assertEquals(collectionOn, sdk.calls, "SDK sequence in $region")
+            assertEquals(listOf(true), collection.recordedBooleans, "must not write intermediate false before true ($region)")
+        }
+    }
+
+    /** #3238 AC4: AnalyticsGuard.beforeFirebase commits synchronously unless both SDK keys are already present and false. */
+    @Test
+    fun beforeFirebaseSkipsCommitOnlyWhenBothKeysArePresentAndFalse() {
+        val prefs = context.getSharedPreferences("com.google.android.gms.measurement.prefs", Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+        AnalyticsGuard.beforeFirebase(context)
+        assertTrue(prefs.contains("measurement_enabled_from_api"))
+        assertTrue(prefs.contains("measurement_enabled"))
+        assertFalse(prefs.getBoolean("measurement_enabled_from_api", true))
+        assertFalse(prefs.getBoolean("measurement_enabled", true))
+
+        // Calling again when both keys are present and false should be a no-op (no commit).
+        val counting = CountingContext(context, "com.google.android.gms.measurement.prefs")
+        AnalyticsGuard.beforeFirebase(counting)
+        assertEquals(0, counting.commits, "both keys present and false: skip commit")
+
+        // When one key is true, must commit both false.
+        prefs.edit().putBoolean("measurement_enabled", true).commit()
+        counting.commits = 0
+        AnalyticsGuard.beforeFirebase(counting)
+        assertEquals(1, counting.commits, "one key true: must commit")
+        assertFalse(prefs.getBoolean("measurement_enabled", true))
+
+        // When one key is missing, must commit both false.
+        prefs.edit().remove("measurement_enabled_from_api").commit()
+        counting.commits = 0
+        AnalyticsGuard.beforeFirebase(counting)
+        assertEquals(1, counting.commits, "missing key: must commit")
+        assertTrue(prefs.contains("measurement_enabled_from_api"))
+        assertFalse(prefs.getBoolean("measurement_enabled_from_api", true))
+    }
+
+    /** #3238 AC2: setCollectionEnabled on a background thread must not hold the monitor used by screen() or track() across commits. */
+    @Test
+    fun setCollectionEnabledOnBackgroundDoesNotBlockConcurrentScreenOrTrack() {
+        for (blockOnChoices in listOf(true, false)) {
+            choices.edit().clear().commit()
+            collection.edit().clear().commit()
+            val sdk = Sdk()
+            val a = analytics(sdk, "DE")
+            val enteredCommit = CountDownLatch(1)
+            val releaseCommit = CountDownLatch(1)
+            val targetPrefs = if (blockOnChoices) choices else collection
+            targetPrefs.onCommit = {
+                enteredCommit.countDown()
+                releaseCommit.await(5, TimeUnit.SECONDS)
+            }
+            val saveResult = AtomicReference<Boolean>()
+            val bg = thread(name = "analytics-commit-test") {
+                saveResult.set(a.setCollectionEnabled(true))
+            }
+            try {
+                assertTrue(enteredCommit.await(5, TimeUnit.SECONDS), "must enter commit (choices=$blockOnChoices)")
+                val probeDone = CountDownLatch(1)
+                val probe = thread(name = "main-screen-probe") {
+                    a.screen("tab.forecast")
+                    a.track("weather_fetch", fetch)
+                    probeDone.countDown()
+                }
+                assertTrue(
+                    probeDone.await(500, TimeUnit.MILLISECONDS),
+                    "screen() and track() must not block while setCollectionEnabled commits (choices=$blockOnChoices)",
+                )
+                probe.join(1_000)
+            } finally {
+                targetPrefs.onCommit = null
+                releaseCommit.countDown()
+                bg.join(5_000)
+            }
+            assertEquals(true, saveResult.get())
+            assertTrue(a.choice.value)
+            assertTrue(a.collecting.value)
+        }
+    }
+
+    /** #3238 CODEX-2: delayed suite hand-back delays completion and SDK enablement; once finished, HandBackConsent preserves the grant. */
+    @Test
+    fun setCollectionEnabledWaitsForDelayedSuiteHandBackBeforeEnablingSdk() {
+        choices.edit().clear().commit()
+        collection.edit().clear().commit()
+        val suite = context.getSharedPreferences(CordovaMigration.SUITE, Context.MODE_PRIVATE)
+        suite.edit().clear().commit()
+        val store = ConsentStore(choices, collection)
+        val writer = HandBackWriter(suite) { store.storedChoice() }
+        store.write(false)
+        writer.write(AppState(places = listOf(Place.currentPositionPlaceholder()), placeIndex = 0))
+        assertEquals("false", suite.getString(CordovaHandBack.CONSENT, null))
+
+        val enteredHandBack = CountDownLatch(1)
+        val releaseHandBack = CountDownLatch(1)
+        val sdk = Sdk()
+        val a = Analytics(sdk, store, "development", { "DE" }, onChoiceWritten = {
+            enteredHandBack.countDown()
+            assertTrue(releaseHandBack.await(5, TimeUnit.SECONDS))
+            writer.rewrite()
+        }).also { it.start() }
+        sdk.calls.clear()
+
+        val done = CountDownLatch(1)
+        val result = AtomicReference<Boolean>()
+        val bg = thread(name = "delayed-handback-codex2") {
+            result.set(a.setCollectionEnabled(true))
+            done.countDown()
+        }
+        try {
+            assertTrue(enteredHandBack.await(5, TimeUnit.SECONDS), "must enter onChoiceWritten")
+            assertFalse(done.await(200, TimeUnit.MILLISECONDS), "setCollectionEnabled(true) must wait for suite hand-back")
+            assertFalse(a.collecting.value, "must not collect before suite hand-back commits")
+            assertFalse("collection true" in sdk.calls, "SDK must not enable before suite hand-back commits")
+
+            releaseHandBack.countDown()
+            assertTrue(done.await(5, TimeUnit.SECONDS))
+            assertEquals(true, result.get())
+            assertTrue(a.choice.value)
+            assertTrue(a.collecting.value)
+            assertEquals("true", suite.getString(CordovaHandBack.CONSENT, null))
+
+            // Restart path: HandBackConsent preserves the grant and next Analytics.start() restores collection.
+            HandBackConsent.beforeStart(context)
+            val restartedSdk = Sdk()
+            val restarted = Analytics(restartedSdk, ConsentStore(context), "development") { "DE" }.also { it.start() }
+            assertTrue(restarted.choice.value)
+            assertTrue(restarted.collecting.value)
+            assertEquals(collectionOn, restartedSdk.calls)
+        } finally {
+            releaseHandBack.countDown()
+            bg.join(5_000)
+        }
+    }
+
+    /** #3238 CODEX-2: a failed suite hand-back rolls back a grant without enabling the SDK and reports failure. */
+    @Test
+    fun failedSuiteHandBackRollsBackGrantAndDoesNotEnableSdk() {
+        choices.edit().clear().commit()
+        collection.edit().clear().commit()
+        val store = ConsentStore(choices, collection)
+        val sdk = Sdk()
+        val a = Analytics(sdk, store, "development", { "DE" }, onChoiceWritten = { false }).also { it.start() }
+        sdk.calls.clear()
+
+        assertFalse(a.setCollectionEnabled(true))
+        assertFalse(a.choice.value)
+        assertFalse(a.collecting.value)
+        assertEquals("false", store.storedChoice())
+        assertFalse(collection.getBoolean(ConsentStore.ENABLED, true))
+        assertFalse("collection true" in sdk.calls, "SDK must never be enabled when hand-back fails")
+
+        // Withdrawal with failed hand-back still records collection off and reports failure.
+        assertFalse(a.setCollectionEnabled(false))
+        assertFalse(a.choice.value)
+        assertFalse(a.collecting.value)
+        assertFalse(collection.getBoolean(ConsentStore.ENABLED, true))
+    }
+
+    /** #3238 CODEX-3: beginChoice(false) returns immediately without blocking on recordCollection(true) and supersedes the in-flight opt-in. */
+    @Test
+    fun optOutWhileOptInIsBlockedInRecordCollectionPreventsSdkEnableAndEvents() {
+        choices.edit().clear().commit()
+        collection.edit().clear().commit()
+        val sdk = Sdk()
+        val a = analytics(sdk, "DE")
+        sdk.calls.clear()
+        val enteredRecord = CountDownLatch(1)
+        val releaseRecord = CountDownLatch(1)
+        collection.onCommit = {
+            enteredRecord.countDown()
+            releaseRecord.await(5, TimeUnit.SECONDS)
+        }
+        val gen1 = a.beginChoice(true)
+        val gen1Outcome = AtomicReference<Analytics.ChoiceOutcome>()
+        val optInThread = thread(name = "opt-in-codex3") {
+            gen1Outcome.set(a.commitChoice(true, gen1))
+        }
+        val gen2Outcome = AtomicReference<Analytics.ChoiceOutcome>()
+        var optOutThread: Thread? = null
+        try {
+            assertTrue(enteredRecord.await(5, TimeUnit.SECONDS), "opt-in must enter recordCollection(true)")
+            a.screen("tab.forecast")
+            assertFalse(a.collecting.value, "collecting must stay false while recordCollection(true) is still in flight")
+
+            // beginChoice(false) must return immediately without waiting for the latch and stop the SDK at once.
+            val beginDone = CountDownLatch(1)
+            val gen2Ref = AtomicReference<Long>()
+            val mainCaller = thread(name = "main-begin-optout") {
+                gen2Ref.set(a.beginChoice(false))
+                beginDone.countDown()
+            }
+            assertTrue(beginDone.await(500, TimeUnit.MILLISECONDS), "beginChoice(false) must not block on disk commit")
+            mainCaller.join(1_000)
+            val gen2 = gen2Ref.get()!!
+            assertFalse(a.choice.value)
+            assertFalse(a.collecting.value)
+            assertEquals(collectionOff, sdk.calls.takeLast(2), "beginChoice(false) must stop SDK immediately")
+
+            optOutThread = thread(name = "opt-out-codex3") {
+                gen2Outcome.set(a.commitChoice(false, gen2))
+            }
+            collection.onCommit = null
+            releaseRecord.countDown()
+            optInThread.join(5_000)
+            optOutThread.join(5_000)
+
+            assertEquals(Analytics.ChoiceOutcome.SUPERSEDED, gen1Outcome.get())
+            assertEquals(Analytics.ChoiceOutcome.APPLIED, gen2Outcome.get())
+            assertFalse("collection true" in sdk.calls, "opt-in superseded by opt-out must never enable SDK")
+            assertTrue(sdk.events.isEmpty(), "superseded opt-in must not flush pendingScreen or log events")
+            assertFalse(a.choice.value)
+            assertFalse(a.collecting.value)
+            assertEquals("false", choices.getString(ConsentStore.KEY, null))
+        } finally {
+            collection.onCommit = null
+            releaseRecord.countDown()
+            optInThread.join(5_000)
+            optOutThread?.join(5_000)
+        }
+    }
+
+    /** #3238 CODEX-R2-2: opt-out arriving during suite hand-back under KR default-on must clear collectionEnabled before SUPERSEDED so restart never restores collection. */
+    @Test
+    fun optOutDuringDelayedSuiteHandBackUnderKrDefaultPreventsRestartFromRestoringCollection() {
+        choices.edit().clear().commit()
+        collection.edit().clear().commit()
+        val suite = context.getSharedPreferences(CordovaMigration.SUITE, Context.MODE_PRIVATE)
+        suite.edit().clear().commit()
+        val store = ConsentStore(choices, collection)
+        val writer = HandBackWriter(suite) { store.storedChoice() }
+        writer.write(AppState(places = listOf(Place.currentPositionPlaceholder()), placeIndex = 0))
+
+        val enteredHandBack = CountDownLatch(1)
+        val releaseHandBack = CountDownLatch(1)
+        val sdk = Sdk()
+        val a = Analytics(sdk, store, "development", { "KR" }, onChoiceWritten = {
+            enteredHandBack.countDown()
+            assertTrue(releaseHandBack.await(5, TimeUnit.SECONDS))
+            writer.rewrite()
+        }).also { it.start() }
+        // KR default-on left collectionEnabled=true on disk with no stored choice yet.
+        assertTrue(collection.getBoolean(ConsentStore.ENABLED, false))
+        assertEquals(null, store.storedChoice())
+        sdk.calls.clear()
+
+        val gen1 = a.beginChoice(true)
+        val gen1Outcome = AtomicReference<Analytics.ChoiceOutcome>()
+        val optInThread = thread(name = "opt-in-codex-r2-2") {
+            gen1Outcome.set(a.commitChoice(true, gen1))
+        }
+        try {
+            assertTrue(enteredHandBack.await(5, TimeUnit.SECONDS), "opt-in must enter suite hand-back")
+            // User withdraws before suite commit finishes; process dies before gen2's commitChoice(false, gen2) can run.
+            a.beginChoice(false)
+            assertFalse(a.choice.value)
+            assertFalse(a.collecting.value)
+
+            releaseHandBack.countDown()
+            optInThread.join(5_000)
+            assertEquals(Analytics.ChoiceOutcome.SUPERSEDED, gen1Outcome.get())
+            assertFalse("collection true" in sdk.calls)
+            assertFalse(
+                collection.getBoolean(ConsentStore.ENABLED, true),
+                "superseded opt-in must clear collectionEnabled before returning SUPERSEDED",
+            )
+
+            // Simulate process restart in DE using only what reached disk before gen2 could run.
+            HandBackConsent.beforeStart(context)
+            val restartedSdk = Sdk()
+            val restarted = Analytics(restartedSdk, ConsentStore(choices, collection), "development") { "DE" }.also { it.start() }
+            assertFalse(restarted.choice.value, "restart must not restore collection after withdrawal superseded opt-in")
+            assertFalse(restarted.collecting.value)
+            assertFalse("collection true" in restartedSdk.calls)
+        } finally {
+            releaseHandBack.countDown()
+            optInThread.join(5_000)
+        }
+    }
+
+    private class CountingContext(base: Context, private val fileName: String) : android.content.ContextWrapper(base) {
+        var commits = 0
+        override fun getSharedPreferences(name: String?, mode: Int): SharedPreferences {
+            val real = super.getSharedPreferences(name, mode)
+            if (name != fileName) return real
+            return object : SharedPreferences by real {
+                override fun edit(): SharedPreferences.Editor {
+                    val staged = real.edit()
+                    return object : SharedPreferences.Editor by staged {
+                        override fun putBoolean(key: String?, value: Boolean) = also { staged.putBoolean(key, value) }
+                        override fun commit(): Boolean {
+                            commits++
+                            return staged.commit()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /** Preferences whose writes fail while [fail] is set: nothing changes, as when the file cannot be written. */
     private class FailingPrefs(private val real: SharedPreferences) : SharedPreferences by real {
         var fail = false
@@ -413,6 +737,8 @@ class AnalyticsTest {
         /** Only writes of a value fail ([failValue] only, when set); a removal succeeds. */
         var failPuts = false
         var failValue: String? = null
+        val recordedBooleans = mutableListOf<Boolean>()
+        var onCommit: (() -> Unit)? = null
 
         override fun edit(): SharedPreferences.Editor = when {
             fail -> Failing(real.edit())
@@ -422,9 +748,27 @@ class AnalyticsTest {
                 override fun putString(key: String?, value: String?) =
                     also { if (failValue == null || value == failValue) put = true else staged.putString(key, value) }
                 override fun remove(key: String?) = also { staged.remove(key) }
-                override fun commit() = !put && staged.commit()
+                override fun commit(): Boolean {
+                    onCommit?.invoke()
+                    return !put && staged.commit()
+                }
             }
-            else -> real.edit()
+            else -> object : SharedPreferences.Editor by real.edit() {
+                private val staged = real.edit()
+                private val booleans = mutableListOf<Boolean>()
+                override fun putString(key: String?, value: String?) = also { staged.putString(key, value) }
+                override fun putBoolean(key: String?, value: Boolean) = also {
+                    if (key == ConsentStore.ENABLED) booleans += value
+                    staged.putBoolean(key, value)
+                }
+                override fun remove(key: String?) = also { staged.remove(key) }
+                override fun clear() = also { staged.clear() }
+                override fun commit(): Boolean {
+                    onCommit?.invoke()
+                    recordedBooleans += booleans
+                    return staged.commit()
+                }
+            }
         }
 
         /** An editor that stages changes and never writes them. */
