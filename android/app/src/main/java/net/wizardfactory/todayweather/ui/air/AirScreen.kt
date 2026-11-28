@@ -236,7 +236,7 @@ private fun MainBox(main: AirMain, metrics: ChartMetrics, theme: Theme, colors: 
  * it: the first font's ascent (a rounded-down descent borrowing a pixel) plus half the leading, rounded down.
  */
 @Composable
-private fun GradeLine(main: AirMain, color: Color, text: Color) {
+internal fun GradeLine(main: AirMain, color: Color, text: Color) {
     val density = LocalDensity.current
     val face = "face"
     val annotated = remember(main) {
@@ -255,13 +255,11 @@ private fun GradeLine(main: AirMain, color: Color, text: Color) {
     // own, possibly nonlinear, conversion). It stands on the baseline in the text and is moved down to the line's top.
     val size = with(density) { 24.dp.toSp() }
     val placeholder = Placeholder(size, size, PlaceholderVerticalAlign.AboveBaseline)
-    val inline = mapOf(face to InlineTextContent(placeholder) {
-        Box(Modifier.layout { measurable, constraints ->
-            val p = measurable.measure(constraints)
-            layout(p.width, p.height) { p.place(0, p.height - baseline) }
-        }) { Icon { Text(main.glyph, style = glyphStyle(24.sp, color, Glyphs.materialIcons)) } }
-    })
-    HeaderParagraph(annotated, style, Modifier, lineHeight, baseline, inline = inline)
+    val inline = mapOf(face to InlineTextContent(placeholder) {})
+    val faceStart = if (main.lead.isEmpty()) 0 else main.lead.length + 1
+    HeaderParagraph(annotated, style, Modifier, lineHeight, baseline, inline = inline, faceStart = faceStart) {
+        Icon { Text(main.glyph, style = glyphStyle(24.sp, color, Glyphs.materialIcons)) }
+    }
 }
 
 /**

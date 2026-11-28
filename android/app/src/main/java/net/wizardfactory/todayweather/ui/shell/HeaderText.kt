@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.layout.Layout
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
@@ -62,7 +64,7 @@ internal fun ShellLine(text: AnnotatedString, style: TextStyle, modifier: Modifi
 }
 
 @Composable
-internal fun PaintText(text: AnnotatedString, style: TextStyle, modifier: Modifier = Modifier,
+private fun PaintText(text: AnnotatedString, style: TextStyle, modifier: Modifier = Modifier,
                        outline: Color?, maxLines: Int = Int.MAX_VALUE, overflow: TextOverflow = TextOverflow.Clip) {
     if (outline == null) {
         Text(text, modifier, style = style, maxLines = maxLines, overflow = overflow)
@@ -74,43 +76,65 @@ internal fun PaintText(text: AnnotatedString, style: TextStyle, modifier: Modifi
     }
 }
 
-private inline fun DrawScope.outlineOffsets(draw: (Float, Float) -> Unit) {
+internal inline fun DrawScope.outlineOffsets(relative: Boolean = true, draw: (Float, Float) -> Unit) {
     val low = (-0.5).dp.roundToPx().toFloat()
     val high = 0.5.dp.roundToPx().toFloat()
-    val direction = if (layoutDirection == LayoutDirection.Rtl) -1 else 1
+    val direction = if (relative && layoutDirection == LayoutDirection.Rtl) -1 else 1
     draw(direction * low, low)
     draw(direction * high, low)
     draw(direction * low, high)
     draw(direction * high, high)
 }
 
-/** Keep platform line breaks, text semantics and inline children. Paint each original line on its CSS baseline. */
+/** Draw a platform paragraph on CSS baselines. Its optional inline face stays 24 dp even at reduced font scales. */
 @Composable
 internal fun HeaderParagraph(text: AnnotatedString, style: TextStyle, modifier: Modifier,
                              lineHeight: Int, baseline: Int, outline: Color? = null,
-                             inline: Map<String, InlineTextContent> = emptyMap()) {
+                             inline: Map<String, InlineTextContent> = emptyMap(), faceStart: Int = 0,
+                             face: (@Composable () -> Unit)? = null) {
     var result by remember { mutableStateOf<TextLayoutResult?>(null) }
-    Text(text, modifier.fillMaxWidth().layout { measurable, constraints ->
-        val paragraph = measurable.measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
-        val lines = result?.lineCount ?: 1
-        layout(paragraph.width, lines * lineHeight) { paragraph.place(0, 0) }
-    }.drawWithContent {
-        val paragraph = result ?: return@drawWithContent
-        for (i in 0 until paragraph.lineCount) {
-            val left = paragraph.getLineLeft(i)
-            val lineWidth = ceil(paragraph.getLineRight(i) - left)
-            val x = ((size.width - lineWidth) / 2f).roundToInt() - left
-            val y = i * lineHeight + baseline - paragraph.getLineBaseline(i)
-            val top = paragraph.getLineTop(i)
-            val bottom = paragraph.getLineBottom(i)
-            if (outline != null) {
-                outlineOffsets { dx, dy ->
-                    translate(x + dx, y + dy) {
-                        clipRect(top = top, bottom = bottom) { drawText(paragraph, outline) }
+    Layout(content = {
+        Text(text, Modifier.fillMaxWidth().drawWithContent {
+            val paragraph = result ?: return@drawWithContent
+            for (i in 0 until paragraph.lineCount) {
+                val x = paragraph.centerOffset(i)
+                val y = i * lineHeight + baseline - paragraph.getLineBaseline(i)
+                val top = paragraph.getLineTop(i)
+                val bottom = paragraph.getLineBottom(i)
+                if (outline != null) {
+                    outlineOffsets { dx, dy ->
+                        translate(x + dx, y + dy) {
+                            clipRect(top = top, bottom = bottom) { drawText(paragraph, outline) }
+                        }
                     }
                 }
+                translate(x, y) { clipRect(top = top, bottom = bottom) { this@drawWithContent.drawContent() } }
             }
-            translate(x, y) { clipRect(top = top, bottom = bottom) { this@drawWithContent.drawContent() } }
+        }, style = style, inlineContent = inline, onTextLayout = { result = it })
+        if (face != null) Box { face() }
+    }, modifier = modifier.fillMaxWidth()) { children, constraints ->
+        val paragraph = children.first().measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
+        val textLayout = result
+        val rect = textLayout?.placeholderRects?.firstOrNull()
+        val icon = if (rect == null) null else children.getOrNull(1)?.measure(
+            Constraints(maxWidth = rect.width.toInt(), maxHeight = rect.height.toInt())
+        )
+        layout(paragraph.width, (textLayout?.lineCount ?: 1) * lineHeight) {
+            paragraph.place(0, 0)
+            if (icon != null && rect != null) {
+                // InlineTextContent may paint past its line box. Place the real icon at its old baseline-relative
+                // position independently of the text clips so its bottom survives small system font settings.
+                val i = textLayout.getLineForOffset(faceStart)
+                val x = rect.left.roundToInt() + textLayout.centerOffset(i).roundToInt()
+                val y = i * lineHeight + (rect.top - textLayout.getLineBaseline(i)).roundToInt() + icon.height
+                icon.place(x, y)
+            }
         }
-    }, style = style, inlineContent = inline, onTextLayout = { result = it })
+    }
+}
+
+private fun TextLayoutResult.centerOffset(line: Int): Float {
+    val left = getLineLeft(line)
+    val lineWidth = ceil(getLineRight(line) - left)
+    return ((size.width - lineWidth) / 2f).roundToInt() - left
 }

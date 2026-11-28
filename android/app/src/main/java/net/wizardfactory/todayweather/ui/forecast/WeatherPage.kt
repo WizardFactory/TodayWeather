@@ -27,6 +27,9 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -55,6 +58,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -100,7 +105,7 @@ import net.wizardfactory.todayweather.ui.shell.Icon
 import net.wizardfactory.todayweather.ui.shell.LineText
 import net.wizardfactory.todayweather.ui.shell.OutlinedText
 import net.wizardfactory.todayweather.ui.shell.HeaderParagraph
-import net.wizardfactory.todayweather.ui.shell.PaintText
+import net.wizardfactory.todayweather.ui.shell.outlineOffsets
 import net.wizardfactory.todayweather.ui.shell.referenceLine
 import net.wizardfactory.todayweather.ui.shell.line
 import net.wizardfactory.todayweather.ui.text.CssMetrics
@@ -283,21 +288,37 @@ internal fun temperatureNumber(value: String, size: Double): AnnotatedString = b
  * (`vertical-align: super`) without making the line taller, as in the WebView.
  */
 @Composable
-private fun Temperature(value: String, size: Double, color: Color, outline: Color?) {
+internal fun Temperature(value: String, size: Double, color: Color, outline: Color?) {
     val style = plain(size.sp, color, FontWeight.Light)
+    val layers = if (outline != null) remember { TemperatureLayers() } else null
+    val modifier = if (outline == null || layers == null) Modifier else Modifier.drawBehind {
+        // The CSS temperature uses absolute offsets. Both shadows sit behind both foreground runs.
+        outlineOffsets(relative = false) { x, y ->
+            layers.number?.let { drawText(it, outline, Offset(x, y)) }
+            layers.degree?.let { drawText(it, outline, layers.degreeOrigin + Offset(x, y)) }
+        }
+    }
     Layout(content = {
-        PaintText(temperatureNumber(value, size), style, outline = outline)
-        PaintText(AnnotatedString("˚"), style.copy(fontSize = (size / 2).sp), outline = outline)
-    }) { (number, sign), constraints ->
+        Text(temperatureNumber(value, size), style = style, onTextLayout = { layers?.number = it })
+        Text("˚", style = style.copy(fontSize = (size / 2).sp), onTextLayout = layers?.let { runs -> { layout -> runs.degree = layout } })
+    }, modifier = modifier) { (number, sign), constraints ->
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val n = number.measure(loose)
         val s = sign.measure(loose)
         val raise = (size / 3).sp.toPx()
+        val degreeTop = (n[FirstBaseline] - raise - s[FirstBaseline]).roundToInt()
+        layers?.degreeOrigin = Offset(n.width.toFloat(), degreeTop.toFloat())
         layout(n.width + s.width, n.height) {
             n.place(0, 0)
-            s.place(n.width, (n[FirstBaseline] - raise - s[FirstBaseline]).roundToInt())
+            s.place(n.width, degreeTop)
         }
     }
+}
+
+private class TemperatureLayers {
+    var number by mutableStateOf<TextLayoutResult?>(null)
+    var degree by mutableStateOf<TextLayoutResult?>(null)
+    var degreeOrigin by mutableStateOf(Offset.Zero)
 }
 
 /**
