@@ -59,8 +59,7 @@ import org.robolectric.annotation.GraphicsMode
  * The nationwide and warning pages at font scale 1.3 (AN-06: text follows the system font scale), on a phone, a
  * small window and a tablet, with the wind in km/h (the longest values): S10 in its three modes, S11 in its six tabs
  * and S12 scrolled to its end.
- * - No text is cut or reaches past the window's sides ([ShellFit]). The mode buttons end with an ellipsis by design
- *   (`text-overflow: ellipsis`), as English does at any size.
+ * - No text is cut, ellipsized or reaches past the window's sides ([ShellFit]).
  * - Every map label lies inside the window where it is laid out (the labels may overlap each other at fixed positions,
  *   as on the Cordova map).
  * - No line of S12 crowds the one above it: baselines at least 1.1 times the larger font apart.
@@ -126,14 +125,13 @@ abstract class NationFitTest(private val lang: String) {
         session.reload(WeatherSession.Sender.INIT)
         rule.waitForIdle()
         val safe = ShellFit.safeArea(rule.activity, rule.onRoot().fetchSemanticsNode().boundsInRoot)
-        val buttons = hasAnyAncestor(hasTestTag(NationTags.mode(0)) or hasTestTag(NationTags.mode(1)) or hasTestTag(NationTags.mode(2)))
         val problems = mutableListOf<String>()
         val density = rule.density
         // A node's bounds where it is laid out, whatever clips it, in the root's pixels.
         fun laidOut(node: SemanticsNode) = androidx.compose.ui.geometry.Rect(node.positionInRoot, node.size.toSize())
         fun check(what: String) {
             rule.waitForIdle()
-            problems += ShellFit.texts(rule, what, safe, designed = buttons)
+            problems += ShellFit.texts(rule, what, safe)
             if (what.startsWith("nation")) {
                 rule.onAllNodes(SemanticsMatcher("a map label") { it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("nation-label-") == true })
                     .fetchSemanticsNodes().forEach { node ->

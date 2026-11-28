@@ -183,7 +183,7 @@ The menu's 기상특보 (S12), 전국날씨 (S10) and 전국미세먼지 (S11) (
   - `WarningCards` gives each card its heading (`name announcement`), situations (bold hazard and level, then `timeStr location` lines), the note heading for numeric type 1 or 2, and the comment through `ng-bind-html` (`BoundHtml`).
   - In `BoundHtml`, `<br>` breaks lines, other tags go with `script` and `style` content, and white space collapses. Entities are decoded, numeric ones as the HTML parser reads them: U+FFFD outside Unicode, and windows-1252 for 0x80–0x9F.
 - **Screens (`app` `ui/nation/`):** `NationScreen` draws the pages over the tabs, like the settings pages, with the theme's plain header and #F5F5F5 in every theme.
-  - S10: the three outline mode buttons, at Chrome's pixel-snapped widths, with an ellipsis for text that does not fit. The map is 330×485 dp with 20 sp labels on `line-height: normal` lines. A label is CSS shrink-to-fit, so 울산's 북북서 wraps at the map's edge.
+  - S10: the three outline mode buttons retain Chrome's pixel-snapped widths and single-line layout where the label fits. When space runs short, the button reduces its horizontal padding and wraps the label if needed (#3247). The bar grows to keep each full label at the system text size. At the default font size, the English wind label also wraps at the 320–412 dp portrait phone widths, including full screen. That can move the map down. The map is 330×485 dp with 20 sp labels on `line-height: normal` lines. A label is CSS shrink-to-fit, so 울산's 북북서 wraps at the map's edge.
   - S11: the 480 dp strip of tabs, which scrolls sideways on narrow windows, and the labels in the grade colors of the chosen air standard.
   - S12: the cards with Chrome's line boxes:
     - the h2's 19.2 dp lines on Roboto's baseline;
