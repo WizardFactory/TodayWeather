@@ -8,10 +8,11 @@ import UIKit
 extension HostedShellTests {
     @MainActor struct NativeAdScreenTests {
         /// A deterministic asset set for layout checks. The SDK never receives an impression or click from these fixtures.
-        final class LayoutInventory: ForecastNativeInventory {
+        @Observable final class LayoutInventory: ForecastNativeInventory {
             var enabled = true
             let generation = 0
             var hasFreshCreative = true
+            var availability: Int { hasFreshCreative ? 1 : 0 }
             private var assigned: [ShellTab: ForecastCreative] = [:]
             func assignedCreative(for tab: ShellTab) -> ForecastCreative? { assigned[tab] }
             func assignCreative(to tab: ShellTab) -> ForecastCreative? {
@@ -37,6 +38,7 @@ extension HostedShellTests {
             let enabled = true
             let generation = 0
             let cache: ForecastNativeCache
+            var availability: Int { cache.availability }
             init(_ cache: ForecastNativeCache) { self.cache = cache }
             func assignCreative(to tab: ShellTab) -> ForecastCreative? { cache.assignCreative(to: tab) }
             func assignedCreative(for tab: ShellTab) -> ForecastCreative? { cache.assignedCreative(for: tab) }
@@ -58,9 +60,11 @@ extension HostedShellTests {
             shell.tapTab(.air)
             try await hosted.settle()
             #expect(shell.selected == .air)
-            inventory.cache.store(daily)
             #expect(!hosted.elements().contains { $0 is ForecastCreativeView })
             shell.tapTab(.forecast)
+            try await hosted.settle()
+            #expect(hosted.elements().contains { $0 === hourly.registeredView })
+            inventory.cache.store(daily)
             try await hosted.settle()
             #expect(hosted.elements().contains { $0 === hourly.registeredView })
             #expect(inventory.cache.hasSpare)
@@ -68,6 +72,30 @@ extension HostedShellTests {
             try await hosted.settle()
             #expect(hosted.elements().contains { $0 === daily.registeredView })
             #expect(!inventory.cache.hasSpare)
+        }
+
+        @Test func aLateLoadFillsTheCurrentTabWithoutSwitchingTabs() async throws {
+            let now = ContinuousClock.now
+            var loaders: [AdLoader] = []
+            let ads = ForecastNativeAds(unitID: AdsSettings.testNativeUnit, request: { Request() },
+                                        now: { now }, send: { loader, _ in loaders.append(loader) },
+                                        track: { _, _ in true })
+            let shell = ShellFixture.shell()
+            shell.select(.search)
+            let hosted = try HostedView(ShellFrame(model: shell, insets: PlacesScreenshotTests.insets, content: { tab in
+                TabContent(page: AnyView(ScrollView { ForecastNativeSlot(tab: tab, theme: .light) }))
+            }).environment(\.forecastNativeAds, ads), size: CGSize(width: 393, height: 798))
+            defer { hosted.close() }
+            try await hosted.settle()
+            #expect(!hosted.elements().contains { $0 is ForecastCreativeView })
+            ads.setEnabled(true)
+            try #require(await AirLiveTests.wait(3) { !loaders.isEmpty })
+            try await hosted.settle()
+            #expect(!hosted.elements().contains { $0 is ForecastCreativeView })
+            ads.adLoader(loaders[0], didReceive: NativeAd())
+            try await hosted.settle()
+            #expect(hosted.elements().contains { $0 is ForecastCreativeView })
+            try #require(await AirLiveTests.wait(3) { loaders.count == 2 })
         }
 
         @Test func twoWindowsCannotMountTheSameRegisteredView() async throws {
@@ -181,7 +209,7 @@ extension HostedShellTests {
             #expect(cache.assignCreative(to: .forecast) == nil && !cache.hasSpare)
         }
 
-        @Test func reopeningSavedListDoesNotInsertALateCreative() async throws {
+        @Test func reopeningSavedListShowsALateCreativeAfterLeavingEditMode() async throws {
             let source = LayoutInventory()
             source.hasFreshCreative = false
             let f = try await PlacesScreenshotTests.fixture("list", language: "ko-KR")
@@ -195,11 +223,14 @@ extension HostedShellTests {
             f.places.modeTapped()
             try await hosted.settle()
             source.hasFreshCreative = true
+            try await hosted.settle()
+            #expect(source.hasFreshCreative, "editing suppresses the slot without consuming the spare")
+            #expect(!hosted.elements().contains { $0 is ForecastCreativeView })
             f.places.modeTapped()
             try await hosted.settle()
             #expect(originalVisit == f.shell.adVisit)
-            #expect(source.hasFreshCreative)
-            #expect(!hosted.elements().contains { $0 is ForecastCreativeView })
+            #expect(!source.hasFreshCreative)
+            #expect(hosted.elements().contains { $0 is ForecastCreativeView })
         }
 
         @Test func readingAShortDailyDetailDoesNotRequireTheChartToDisappear() {
@@ -284,7 +315,9 @@ extension HostedShellTests {
                     }
                     source = try #require(inventory, "A ready Google test creative for \(tab)")
                 } else {
-                    source = LayoutInventory()
+                    let inventory = LayoutInventory()
+                    inventory.hasFreshCreative = tab != .search
+                    source = inventory
                 }
                 let places = try await PlacesScreenshotTests.fixture("list", language: "ko-KR")
                 let shell = places.shell
@@ -313,6 +346,20 @@ extension HostedShellTests {
                         return frame.height > 300 && frame.contains(CGPoint(x: size.width / 2, y: size.height / 2))
                     })
                 func card() -> ForecastCreativeView? { hosted.elements().compactMap { $0 as? ForecastCreativeView }.first }
+                func capture(_ name: String) throws {
+                    let image = UIGraphicsImageRenderer(bounds: hosted.window.bounds).image { _ in
+                        hosted.window.drawHierarchy(in: hosted.window.bounds, afterScreenUpdates: true)
+                    }
+                    try image.pngData()?.write(to: output.appending(path: "\(name).png"))
+                }
+                if tab == .search, let inventory = source as? LayoutInventory {
+                    #expect(card() == nil)
+                    try capture("search-loading")
+                    inventory.hasFreshCreative = true
+                    try await hosted.settle()
+                    try #require(card() != nil, "Saved Places fills before any navigation or scrolling")
+                    try capture("search-filled")
+                }
                 for _ in 0..<35 where card() == nil {
                     let end: CGFloat = max(.zero, scroll.contentSize.height - scroll.bounds.height)
                     scroll.setContentOffset(CGPoint(x: 0, y: min(end, scroll.contentOffset.y + 140)), animated: false)
@@ -325,10 +372,7 @@ extension HostedShellTests {
                 try await hosted.settle(300)
                 let frame = creative.convert(creative.bounds, to: hosted.window)
                 #expect(frame.minY >= 0 && frame.maxY <= size.height)
-                let image = UIGraphicsImageRenderer(bounds: hosted.window.bounds).image { _ in
-                    hosted.window.drawHierarchy(in: hosted.window.bounds, afterScreenUpdates: true)
-                }
-                try image.pngData()?.write(to: output.appending(path: "\(tab.rawValue).png"))
+                try capture(tab.rawValue)
                 print("NATIVE-CAPTURE \(tab.rawValue) \(frame) \(output.path)")
             }
         }

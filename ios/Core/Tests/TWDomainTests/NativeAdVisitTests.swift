@@ -2,13 +2,11 @@ import Testing
 import TWDomain
 
 struct NativeAdVisitTests {
-    @Test func aLateCreativeWaitsForTheNextVisit() {
+    @Test func aLateCreativeFillsTheCurrentVisit() {
         var visit = NativeAdVisit()
         let first = visit.reached(hasCreative: false)
         let late = visit.reached(hasCreative: true)
-        var next = NativeAdVisit()
-        let secondVisit = next.reached(hasCreative: true)
-        #expect(!first && !late && secondVisit)
+        #expect(!first && late)
     }
 
     @Test func visibleCreativeSurvivesGeometryUpdates() {
