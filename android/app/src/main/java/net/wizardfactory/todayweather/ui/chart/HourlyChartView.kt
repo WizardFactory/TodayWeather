@@ -21,10 +21,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFontFamilyResolver
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import kotlin.math.floor
@@ -37,7 +37,7 @@ import net.wizardfactory.todayweather.ui.text.CssMetrics
  * their text (`line-height: normal`); the chart; separators; detail rows; the 24 dp expander row, which ends
  * 10 dp below the wrapper (`margin-bottom: -10px`).
  */
-internal class HourlyLayout(chart: HourlyChart, expanded: Boolean, measurer: TextMeasurer, density: Density) {
+internal class HourlyLayout(chart: HourlyChart, expanded: Boolean, density: Density) {
     val hourRowTop = 14.0
     // `line-height: normal` as the WebView rounds it (CssMetrics): 24.5 dp for "24시", 20 dp for "24h".
     val hourRowHeight = 4 + (chart.hourLabels.maxOfOrNull { CssMetrics.heightDp(it, chartTextStyle(Color.Black, ChartStyle.title), density) } ?: 0.0)
@@ -80,33 +80,25 @@ fun HourlyChartView(
     scrollState: ScrollState = rememberOpeningScroll(chart, chart.openingOffset),
     colors: ChartColors = ChartColors.LIGHT,
 ) {
-    val measurer = rememberTextMeasurer()
     val imageCache = rememberForecastChartImages()
-    val images = remember(imageCache, chart, expanded, colors.weatherImages, colors.iconImages) {
-        if (expanded) imageCache.prepare(colors, chart.chart, chart.detail) else imageCache.prepare(colors, chart.chart)
-    }
+    val preparedCache = rememberPreparedChartCache()
     val density = LocalDensity.current
-    val layout = remember(chart, expanded, measurer, density) { HourlyLayout(chart, expanded, measurer, density) }
+    val layoutDirection = LocalLayoutDirection.current
+    val fontFamilyResolver = LocalFontFamilyResolver.current
+    val prepared = preparedCache.hourly(chart, expanded, colors, density, layoutDirection, fontFamilyResolver, imageCache)
+    val layout = prepared.layout
     Box(modifier.fillMaxWidth().height(layout.wrapperHeight.dp).clipToBounds().background(colors.background)) {
         Box(Modifier.horizontalScroll(scrollState)) {
             Canvas(Modifier.size(chart.width.dp, layout.contentHeight.dp)) {
-                for (label in chart.dayLabels) {
-                    drawText(measurer.measure(label.text, chartTextStyle(colors.label, ChartStyle.dayTitle), softWrap = false),
-                        topLeft = Offset((label.left * density.density).toFloat(), 0f))
-                }
-                chart.hourLabels.forEachIndexed { i, text ->
-                    val result = measurer.measure(text, chartTextStyle(colors.label, ChartStyle.title), softWrap = false)
-                    val center = (i + 0.5) * chart.columnWidth
-                    drawText(result, topLeft = Offset((center * density.density).toFloat() - result.size.width / 2f,
-                        ((layout.hourRowTop + 2) * density.density).toFloat()))
-                }
-                drawSvg(chart.chart, layout.chartTop, images, measurer, colors)
-                drawSeparator(layout.firstSeparator, colors)
-                if (expanded) drawSvg(chart.detail, layout.detailTop, images, measurer, colors)
-                drawSeparator(layout.secondSeparator, colors)
+                for (label in prepared.dayLabels) drawText(label.layout, topLeft = label.topLeft)
+                for (label in prepared.hourLabels) drawText(label.layout, topLeft = label.topLeft)
+                drawSvg(prepared.chartSvg)
+                drawRect(prepared.separatorColor, Offset(0f, prepared.firstSeparatorY), Size(size.width, prepared.separatorHeight), alpha = 0.3f)
+                prepared.detailSvg?.let { drawSvg(it) }
+                drawRect(prepared.separatorColor, Offset(0f, prepared.secondSeparatorY), Size(size.width, prepared.separatorHeight), alpha = 0.3f)
             }
         }
-        Legend(chart, Modifier.align(Alignment.TopEnd).offset(x = (-10).dp, y = (chart.chart.height - 10).dp), measurer, colors)
+        Legend(prepared.legend, Modifier.align(Alignment.TopEnd).offset(x = (-10).dp, y = (chart.chart.height - 10).dp))
         // The whole 24 dp row is the expander, as the Cordova `ng-click` element; the icon is centered.
         Box(Modifier.offset(y = layout.expanderTop.dp).fillMaxWidth().height(24.dp).clickable(onClick = onToggleExpanded)
             .testTag(EXPANDER_TAG)) {
@@ -120,28 +112,17 @@ fun HourlyChartView(
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSeparator(top: Double, colors: ChartColors) {
-    drawRect(colors.separator, Offset(0f, (top * density).toFloat()), Size(size.width, 1 * density), alpha = 0.3f)
-}
-
 /**
  * `.chart-label`: two rows (5 dp margins, a 13 dp color bar, 5 dp padding, the text) on a translucent box with
  * 5 % rounded corners, 10 dp from the right and at the chart height minus 10 dp from the top.
  */
 @Composable
-private fun Legend(chart: HourlyChart, modifier: Modifier, measurer: TextMeasurer, colors: ChartColors) {
-    val density = LocalDensity.current
-    val rows = listOf(chart.legendToday to colors.legendToday, chart.legendYesterday to colors.legendYesterday)
-        .map { (text, color) -> measurer.measure(text, chartTextStyle(colors.label, ChartStyle.legend), softWrap = false) to color }
-    val textWidth = with(density) { rows.maxOf { it.first.size.width }.toDp() }
-    val width = textWidth + 28.dp
-    Canvas(modifier.size(width, 41.dp)) {
-        val px = density.density
-        drawRoundRect(colors.legendBox, cornerRadius = CornerRadius(size.width * 0.05f, size.height * 0.05f))
-        rows.forEachIndexed { i, (text, color) ->
-            val top = (5 + i * 18) * px
-            drawRect(color, Offset(5 * px, top), Size(13 * px, 13 * px))
-            drawText(text, topLeft = Offset(23 * px, top))
-        }
+private fun Legend(legend: PreparedLegend, modifier: Modifier) {
+    Canvas(modifier.size(legend.width, 41.dp)) {
+        drawRoundRect(legend.boxColor, cornerRadius = CornerRadius(size.width * 0.05f, size.height * 0.05f))
+        drawRect(legend.todayColor, legend.todayBarTopLeft, legend.barSize)
+        drawText(legend.todayText, topLeft = legend.todayTextTopLeft)
+        drawRect(legend.yesterdayColor, legend.yesterdayBarTopLeft, legend.barSize)
+        drawText(legend.yesterdayText, topLeft = legend.yesterdayTextTopLeft)
     }
 }
