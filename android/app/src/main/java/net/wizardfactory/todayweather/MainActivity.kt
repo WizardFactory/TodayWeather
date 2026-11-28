@@ -101,6 +101,8 @@ import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.chart.ForecastChartImages
 import net.wizardfactory.todayweather.ui.chart.LocalForecastChartImages
+import net.wizardfactory.todayweather.ui.chart.LocalPreparedCharts
+import net.wizardfactory.todayweather.ui.chart.PreparedChartCache
 import net.wizardfactory.todayweather.ui.forecast.ForecastCharts
 import net.wizardfactory.todayweather.ui.forecast.rememberWeatherTab
 import net.wizardfactory.todayweather.ui.nation.IonicLoading
@@ -380,6 +382,8 @@ fun AppContent(
     val context = LocalContext.current.applicationContext
     // The activity's decoded asset images (#3224), provided around the shell so every tab, page and popup reads through them.
     val forecastImages = remember(context) { ForecastChartImages(context) }
+    // The activity's draw-ready chart layouts and paths (#3232), kept across tab visits and rebuilt on activity recreation.
+    val preparedCharts = remember { PreparedChartCache() }
     val navigation = rememberShellNavigation(startTab ?: StartupPage.tab(state.settings.startupPage))
     // `?code=` of /tab/air: the pollutant S03 or S04 opened S05 on. The weather tabs keep it in the URL (`$location.path`),
     // so S05 opens on it again; the Locations tab replaces the URL (`href="#/tab/search"`) and clears it.
@@ -542,7 +546,10 @@ fun AppContent(
     }
     val texts = host.texts
     val openUnits = { open(SettingsRoutes.UNITS) }
-    CompositionLocalProvider(LocalForecastChartImages provides forecastImages) {
+    CompositionLocalProvider(
+        LocalForecastChartImages provides forecastImages,
+        LocalPreparedCharts provides preparedCharts,
+    ) {
         TodayWeatherShell(
             ShellState(
                 theme = theme,
